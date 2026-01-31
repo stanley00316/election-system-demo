@@ -207,7 +207,7 @@ export default function NewContactPage() {
                       onChange={(e) => setVoterSearch(e.target.value)}
                     />
                   </div>
-                  {voterSearchResults?.data?.length > 0 && (
+                  {(voterSearchResults?.data?.length ?? 0) > 0 && (
                     <div className="border rounded-lg divide-y max-h-60 overflow-y-auto">
                       {voterSearchResults.data.map((voter: any) => (
                         <button
