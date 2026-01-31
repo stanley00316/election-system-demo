@@ -209,7 +209,7 @@ export default function NewContactPage() {
                   </div>
                   {(voterSearchResults?.data?.length ?? 0) > 0 && (
                     <div className="border rounded-lg divide-y max-h-60 overflow-y-auto">
-                      {voterSearchResults.data.map((voter: any) => (
+                      {voterSearchResults?.data?.map((voter: any) => (
                         <button
                           key={voter.id}
                           type="button"
