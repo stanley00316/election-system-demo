@@ -7,7 +7,7 @@ import {
   RELATION_TYPE_LABELS,
   EVENT_TYPE_LABELS,
   PARTY_LABELS,
-} from '@election/shared';
+} from '@/shared';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

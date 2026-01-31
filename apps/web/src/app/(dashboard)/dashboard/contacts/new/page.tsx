@@ -23,7 +23,7 @@ import { contactsApi, votersApi } from '@/lib/api';
 import { ArrowLeft, Save, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { CONTACT_TYPE_LABELS, CONTACT_OUTCOME_LABELS } from '@election/shared';
+import { CONTACT_TYPE_LABELS, CONTACT_OUTCOME_LABELS } from '@/shared';
 
 // 從共用常量取得所有接觸類型和結果的 keys
 const CONTACT_TYPES = Object.keys(CONTACT_TYPE_LABELS) as [string, ...string[]];

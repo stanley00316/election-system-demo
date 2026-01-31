@@ -43,7 +43,7 @@ import {
 } from '@/lib/utils';
 import {
   RELATION_TYPE_LABELS,
-} from '@election/shared';
+} from '@/shared';
 import {
   ArrowLeft,
   Edit,
