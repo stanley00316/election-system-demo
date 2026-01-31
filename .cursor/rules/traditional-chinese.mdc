@@ -1,0 +1,91 @@
+---
+description: 所有使用者介面必須使用繁體中文顯示
+globs:
+  - "apps/web/**/*.tsx"
+  - "apps/web/**/*.ts"
+alwaysApply: true
+---
+
+# 繁體中文顯示規則
+
+## 核心原則
+
+**所有使用者可見的文字必須以繁體中文呈現**，包含但不限於：
+
+- 頁面標題與說明文字
+- 按鈕文字
+- 表單標籤與提示訊息
+- 錯誤訊息
+- 圖表標籤與提示框
+- Badge 和 Tag 顯示的狀態文字
+- 下拉選單選項
+- Toast 通知訊息
+
+## 列舉值翻譯
+
+後端 API 回傳的英文列舉值（enum）必須在前端轉換為繁體中文。
+
+### 使用方式
+
+在 `apps/web/src/lib/utils.ts` 中已定義以下翻譯函數：
+
+```typescript
+// 政治傾向
+getStanceLabel(stance: string)
+
+// 接觸類型
+getContactTypeLabel(type: string)
+
+// 接觸結果
+getContactOutcomeLabel(outcome: string)
+```
+
+### 範例
+
+**錯誤** - 直接顯示英文值：
+```tsx
+<Badge>{contact.outcome}</Badge>
+<p>{contact.type}</p>
+```
+
+**正確** - 使用翻譯函數：
+```tsx
+<Badge>{getContactOutcomeLabel(contact.outcome)}</Badge>
+<p>{getContactTypeLabel(contact.type)}</p>
+```
+
+## 圖表標籤
+
+Recharts 等圖表庫的資料在傳入前需要先翻譯：
+
+```tsx
+// 正確做法
+const chartData = Object.entries(data).map(([key, value]) => ({
+  name: getContactTypeLabel(key), // 翻譯後的中文
+  count: value,
+}));
+```
+
+## 新增列舉類型
+
+當後端新增新的列舉類型時，請在 `utils.ts` 中新增對應的翻譯函數，格式如下：
+
+```typescript
+export function get[類型名稱]Label(value: string) {
+  const labels: Record<string, string> = {
+    ENUM_VALUE_1: '中文標籤1',
+    ENUM_VALUE_2: '中文標籤2',
+  };
+  return labels[value] || value;
+}
+```
+
+## 例外情況
+
+以下情況可使用英文：
+
+- 程式碼中的變數名稱、函數名稱
+- console.log 除錯訊息
+- 技術性錯誤訊息（僅開發者可見）
+- API 端點路徑
+- CSS class 名稱

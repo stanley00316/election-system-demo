@@ -1,0 +1,1 @@
+export { QuickRelationDialog } from './QuickRelationDialog';
