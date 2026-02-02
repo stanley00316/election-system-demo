@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCampaignStore } from '@/stores/campaign';
@@ -307,9 +308,10 @@ export default function AnalysisPage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {influence?.topInfluencers?.slice(0, 6).map((person: any) => (
-              <div
+              <Link
                 key={person.voterId}
-                className="flex items-center gap-3 p-3 rounded-lg border"
+                href={`/dashboard/voters/${person.voterId}`}
+                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 hover:border-primary/50 transition-colors cursor-pointer"
               >
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-lg font-bold text-primary">
@@ -322,7 +324,7 @@ export default function AnalysisPage() {
                     {getStanceLabel(person.stance)} · {person.connections} 連結
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

@@ -22,6 +22,35 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const CONTACT_TYPE_OPTIONS = [
+  { value: 'HOME_VISIT', label: '家訪' },
+  { value: 'PHONE_CALL', label: '電訪' },
+  { value: 'LIVING_ROOM', label: '客廳會' },
+  { value: 'EVENT', label: '活動' },
+  { value: 'OTHER', label: '其他' },
+];
+
+const OUTCOME_OPTIONS = [
+  { value: 'POSITIVE', label: '正面' },
+  { value: 'NEUTRAL', label: '中立' },
+  { value: 'NEGATIVE', label: '負面' },
+  { value: 'NO_RESPONSE', label: '無回應' },
+  { value: 'NOT_HOME', label: '不在家' },
+];
 
 const CONTACT_TYPE_ICONS: Record<string, React.ElementType> = {
   HOME_VISIT: Home,
@@ -45,14 +74,36 @@ export default function ContactsPage() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<any>({});
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // 計算已啟用的篩選數量
+  const activeFilterCount = Object.values(filters).filter(v => v !== undefined && v !== '').length;
+
+  const handleFilterChange = (key: string, value: string | undefined) => {
+    const newFilters = { ...filters };
+    if (value === '' || value === undefined) {
+      delete newFilters[key];
+    } else {
+      newFilters[key] = value;
+    }
+    setFilters(newFilters);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    setPage(1);
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['contacts', campaignId, page, search],
+    queryKey: ['contacts', campaignId, page, search, filters],
     queryFn: () =>
       contactsApi.getAll({
         campaignId,
         page,
         limit: 20,
+        ...filters,
       }),
     enabled: !!campaignId,
   });
@@ -141,10 +192,88 @@ export default function ContactsPage() {
                 }}
               />
             </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              篩選
-            </Button>
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="relative">
+                  <Filter className="h-4 w-4 mr-2" />
+                  篩選
+                  {activeFilterCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                    >
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">篩選條件</h4>
+                    {activeFilterCount > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearFilters}
+                        className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        清除全部
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* 接觸類型篩選 */}
+                  <div className="space-y-2">
+                    <Label>接觸類型</Label>
+                    <Select
+                      value={filters.type || '__all__'}
+                      onValueChange={(value) => handleFilterChange('type', value === '__all__' ? undefined : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="全部" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">全部</SelectItem>
+                        {CONTACT_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 接觸結果篩選 */}
+                  <div className="space-y-2">
+                    <Label>接觸結果</Label>
+                    <Select
+                      value={filters.outcome || '__all__'}
+                      onValueChange={(value) => handleFilterChange('outcome', value === '__all__' ? undefined : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="全部" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">全部</SelectItem>
+                        {OUTCOME_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setFilterOpen(false)}
+                  >
+                    套用篩選
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>

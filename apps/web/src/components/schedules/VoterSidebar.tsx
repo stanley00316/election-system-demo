@@ -6,8 +6,25 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getStanceLabel } from '@/lib/utils';
-import { Search, MapPin, User, Users, GripVertical, Navigation, Phone } from 'lucide-react';
+import { Search, MapPin, User, Users, Navigation, Phone, GripVertical } from 'lucide-react';
 import type { ScheduleItem, NearbyVoter } from './RouteMapView';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
   FAMILY: '家人',
@@ -27,7 +44,103 @@ interface VoterSidebarProps {
   nearbyVoters: NearbyVoter[];
   onRemoveItem: (itemId: string) => void;
   onAddVoter: (voter: NearbyVoter) => void;
+  onReorderItems?: (newItemIds: string[]) => void;
   isLoading?: boolean;
+}
+
+// 可拖放的選民項目組件
+interface SortableVoterItemProps {
+  item: ScheduleItem;
+  index: number;
+  onRemoveItem: (itemId: string) => void;
+}
+
+function SortableVoterItem({ item, index, onRemoveItem }: SortableVoterItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-start gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors ${
+        isDragging ? 'shadow-lg ring-2 ring-primary/50' : ''
+      }`}
+    >
+      {/* 拖曳手柄 + 序號 */}
+      <div className="flex items-center gap-1 pt-0.5">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+          {index + 1}
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm truncate">
+            {item.voter?.name || item.address || '未命名'}
+          </span>
+          <StanceBadge stance={item.voter?.stance} />
+        </div>
+        {item.address && (
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:underline truncate flex items-center gap-1 mt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Navigation className="h-3 w-3" />
+            {item.address}
+          </a>
+        )}
+        {item.voter?.phone && (
+          <a
+            href={`tel:${item.voter.phone.replace(/[^0-9+]/g, '')}`}
+            className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Phone className="h-3 w-3" />
+            {item.voter.phone}
+          </a>
+        )}
+        {/* 顯示關係 */}
+        {item.voter?.relationsInSchedule && item.voter.relationsInSchedule.length > 0 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Users className="h-3 w-3 text-muted-foreground shrink-0" />
+            {item.voter.relationsInSchedule.map((rel: any) => (
+              <Badge key={rel.id} variant="outline" className="text-xs py-0 px-1">
+                {rel.relatedVoter?.name}（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+      <Checkbox
+        checked={true}
+        onCheckedChange={() => onRemoveItem(item.id)}
+        className="data-[state=checked]:bg-primary mt-1"
+      />
+    </div>
+  );
 }
 
 const STANCE_COLORS: Record<string, string> = {
@@ -56,9 +169,38 @@ export function VoterSidebar({
   nearbyVoters,
   onRemoveItem,
   onAddVoter,
+  onReorderItems,
   isLoading = false,
 }: VoterSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 拖放感應器設定
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 需要拖動 8px 才開始
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // 處理拖放結束
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        const newItemIds = newItems.map((item) => item.id);
+        onReorderItems?.(newItemIds);
+      }
+    }
+  };
 
   // 過濾附近選民（排除已在行程中的）
   const itemVoterIds = new Set(items.map(item => item.voter?.id).filter(Boolean));
@@ -107,67 +249,27 @@ export function VoterSidebar({
               尚未加入任何選民
             </p>
           ) : (
-            <div className="space-y-2">
-              {filteredItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
-                      {index + 1}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate">
-                        {item.voter?.name || item.address || '未命名'}
-                      </span>
-                      <StanceBadge stance={item.voter?.stance} />
-                    </div>
-                    {item.address && (
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline truncate flex items-center gap-1 mt-0.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Navigation className="h-3 w-3" />
-                        {item.address}
-                      </a>
-                    )}
-                    {item.voter?.phone && (
-                      <a
-                        href={`tel:${item.voter.phone.replace(/[^0-9+]/g, '')}`}
-                        className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Phone className="h-3 w-3" />
-                        {item.voter.phone}
-                      </a>
-                    )}
-                    {/* 顯示關係 */}
-                    {item.voter?.relationsInSchedule && item.voter.relationsInSchedule.length > 0 && (
-                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                        <Users className="h-3 w-3 text-muted-foreground shrink-0" />
-                        {item.voter.relationsInSchedule.map((rel: any) => (
-                          <Badge key={rel.id} variant="outline" className="text-xs py-0 px-1">
-                            {rel.relatedVoter?.name}（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <Checkbox
-                    checked={true}
-                    onCheckedChange={() => onRemoveItem(item.id)}
-                    className="data-[state=checked]:bg-primary mt-1"
-                  />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredItems.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {filteredItems.map((item, index) => (
+                    <SortableVoterItem
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      onRemoveItem={onRemoveItem}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 

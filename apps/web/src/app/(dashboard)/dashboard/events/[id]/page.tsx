@@ -18,7 +18,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { eventsApi, votersApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStanceLabel } from '@/lib/utils';
 import { QuickRelationDialog } from '@/components/events';
 import {
@@ -87,6 +95,7 @@ export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const eventId = params.id as string;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quickRelationOpen, setQuickRelationOpen] = useState(false);
@@ -117,6 +126,31 @@ export default function EventDetailPage() {
       router.push('/dashboard/events');
     },
   });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (newStatus: string) => eventsApi.update(eventId, { status: newStatus }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: '狀態已更新',
+        description: '活動狀態已成功更新',
+      });
+    },
+    onError: () => {
+      toast({
+        title: '更新失敗',
+        description: '無法更新活動狀態，請稍後再試',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus !== event?.status) {
+      updateStatusMutation.mutate(newStatus);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -158,9 +192,22 @@ export default function EventDetailPage() {
               <Badge variant="outline">
                 {EVENT_TYPE_LABELS[event.type] || event.type}
               </Badge>
-              <Badge className={STATUS_STYLES[event.status]}>
-                {STATUS_LABELS[event.status] || event.status}
-              </Badge>
+              <Select 
+                value={event.status} 
+                onValueChange={handleStatusChange}
+                disabled={updateStatusMutation.isPending}
+              >
+                <SelectTrigger className={`w-28 h-6 text-xs font-medium border-0 ${STATUS_STYLES[event.status]}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PLANNED">規劃中</SelectItem>
+                  <SelectItem value="CONFIRMED">已確認</SelectItem>
+                  <SelectItem value="IN_PROGRESS">進行中</SelectItem>
+                  <SelectItem value="COMPLETED">已完成</SelectItem>
+                  <SelectItem value="CANCELLED">已取消</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <h1 className="text-2xl font-bold mt-1">{event.name}</h1>
           </div>

@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,13 +22,21 @@ import {
 } from '@/components/ui/select';
 import { useCampaignStore } from '@/stores/campaign';
 import { votersApi } from '@/lib/api';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// 動態匯入 QR 掃描器元件，避免 SSR 錯誤
+const LineQrScanner = dynamic(
+  () => import('@/components/common/LineQrScanner').then(mod => mod.LineQrScanner),
+  { ssr: false }
+);
 
 const voterSchema = z.object({
   name: z.string().min(1, '姓名為必填欄位'),
   phone: z.string().optional(),
   email: z.string().email('Email 格式不正確').optional().or(z.literal('')),
+  lineId: z.string().optional(),
+  lineUrl: z.string().url('LINE 連結格式不正確').optional().or(z.literal('')),
   address: z.string().optional(),
   city: z.string().optional(),
   districtName: z.string().optional(),
@@ -58,6 +67,7 @@ export default function NewVoterPage() {
   const queryClient = useQueryClient();
   const { currentCampaign } = useCampaignStore();
   const { toast } = useToast();
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
 
   const {
     register,
@@ -79,6 +89,8 @@ export default function NewVoterPage() {
         ...data,
         campaignId: currentCampaign?.id,
         age: data.age ? Number(data.age) : undefined,
+        lineId: data.lineId || undefined,
+        lineUrl: data.lineUrl || undefined,
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()) : [],
       }),
     onSuccess: () => {
@@ -170,6 +182,40 @@ export default function NewVoterPage() {
                   {errors.email && (
                     <p className="text-sm text-destructive">{errors.email.message}</p>
                   )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lineId">LINE</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQrScannerOpen(true)}
+                  >
+                    <QrCode className="h-4 w-4 mr-1" />
+                    掃描 QR
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Input
+                      id="lineId"
+                      {...register('lineId')}
+                      placeholder="LINE ID"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      id="lineUrl"
+                      {...register('lineUrl')}
+                      placeholder="LINE 連結"
+                    />
+                    {errors.lineUrl && (
+                      <p className="text-sm text-destructive">{errors.lineUrl.message}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -358,6 +404,18 @@ export default function NewVoterPage() {
           </Button>
         </div>
       </form>
+
+      {/* LINE QR Scanner */}
+      <LineQrScanner
+        open={qrScannerOpen}
+        onOpenChange={setQrScannerOpen}
+        onScan={(result) => {
+          if (result.lineId) {
+            setValue('lineId', result.lineId);
+          }
+          setValue('lineUrl', result.lineUrl);
+        }}
+      />
     </div>
   );
 }

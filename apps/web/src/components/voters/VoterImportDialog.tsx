@@ -186,7 +186,7 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] overflow-hidden">
         <DialogHeader>
           <DialogTitle>匯入選民資料</DialogTitle>
           <DialogDescription>
@@ -194,9 +194,9 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-hidden">
           {/* 範例資料表格 */}
-          <div className="bg-muted/50 rounded-lg p-4">
+          <div className="bg-muted/50 rounded-lg p-4 overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-medium flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4" />
@@ -207,8 +207,8 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
                 下載 500 筆範例
               </Button>
             </div>
-            <div className="overflow-x-auto max-h-52">
-              <table className="w-full text-xs border-collapse whitespace-nowrap">
+            <div className="overflow-x-auto max-h-52 -mx-4 px-4">
+              <table className="min-w-max text-xs border-collapse whitespace-nowrap">
                 <thead className="sticky top-0">
                   <tr className="bg-muted">
                     <th className="border border-border px-2 py-1 text-left font-medium">姓名<span className="text-destructive">*</span></th>

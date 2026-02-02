@@ -62,8 +62,10 @@ import {
   CalendarDays,
   ArrowRightLeft,
   CalendarPlus,
+  MessageCircle,
 } from 'lucide-react';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
+import { VoterAttachments } from '@/components/voters/VoterAttachments';
 
 const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
   INVITED: '已邀請',
@@ -336,6 +338,27 @@ export default function VoterDetailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
                     <p className="font-medium">{voter.email}</p>
+                  </div>
+                </div>
+              )}
+              {(voter.lineId || voter.lineUrl) && (
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">LINE</p>
+                    {voter.lineUrl ? (
+                      <a
+                        href={voter.lineUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-green-600 hover:underline flex items-center gap-1"
+                      >
+                        {voter.lineId || '開啟 LINE'}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <p className="font-medium">{voter.lineId}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -888,6 +911,9 @@ export default function VoterDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Attachments */}
+          <VoterAttachments voterId={voterId} />
 
           {/* Location */}
           {voter.latitude && voter.longitude && (

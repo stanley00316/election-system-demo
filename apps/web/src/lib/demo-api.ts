@@ -187,6 +187,30 @@ export const demoVotersApi = {
       filtered = filtered.filter(v => v.tags?.includes(params.tag));
     }
     
+    // 影響力分數範圍篩選
+    if (params.influenceRange) {
+      switch (params.influenceRange) {
+        case 'high':
+          filtered = filtered.filter(v => v.influenceScore >= 80);
+          break;
+        case 'medium':
+          filtered = filtered.filter(v => v.influenceScore >= 50 && v.influenceScore < 80);
+          break;
+        case 'low':
+          filtered = filtered.filter(v => v.influenceScore < 50);
+          break;
+      }
+    }
+    
+    // 接觸狀態篩選
+    if (params.contactStatus) {
+      if (params.contactStatus === 'contacted') {
+        filtered = filtered.filter(v => v.contactCount > 0);
+      } else if (params.contactStatus === 'not_contacted') {
+        filtered = filtered.filter(v => !v.contactCount || v.contactCount === 0);
+      }
+    }
+    
     return paginate(filtered, params.page || 1, params.limit || 20);
   },
   
@@ -225,7 +249,15 @@ export const demoVotersApi = {
   
   getNearby: async (params: any) => {
     await delay(200);
-    const { lat, lng, radius = 1 } = params;
+    // 支援兩種參數名稱：lat/lng 或 latitude/longitude
+    const lat = params.lat ?? params.latitude;
+    const lng = params.lng ?? params.longitude;
+    const radius = params.radius ?? 1;
+    
+    if (!lat || !lng) {
+      return [];
+    }
+    
     return tempVoters.filter(v => {
       if (!v.latitude || !v.longitude) return false;
       const distance = Math.sqrt(
@@ -280,7 +312,44 @@ export const demoVotersApi = {
     await delay(100);
     return [];
   },
+  
+  // 附件相關 API
+  getAttachments: async (voterId: string) => {
+    await delay(100);
+    return tempVoterAttachments.filter(a => a.voterId === voterId);
+  },
+  
+  addAttachment: async (voterId: string, data: {
+    type: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize?: number;
+    mimeType?: string;
+  }) => {
+    await delay(200);
+    const newAttachment = {
+      id: 'attachment-' + Date.now(),
+      voterId,
+      type: data.type,
+      fileName: data.fileName,
+      fileUrl: data.fileUrl,
+      fileSize: data.fileSize,
+      mimeType: data.mimeType,
+      createdAt: new Date().toISOString(),
+    };
+    tempVoterAttachments.push(newAttachment);
+    return newAttachment;
+  },
+  
+  deleteAttachment: async (_voterId: string, attachmentId: string) => {
+    await delay(200);
+    tempVoterAttachments = tempVoterAttachments.filter(a => a.id !== attachmentId);
+    return { success: true };
+  },
 };
+
+// 暫存附件資料
+let tempVoterAttachments: any[] = [];
 
 // ==================== Contacts API ====================
 export const demoContactsApi = {
@@ -341,14 +410,35 @@ export const demoContactsApi = {
   
   getSummary: async (_campaignId: string) => {
     await delay(100);
+    // 轉換為物件格式 {TYPE_NAME: count}
+    const byType: Record<string, number> = {};
+    demoStats.contactTypeDistribution.forEach(item => {
+      byType[item.type] = item.count;
+    });
+    
+    const byOutcome: Record<string, number> = {
+      POSITIVE: tempContacts.filter(c => c.outcome === 'POSITIVE').length,
+      NEUTRAL: tempContacts.filter(c => c.outcome === 'NEUTRAL').length,
+      NEGATIVE: tempContacts.filter(c => c.outcome === 'NEGATIVE').length,
+      NOT_HOME: tempContacts.filter(c => c.outcome === 'NOT_HOME').length,
+      NO_RESPONSE: tempContacts.filter(c => c.outcome === 'NO_RESPONSE').length,
+    };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayContacts = tempContacts.filter(c => new Date(c.contactDate) >= today).length;
+    
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekContacts = tempContacts.filter(c => new Date(c.contactDate) >= weekAgo).length;
+    
     return {
-      total: tempContacts.length,
-      byType: demoStats.contactTypeDistribution,
-      byOutcome: [
-        { outcome: 'POSITIVE', count: tempContacts.filter(c => c.outcome === 'POSITIVE').length },
-        { outcome: 'NEUTRAL', count: tempContacts.filter(c => c.outcome === 'NEUTRAL').length },
-        { outcome: 'NEGATIVE', count: tempContacts.filter(c => c.outcome === 'NEGATIVE').length },
-      ],
+      totalContacts: tempContacts.length,
+      todayContacts,
+      weekContacts,
+      byType,
+      byOutcome,
+      recentContacts: tempContacts.slice(0, 10),
     };
   },
   
@@ -486,6 +576,36 @@ export const demoSchedulesApi = {
     return { success: true };
   },
   
+  updateItemStatus: async (scheduleId: string, itemId: string, status: string) => {
+    await delay(200);
+    const schedule = tempSchedules.find(s => s.id === scheduleId);
+    if (!schedule) throw new Error('行程不存在');
+    
+    const item = schedule.items?.find((i: any) => i.id === itemId);
+    if (!item) throw new Error('行程項目不存在');
+    
+    item.status = status;
+    return item;
+  },
+  
+  reorderItems: async (scheduleId: string, itemIds: string[]) => {
+    await delay(200);
+    const schedule = tempSchedules.find(s => s.id === scheduleId);
+    if (!schedule) throw new Error('行程不存在');
+    
+    // 根據 itemIds 重新排序 items
+    const reorderedItems = itemIds.map((id, index) => {
+      const item = schedule.items?.find((i: any) => i.id === id);
+      if (item) {
+        return { ...item, order: index + 1 };
+      }
+      return null;
+    }).filter(Boolean);
+    
+    schedule.items = reorderedItems;
+    return schedule;
+  },
+  
   optimize: async (_id: string, _startLocation: any) => {
     await delay(500);
     return { optimized: true, message: '路線已優化（示範模式）' };
@@ -518,6 +638,24 @@ export const demoSchedulesApi = {
     await delay(200);
     return { success: true };
   },
+  
+  // 匯出行程資料（整月）
+  exportByDateRange: async (campaignId: string, startDate: string, endDate: string) => {
+    await delay(300);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    return tempSchedules.filter(s => {
+      const scheduleDate = new Date(s.date);
+      return scheduleDate >= start && scheduleDate <= end;
+    }).map(schedule => ({
+      ...schedule,
+      items: schedule.items?.map((item: any) => ({
+        ...item,
+        voter: item.voterId ? tempVoters.find(v => v.id === item.voterId) : null,
+      })),
+    }));
+  },
 };
 
 // ==================== Google API ====================
@@ -547,12 +685,20 @@ export const demoGoogleApi = {
 export const demoAnalysisApi = {
   getOverview: async (_campaignId: string) => {
     await delay(200);
+    const uniqueVotersContacted = new Set(tempContacts.map(c => c.voterId)).size;
+    
     return {
-      totalVoters: demoStats.totalVoters,
-      totalContacts: demoStats.totalContacts,
+      voterStats: {
+        totalVoters: demoStats.totalVoters,
+        highInfluenceCount: tempVoters.filter(v => v.influenceScore >= 70).length,
+      },
+      contactStats: {
+        totalContacts: demoStats.totalContacts,
+        uniqueVotersContacted,
+        contactRate: uniqueVotersContacted / demoStats.totalVoters,
+      },
+      stanceDistribution: demoStats.stanceDistribution,
       totalEvents: demoStats.totalEvents,
-      supportRate: 45.2,
-      contactRate: 62.8,
       recentActivity: demoStats.dailyContacts.slice(-7),
     };
   },
@@ -593,8 +739,9 @@ export const demoAnalysisApi = {
   getWinProbability: async (_campaignId: string) => {
     await delay(300);
     return {
-      probability: 52.3,
-      confidence: 75,
+      probability: 0.523,  // 比例值，供 formatPercent 使用
+      confidence: 0.75,
+      scenario: 'COMPETITIVE',
       factors: [
         { name: '支持度', score: 68, weight: 0.4 },
         { name: '接觸率', score: 62, weight: 0.3 },
@@ -613,8 +760,8 @@ export const demoAnalysisApi = {
     
     return {
       topInfluencers: influencers.map(v => ({
-        id: v.id,
-        name: v.name,
+        voterId: v.id,
+        voterName: v.name,
         influenceScore: v.influenceScore,
         stance: v.stance,
         connections: Math.floor(Math.random() * 20 + 5),
@@ -636,13 +783,13 @@ export const demoAnalysisApi = {
     return {
       todayCompleted: 8,
       todayPlanned: 12,
-      todayCompletionRate: 66.7,
+      todayCompletionRate: 0.667,  // 比例值
       weekCompleted: 45,
       weekPlanned: 60,
-      weekCompletionRate: 75,
+      weekCompletionRate: 0.75,  // 比例值
       uniqueContacted: 312,
       totalVoters: demoStats.totalVoters,
-      contactedRate: 62.4,
+      contactedRate: 0.624,  // 比例值
     };
   },
 };

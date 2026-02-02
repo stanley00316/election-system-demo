@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { googleApi } from '@/lib/api';
 import {
@@ -17,7 +18,13 @@ import {
   XCircle,
   Loader2,
   ExternalLink,
+  Upload,
+  Download,
+  Info,
 } from 'lucide-react';
+
+// 檢查是否為示範模式
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 export function GoogleCalendarConnect() {
   const { toast } = useToast();
@@ -207,14 +214,49 @@ export function GoogleCalendarConnect() {
           )}
         </div>
 
+        {/* 示範模式提示 */}
+        {isDemoMode && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              示範模式不支援實際的 Google 帳號連結。正式環境中，您可以將行程雙向同步到 Google 行事曆。
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* 說明 */}
         <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
-          <p>連結後，您可以：</p>
+          <p className="font-medium text-foreground">功能說明：</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>將行程同步到 Google 行事曆</li>
-            <li>在行程中包含選民姓名、電話、地址等資訊</li>
-            <li>在手機上接收行程提醒</li>
+            <li>
+              <span className="font-medium">匯出到 Google 行事曆</span>
+              <span className="text-muted-foreground">：將選情系統的行程同步到 Google Calendar</span>
+            </li>
+            <li>
+              <span className="font-medium">從 Google 行事曆匯入</span>
+              <span className="text-muted-foreground">：將現有的 Google Calendar 行程匯入選情系統</span>
+            </li>
+            <li>
+              <span className="font-medium">行程提醒</span>
+              <span className="text-muted-foreground">：在手機上接收 Google Calendar 推播通知</span>
+            </li>
           </ul>
+        </div>
+
+        {/* 同步格式說明 */}
+        <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+          <p className="font-medium text-sm">同步到 Google Calendar 的格式：</p>
+          <div className="text-sm text-muted-foreground space-y-1 pl-2 border-l-2 border-primary/30">
+            <p><span className="font-medium">標題：</span>行程名稱 - 選民姓名</p>
+            <p><span className="font-medium">地點：</span>選民地址</p>
+            <p><span className="font-medium">說明：</span></p>
+            <div className="pl-4 text-xs">
+              <p>選民：XXX</p>
+              <p>電話：0912-XXX-XXX</p>
+              <p>LINE：xxx_id</p>
+              <p>備註：...</p>
+            </div>
+          </div>
         </div>
 
         {/* Google Calendar 連結 */}
@@ -229,6 +271,14 @@ export function GoogleCalendarConnect() {
             <ExternalLink className="h-3 w-3" />
           </a>
         )}
+
+        {/* ICS 匯出提示 */}
+        <div className="text-sm text-muted-foreground pt-2 border-t">
+          <p>
+            <span className="font-medium">提示：</span>您也可以在「行程規劃」頁面點擊「匯出行程」，
+            下載 ICS 檔案後手動匯入到 Google 行事曆或其他行事曆應用程式。
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

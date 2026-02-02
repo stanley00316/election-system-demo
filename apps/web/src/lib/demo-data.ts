@@ -106,6 +106,15 @@ export const demoCampaign = {
   updatedAt: new Date().toISOString(),
 };
 
+// 為 demoUser 新增 campaigns 和 teamMembers（解決循環依賴）
+(demoUser as any).campaigns = [demoCampaign];
+(demoUser as any).teamMembers = [{
+  id: 'demo-team-member-id',
+  campaignId: demoCampaign.id,
+  userId: demoUser.id,
+  role: 'ADMIN',
+}];
+
 // 生成選民資料
 function generateVoters(count: number): any[] {
   seed = 12345; // 重置種子
@@ -127,12 +136,22 @@ function generateVoters(count: number): any[] {
     const latOffset = (seededRandom() - 0.5) * 0.02;
     const lngOffset = (seededRandom() - 0.5) * 0.02;
 
+    // 60% 的選民有 LINE（現代人更常用 LINE）
+    const hasLine = seededRandom() > 0.4;
+    const lineId = hasLine ? `${surname.toLowerCase()}${firstName.toLowerCase()}${seededRandomInt(100, 999)}` : null;
+    const lineUrl = hasLine && seededRandom() > 0.5 ? `https://line.me/ti/p/~${lineId}` : null;
+    
+    // 有些人只有 LINE 沒有電話（30% 的情況）
+    const hasPhone = seededRandom() > 0.3;
+
     voters.push({
       id: `voter-${i + 1}`,
       campaignId: demoCampaign.id,
       name,
-      phone: generatePhone(),
+      phone: hasPhone ? generatePhone() : null,
       email: generateEmail(surname),
+      lineId,
+      lineUrl,
       address,
       city: '台北市',
       districtName: district.name,
@@ -186,6 +205,8 @@ function generateContacts(voters: any[], count: number): any[] {
         id: voter.id,
         name: voter.name,
         phone: voter.phone,
+        lineId: voter.lineId,
+        lineUrl: voter.lineUrl,
         address: voter.address,
         stance: voter.stance,
       },

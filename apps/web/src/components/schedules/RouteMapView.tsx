@@ -322,12 +322,9 @@ export default function RouteMapView({
             weight={2}
             opacity={0.8}
             fillOpacity={0.6}
-            eventHandlers={{
-              click: () => onNearbyVoterClick?.(voter),
-            }}
           >
             <Tooltip direction="top" offset={[0, -8]}>
-              <span>{voter.name}（點擊加入）</span>
+              <span>{voter.name}</span>
             </Tooltip>
             <Popup>
               <NearbyVoterPopup voter={voter} onAdd={() => onNearbyVoterClick?.(voter)} />

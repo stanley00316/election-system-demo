@@ -229,6 +229,10 @@ const realVotersApi = {
   batchCreateRelationships: (data: any) => api.post('/voters/relationships/batch', data),
   getRelationshipsByEvent: (eventId: string) => api.get<any>(`/voters/relationships/by-event/${eventId}`),
   getRelationshipMeetings: (relationshipId: string) => api.get<any[]>(`/voters/relationships/${relationshipId}/meetings`),
+  // 附件相關 API
+  getAttachments: (voterId: string) => api.get<any[]>(`/voters/${voterId}/attachments`),
+  addAttachment: (voterId: string, data: any) => api.post<any>(`/voters/${voterId}/attachments`, data),
+  deleteAttachment: (voterId: string, attachmentId: string) => api.delete(`/voters/${voterId}/attachments/${attachmentId}`),
 };
 export const votersApi = isDemoMode ? demoApi.demoVotersApi : realVotersApi;
 
@@ -270,6 +274,10 @@ const realSchedulesApi = {
   addItem: (id: string, data: any) => api.post(`/schedules/${id}/items`, data),
   removeItem: (scheduleId: string, itemId: string) =>
     api.delete(`/schedules/${scheduleId}/items/${itemId}`),
+  updateItemStatus: (scheduleId: string, itemId: string, status: string) =>
+    api.put(`/schedules/${scheduleId}/items/${itemId}/status`, { status }),
+  reorderItems: (scheduleId: string, itemIds: string[]) =>
+    api.put(`/schedules/${scheduleId}/items/reorder`, { itemIds }),
   optimize: (id: string, startLocation: any) =>
     api.post(`/schedules/${id}/optimize`, { startLocation }),
   getSuggestions: (campaignId: string, lat: number, lng: number) =>
@@ -279,6 +287,9 @@ const realSchedulesApi = {
   unsyncFromGoogle: (id: string) => api.delete(`/schedules/${id}/sync`),
   toggleSyncEnabled: (id: string, enabled: boolean) =>
     api.put(`/schedules/${id}/sync-enabled`, { enabled }),
+  // 匯出行程資料（整月）
+  exportByDateRange: (campaignId: string, startDate: string, endDate: string) =>
+    api.get<any[]>('/schedules/export', { campaignId, startDate, endDate }),
 };
 export const schedulesApi = isDemoMode ? demoApi.demoSchedulesApi : realSchedulesApi;
 

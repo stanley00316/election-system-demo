@@ -3,13 +3,10 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
   Shield, 
-  Key, 
   Smartphone, 
   Monitor, 
   Globe,
@@ -68,69 +65,8 @@ export default function SecuritySettingsPage() {
   const { toast } = useToast();
   const [sessions, setSessions] = useState<LoginSession[]>(mockSessions);
   
-  // 密碼變更
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  
   // 登出其他裝置
   const [isLoggingOut, setIsLoggingOut] = useState<string | null>(null);
-
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({
-        title: '錯誤',
-        description: '請填寫所有密碼欄位',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: '錯誤',
-        description: '新密碼與確認密碼不符',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast({
-        title: '錯誤',
-        description: '密碼長度至少需要 8 個字元',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      // TODO: 連接 API 變更密碼
-      // await api.put('/users/me/password', { currentPassword, newPassword });
-      
-      // 模擬 API 延遲
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: '成功',
-        description: '密碼已變更',
-      });
-      
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error: any) {
-      toast({
-        title: '錯誤',
-        description: error.message || '密碼變更失敗',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
 
   const handleLogoutSession = async (sessionId: string) => {
     setIsLoggingOut(sessionId);
@@ -207,65 +143,6 @@ export default function SecuritySettingsPage() {
       </div>
 
       <div className="grid gap-6 max-w-2xl">
-        {/* 變更密碼 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
-              變更密碼
-            </CardTitle>
-            <CardDescription>定期更新密碼以確保帳號安全</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">目前密碼</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="輸入目前密碼"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-password">新密碼</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="輸入新密碼（至少 8 個字元）"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">確認新密碼</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="再次輸入新密碼"
-              />
-            </div>
-            
-            <Button 
-              onClick={handleChangePassword} 
-              disabled={isChangingPassword}
-            >
-              {isChangingPassword ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  變更中...
-                </>
-              ) : (
-                '變更密碼'
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* 兩步驟驗證 */}
         <Card>
           <CardHeader>

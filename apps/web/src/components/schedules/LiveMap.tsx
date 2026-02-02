@@ -278,9 +278,6 @@ export default function LiveMap({
             weight={isSelected ? 3 : 2}
             opacity={0.9}
             fillOpacity={isSelected ? 0.9 : 0.7}
-            eventHandlers={{
-              click: () => onVoterClick?.(voter),
-            }}
           >
             <Tooltip direction="top" offset={[0, -8]}>
               <span>

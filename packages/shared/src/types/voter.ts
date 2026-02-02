@@ -33,6 +33,8 @@ export interface Voter {
   name: string;
   phone?: string;
   email?: string;
+  lineId?: string;      // LINE ID
+  lineUrl?: string;     // LINE 個人連結
   address?: string;
   city?: string;
   district?: string;
@@ -59,6 +61,8 @@ export interface CreateVoterDto {
   name: string;
   phone?: string;
   email?: string;
+  lineId?: string;
+  lineUrl?: string;
   address?: string;
   city?: string;
   district?: string;
@@ -77,6 +81,8 @@ export interface UpdateVoterDto {
   name?: string;
   phone?: string;
   email?: string;
+  lineId?: string;
+  lineUrl?: string;
   address?: string;
   city?: string;
   district?: string;
@@ -141,4 +147,23 @@ export interface VoterImportResult {
     row: number;
     message: string;
   }>;
+}
+
+// 選民附件類型
+export enum AttachmentType {
+  BUSINESS_CARD = 'BUSINESS_CARD',  // 名片
+  PHOTO = 'PHOTO',                   // 照片
+  DOCUMENT = 'DOCUMENT',             // 文件
+  OTHER = 'OTHER',                   // 其他
+}
+
+export interface VoterAttachment {
+  id: string;
+  voterId: string;
+  type: AttachmentType;
+  fileName: string;
+  fileUrl: string;        // 檔案 URL 或 base64 data URL
+  fileSize?: number;      // 檔案大小（bytes）
+  mimeType?: string;      // MIME 類型
+  createdAt: Date;
 }
