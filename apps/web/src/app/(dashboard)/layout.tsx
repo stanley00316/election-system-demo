@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/popover';
 import { useAuthStore } from '@/stores/auth';
 import { useCampaignStore } from '@/stores/campaign';
+import { useHydration } from '@/hooks/use-hydration';
 import { authApi } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -69,6 +70,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const hydrated = useHydration();
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
@@ -119,7 +121,8 @@ export default function DashboardLayout({
     router.push('/login');
   };
 
-  if (isLoading) {
+  // 水合完成前或載入中顯示載入狀態，避免 SSR 與客戶端渲染不匹配
+  if (isLoading || !hydrated) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
