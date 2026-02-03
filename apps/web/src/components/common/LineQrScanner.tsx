@@ -30,6 +30,8 @@ interface LineQrScannerProps {
  * LINE QR Code 格式：
  * - https://line.me/ti/p/~{LINE_ID} - 包含 LINE ID
  * - https://line.me/R/ti/p/{內部ID} - 不含 LINE ID，但可作為連結
+ * 
+ * @updated 2026-02-04 - 移除相機掃描，僅保留圖片上傳
  */
 function parseLineQrCode(url: string): { lineId?: string; lineUrl: string } | null {
   // 確保是 LINE 連結
