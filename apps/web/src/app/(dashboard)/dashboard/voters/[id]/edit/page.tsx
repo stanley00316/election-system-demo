@@ -441,17 +441,19 @@ export default function EditVoterPage() {
         </div>
       </form>
 
-      {/* LINE QR Scanner */}
-      <LineQrScanner
-        open={qrScannerOpen}
-        onOpenChange={setQrScannerOpen}
-        onScan={(result) => {
-          if (result.lineId) {
-            setValue('lineId', result.lineId);
-          }
-          setValue('lineUrl', result.lineUrl);
-        }}
-      />
+      {/* LINE QR Scanner - 條件渲染以避免 SSR 水合錯誤 */}
+      {qrScannerOpen && (
+        <LineQrScanner
+          open={qrScannerOpen}
+          onOpenChange={setQrScannerOpen}
+          onScan={(result) => {
+            if (result.lineId) {
+              setValue('lineId', result.lineId);
+            }
+            setValue('lineUrl', result.lineUrl);
+          }}
+        />
+      )}
     </div>
   );
 }
