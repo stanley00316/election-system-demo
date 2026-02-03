@@ -24,6 +24,7 @@ import { useCampaignStore } from '@/stores/campaign';
 import { votersApi } from '@/lib/api';
 import { ArrowLeft, Save, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useHydration } from '@/hooks/use-hydration';
 
 // 動態匯入 QR 掃描器元件，避免 SSR 錯誤
 const LineQrScanner = dynamic(
@@ -63,6 +64,7 @@ const voterSchema = z.object({
 type VoterFormData = z.infer<typeof voterSchema>;
 
 export default function NewVoterPage() {
+  const hydrated = useHydration();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { currentCampaign } = useCampaignStore();
@@ -113,6 +115,15 @@ export default function NewVoterPage() {
   const onSubmit = (data: VoterFormData) => {
     createMutation.mutate(data);
   };
+
+  // 水合完成前顯示載入狀態，避免 SSR 與客戶端渲染不匹配
+  if (!hydrated) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!currentCampaign) {
     return (

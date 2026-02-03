@@ -28,6 +28,7 @@ import { VoterImportDialog } from '@/components/voters/VoterImportDialog';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useHydration } from '@/hooks/use-hydration';
 import {
   Popover,
   PopoverContent,
@@ -53,6 +54,7 @@ const STANCE_OPTIONS = [
 ];
 
 export default function VotersPage() {
+  const hydrated = useHydration();
   const { currentCampaign } = useCampaignStore();
   const campaignId = currentCampaign?.id;
   const { toast } = useToast();
@@ -118,6 +120,15 @@ export default function VotersPage() {
       }),
     enabled: !!campaignId,
   });
+
+  // 水合完成前顯示載入狀態，避免 SSR 與客戶端渲染不匹配
+  if (!hydrated) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!currentCampaign) {
     return (
