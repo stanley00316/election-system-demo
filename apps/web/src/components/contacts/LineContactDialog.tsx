@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { contactsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Loader2 } from 'lucide-react';
-import { ContactType, ContactOutcome } from '@election/shared';
+import { ContactType, ContactOutcome } from '@/shared/types/contact';
 
 interface LineContactDialogProps {
   open: boolean;
