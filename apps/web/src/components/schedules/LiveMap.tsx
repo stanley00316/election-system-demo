@@ -168,8 +168,8 @@ function VoterPopup({
         </a>
       )}
 
-      {/* LINE 資訊顯示 - v2 強制更新 */}
-      {voter.lineId ? (
+      {/* LINE 資訊顯示 - v3 調試版 */}
+      {voter.lineId && (
         <a
           href={voter.lineUrl || `https://line.me/ti/p/~${voter.lineId}`}
           target="_blank"
@@ -180,18 +180,11 @@ function VoterPopup({
           <MessageCircle className="h-3 w-3" />
           LINE: {voter.lineId}
         </a>
-      ) : voter.lineUrl ? (
-        <a
-          href={voter.lineUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-green-600 hover:underline mb-1 flex items-center gap-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <MessageCircle className="h-3 w-3" />
-          LINE: 開啟聊天
-        </a>
-      ) : null}
+      )}
+      {/* 調試：顯示 LINE 資料狀態 (部署確認用，之後刪除) */}
+      <p className="text-xs text-gray-400 mb-1">
+        [v3] LINE: {voter.lineId || '無'} | URL: {voter.lineUrl ? '有' : '無'}
+      </p>
 
       {voter.distance !== undefined && (
         <p className="text-xs text-gray-500 mb-1">
