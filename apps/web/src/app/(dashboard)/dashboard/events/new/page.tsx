@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { NumericKeypad } from '@/components/ui/numeric-keypad';
 import {
   Select,
   SelectContent,
@@ -56,6 +57,7 @@ export default function NewEventPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
@@ -237,11 +239,10 @@ export default function NewEventPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="expectedAttendees">預期人數</Label>
-                <Input
-                  id="expectedAttendees"
-                  type="number"
-                  min="0"
-                  {...register('expectedAttendees')}
+                <NumericKeypad
+                  value={watch('expectedAttendees')}
+                  onChange={(val) => setValue('expectedAttendees', val)}
+                  min={0}
                   placeholder="預計參與人數"
                 />
               </div>

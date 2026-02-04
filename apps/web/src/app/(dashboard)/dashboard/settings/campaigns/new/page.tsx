@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { NumericKeypad } from '@/components/ui/numeric-keypad';
 import {
   Select,
   SelectContent,
@@ -290,10 +291,10 @@ export default function NewCampaignPage() {
             {['CITY_COUNCILOR', 'LEGISLATOR'].includes(electionType) && (
               <div className="space-y-2">
                 <Label htmlFor="constituency">選區編號</Label>
-                <Input
-                  id="constituency"
-                  type="number"
-                  {...register('constituency')}
+                <NumericKeypad
+                  value={watch('constituency')}
+                  onChange={(val) => setValue('constituency', val)}
+                  min={1}
                   placeholder="例如：3"
                 />
               </div>

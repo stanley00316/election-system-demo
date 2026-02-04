@@ -33,6 +33,8 @@ export interface Voter {
   name: string;
   phone?: string;
   email?: string;
+  lineId?: string;      // LINE ID
+  lineUrl?: string;     // LINE 個人連結
   address?: string;
   city?: string;
   district?: string;
@@ -59,6 +61,8 @@ export interface CreateVoterDto {
   name: string;
   phone?: string;
   email?: string;
+  lineId?: string;      // LINE ID
+  lineUrl?: string;     // LINE 個人連結
   address?: string;
   city?: string;
   district?: string;
@@ -77,6 +81,8 @@ export interface UpdateVoterDto {
   name?: string;
   phone?: string;
   email?: string;
+  lineId?: string;      // LINE ID
+  lineUrl?: string;     // LINE 個人連結
   address?: string;
   city?: string;
   district?: string;

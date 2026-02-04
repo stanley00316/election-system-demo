@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NumericKeypad } from '@/components/ui/numeric-keypad';
 import {
   Dialog,
   DialogContent,
@@ -69,7 +70,7 @@ export default function TeamPage() {
   // 邀請連結對話框
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkRole, setLinkRole] = useState<'ADMIN' | 'EDITOR' | 'VIEWER'>('VIEWER');
-  const [linkMaxUses, setLinkMaxUses] = useState<string>('');
+  const [linkMaxUses, setLinkMaxUses] = useState<number | undefined>(undefined);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   
   // 刪除成員確認
@@ -117,7 +118,7 @@ export default function TeamPage() {
       queryClient.invalidateQueries({ queryKey: ['campaign', currentCampaign?.id, 'invite-links'] });
       setLinkDialogOpen(false);
       setLinkRole('VIEWER');
-      setLinkMaxUses('');
+      setLinkMaxUses(undefined);
       toast({
         title: '成功',
         description: '已建立邀請連結',
@@ -280,12 +281,10 @@ export default function TeamPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="maxUses">最大使用次數（選填）</Label>
-                  <Input
-                    id="maxUses"
-                    type="number"
-                    min="1"
+                  <NumericKeypad
                     value={linkMaxUses}
-                    onChange={(e) => setLinkMaxUses(e.target.value)}
+                    onChange={(val) => setLinkMaxUses(val)}
+                    min={1}
                     placeholder="留空表示無限制"
                   />
                 </div>
@@ -300,7 +299,7 @@ export default function TeamPage() {
                 <Button
                   onClick={() => createLinkMutation.mutate({
                     role: linkRole,
-                    maxUses: linkMaxUses ? parseInt(linkMaxUses) : undefined,
+                    maxUses: linkMaxUses,
                   })}
                   disabled={createLinkMutation.isPending}
                 >

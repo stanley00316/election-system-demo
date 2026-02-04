@@ -29,10 +29,10 @@ const parties = ['KMT', 'DPP', 'TPP', 'NPP', 'INDEPENDENT', 'INDEPENDENT', 'UNKN
 const stances = ['STRONG_SUPPORT', 'SUPPORT', 'SUPPORT', 'LEAN_SUPPORT', 'LEAN_SUPPORT', 'NEUTRAL', 'NEUTRAL', 'UNDECIDED', 'UNDECIDED', 'LEAN_OPPOSE', 'OPPOSE'];
 const occupations = ['企業主', '教師', '工程師', '醫師', '護理師', '公務員', '退休', '家管', '商人', '律師', '會計師', '業務員', '技師', '司機', '廚師', '美髮師', '服務業', '金融業', '科技業', '製造業', '建築業', '自由業', '軍警', '農漁業', '學生'];
 const tagsList = ['里長推薦', '商會成員', '教育界', '家長會', '社區發展協會', '宮廟', '志工團', '青年會', '婦女會', '長青會', '校友會', '同鄉會', '獅子會', '扶輪社', '專業人士', '地方仕紳', '意見領袖', '社區熱心', '環保志工', '文化協會'];
-const contactTypes = ['HOME_VISIT', 'STREET_VISIT', 'PHONE_CALL', 'LIVING_ROOM', 'MARKETPLACE', 'TEMPLE', 'EVENT'];
+const contactTypes = ['HOME_VISIT', 'STREET_VISIT', 'PHONE_CALL', 'LINE_CALL', 'LIVING_ROOM', 'MARKETPLACE', 'TEMPLE', 'EVENT'];
 const outcomes = ['POSITIVE', 'POSITIVE', 'NEUTRAL', 'NEUTRAL', 'NEGATIVE', 'NOT_HOME', 'NO_RESPONSE'];
 const topics = ['政策討論', '地方建設', '社會福利', '教育議題', '經濟發展', '環境保護', '交通問題', '治安問題', '醫療照護', '青年就業', '長照政策', '一般寒暄'];
-const contactNotes = ['表達高度支持', '反應良好', '態度中立', '需要再追蹤', '有其他支持對象', '不在家', '拒絕交談', '希望了解更多政見', '關心社區發展', '反映鄰里問題'];
+const contactNotes = ['表達高度支持', '反應良好', '態度中立', '需要再追蹤', '有其他支持對象', '不在家', '拒絕交談', '希望了解更多政見', '關心社區發展', '反映鄰里問題', 'LINE 已讀未回', 'LINE 聊天互動良好', 'LINE 傳送政見資料', '透過 LINE 約定下次見面'];
 const eventTypes = ['LIVING_ROOM', 'COMMUNITY', 'TEMPLE', 'CAMPAIGN', 'MEETING'];
 const eventStatuses = ['COMPLETED', 'COMPLETED', 'CONFIRMED', 'PLANNED', 'PLANNED'];
 const eventNames = ['客廳會', '社區座談會', '里民大會', '造勢晚會', '政見發表會', '青年論壇', '婦女座談', '長青聯誼', '志工感謝餐會', '地方建設說明會'];
@@ -136,10 +136,11 @@ function generateVoters(count: number): any[] {
     const latOffset = (seededRandom() - 0.5) * 0.02;
     const lngOffset = (seededRandom() - 0.5) * 0.02;
 
-    // 60% 的選民有 LINE（現代人更常用 LINE）
-    const hasLine = seededRandom() > 0.4;
-    const lineId = hasLine ? `${surname.toLowerCase()}${firstName.toLowerCase()}${seededRandomInt(100, 999)}` : null;
-    const lineUrl = hasLine && seededRandom() > 0.5 ? `https://line.me/ti/p/~${lineId}` : null;
+    // 所有選民都有 LINE（現代人常用 LINE）
+    // 使用隨機英文字母和數字組合生成 LINE ID
+    const lineIdPrefix = ['user', 'tw', 'line', 'id', 'tp'][seededRandomInt(0, 4)];
+    const lineId = `${lineIdPrefix}${seededRandomInt(10000, 99999)}`;
+    const lineUrl = seededRandom() > 0.3 ? `https://line.me/ti/p/~${lineId}` : null;
     
     // 有些人只有 LINE 沒有電話（30% 的情況）
     const hasPhone = seededRandom() > 0.3;

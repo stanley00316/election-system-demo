@@ -66,6 +66,13 @@ import {
 } from 'lucide-react';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
 import { VoterAttachments } from '@/components/voters/VoterAttachments';
+import dynamic from 'next/dynamic';
+
+// 動態匯入 LINE 通話記錄對話框
+const LineContactDialog = dynamic(
+  () => import('@/components/contacts/LineContactDialog').then(mod => mod.LineContactDialog),
+  { ssr: false }
+);
 
 const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
   INVITED: '已邀請',
@@ -87,6 +94,7 @@ export default function VoterDetailPage() {
   const [addRelationDialogOpen, setAddRelationDialogOpen] = useState(false);
   const [recordMeetingDialogOpen, setRecordMeetingDialogOpen] = useState(false);
   const [addToScheduleOpen, setAddToScheduleOpen] = useState(false);
+  const [lineContactDialogOpen, setLineContactDialogOpen] = useState(false);
   const [selectedRelationship, setSelectedRelationship] = useState<any>(null);
   const [relationSearch, setRelationSearch] = useState('');
   const [selectedRelationVoter, setSelectedRelationVoter] = useState<any>(null);
@@ -270,7 +278,32 @@ export default function VoterDetailPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* LINE 按鈕 - 當選民有 LINE 資訊時顯示 */}
+          {(voter.lineId || voter.lineUrl) && (
+            <>
+              <Button
+                variant="outline"
+                className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                onClick={() => {
+                  const lineUrl = voter.lineUrl || (voter.lineId ? `https://line.me/ti/p/~${voter.lineId}` : null);
+                  if (lineUrl) {
+                    window.open(lineUrl, '_blank');
+                  }
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                開啟 LINE
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLineContactDialogOpen(true)}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                記錄 LINE 通話
+              </Button>
+            </>
+          )}
           <Button variant="outline" onClick={() => setAddToScheduleOpen(true)}>
             <CalendarPlus className="h-4 w-4 mr-2" />
             加入行程
@@ -951,6 +984,25 @@ export default function VoterDetailPage() {
         open={addToScheduleOpen}
         onOpenChange={setAddToScheduleOpen}
       />
+
+      {/* LINE 通話記錄對話框 */}
+      {lineContactDialogOpen && voter && currentCampaign && (
+        <LineContactDialog
+          open={lineContactDialogOpen}
+          onOpenChange={setLineContactDialogOpen}
+          voter={{
+            id: voter.id,
+            name: voter.name,
+            lineId: voter.lineId,
+            lineUrl: voter.lineUrl,
+          }}
+          campaignId={currentCampaign.id}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['voter', voterId] });
+            queryClient.invalidateQueries({ queryKey: ['contacts'] });
+          }}
+        />
+      )}
     </div>
   );
 }

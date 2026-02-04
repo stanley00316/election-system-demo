@@ -4,6 +4,7 @@ export enum ContactType {
   HOME_VISIT = 'HOME_VISIT',         // 家訪
   STREET_VISIT = 'STREET_VISIT',     // 掃街
   PHONE_CALL = 'PHONE_CALL',         // 電話
+  LINE_CALL = 'LINE_CALL',           // LINE 通話
   LIVING_ROOM = 'LIVING_ROOM',       // 客廳會
   FUNERAL = 'FUNERAL',               // 公祭
   WEDDING = 'WEDDING',               // 喜事

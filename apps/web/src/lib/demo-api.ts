@@ -346,6 +346,19 @@ export const demoVotersApi = {
     tempVoterAttachments = tempVoterAttachments.filter(a => a.id !== attachmentId);
     return { success: true };
   },
+  
+  searchByLine: async (params: { campaignId: string; lineId?: string; lineUrl?: string }) => {
+    await delay(200);
+    const voters = tempVoters.filter(v => {
+      if (params.lineId && v.lineId === params.lineId) return true;
+      if (params.lineUrl && v.lineUrl === params.lineUrl) return true;
+      return false;
+    });
+    return {
+      found: voters.length > 0,
+      voters,
+    };
+  },
 };
 
 // 暫存附件資料

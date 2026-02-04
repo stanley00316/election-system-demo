@@ -216,6 +216,8 @@ const realVotersApi = {
   update: (id: string, data: any) => api.put<any>(`/voters/${id}`, data),
   delete: (id: string) => api.delete(`/voters/${id}`),
   getNearby: (params: any) => api.get<any[]>('/voters/nearby', params),
+  searchByLine: (params: { campaignId: string; lineId?: string; lineUrl?: string }) =>
+    api.get<{ found: boolean; voters: any[] }>('/voters/search-by-line', params),
   getDuplicates: (campaignId: string) =>
     api.get<any[]>('/voters/duplicates', { campaignId }),
   importExcel: (file: File, campaignId: string) =>

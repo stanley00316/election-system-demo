@@ -11,6 +11,8 @@ export interface Voter {
   name: string;
   address?: string;
   phone?: string;
+  lineId?: string;
+  lineUrl?: string;
   stance: string;
   influenceScore: number;
   latitude: number;
@@ -55,6 +57,18 @@ function VoterPopup({ voter }: { voter: Voter }) {
 
       {voter.phone && (
         <p className="text-xs text-gray-600 mb-1">電話: {voter.phone}</p>
+      )}
+
+      {(voter.lineId || voter.lineUrl) && (
+        <a
+          href={voter.lineUrl || `https://line.me/ti/p/~${voter.lineId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-green-600 hover:underline mb-1 flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          LINE: {voter.lineId || '開啟聊天'}
+        </a>
       )}
 
       <div className="flex items-center justify-between text-xs mt-2 text-gray-500">

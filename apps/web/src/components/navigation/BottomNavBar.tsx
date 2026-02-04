@@ -14,6 +14,7 @@ import {
   BarChart3,
   Settings,
   MoreHorizontal,
+  QrCode,
   LucideIcon,
 } from 'lucide-react';
 import { NavSettingsDialog } from './NavSettingsDialog';
@@ -22,6 +23,7 @@ import { NavSettingsDialog } from './NavSettingsDialog';
 export const ALL_NAV_ITEMS = [
   { name: '總覽', href: '/dashboard', icon: LayoutDashboard },
   { name: '選民管理', href: '/dashboard/voters', icon: Users },
+  { name: '掃描 LINE', href: '/dashboard/scan-line', icon: QrCode },
   { name: '接觸紀錄', href: '/dashboard/contacts', icon: MessageSquare },
   { name: '活動管理', href: '/dashboard/events', icon: Calendar },
   { name: '行程規劃', href: '/dashboard/schedules', icon: MapPin },

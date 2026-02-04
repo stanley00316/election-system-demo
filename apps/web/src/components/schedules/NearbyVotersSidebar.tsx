@@ -17,6 +17,7 @@ import {
   GripVertical,
   Trash2,
   Navigation,
+  MessageCircle,
 } from 'lucide-react';
 import type { NearbyVoter } from './LiveMap';
 
@@ -197,6 +198,18 @@ export function NearbyVotersSidebar({
                           {voter.phone}
                         </a>
                       )}
+                      {(voter.lineId || voter.lineUrl) && (
+                        <a
+                          href={voter.lineUrl || `https://line.me/ti/p/~${voter.lineId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-green-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          LINE
+                        </a>
+                      )}
                     </div>
                   </div>
                   <Button
@@ -287,6 +300,18 @@ export function NearbyVotersSidebar({
                           <Clock className="h-3 w-3" />
                           {formatLastContact(voter.lastContactAt)}
                         </span>
+                      )}
+                      {(voter.lineId || voter.lineUrl) && (
+                        <a
+                          href={voter.lineUrl || `https://line.me/ti/p/~${voter.lineId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-green-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          LINE
+                        </a>
                       )}
                     </div>
                   </div>

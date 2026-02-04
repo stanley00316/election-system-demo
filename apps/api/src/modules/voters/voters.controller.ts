@@ -65,6 +65,16 @@ export class VotersController {
     );
   }
 
+  @Get('search-by-line')
+  @ApiOperation({ summary: '根據 LINE ID 或 URL 搜尋選民' })
+  async searchByLine(
+    @Query('campaignId') campaignId: string,
+    @Query('lineId') lineId?: string,
+    @Query('lineUrl') lineUrl?: string,
+  ) {
+    return this.votersService.searchByLine(campaignId, lineId, lineUrl);
+  }
+
   @Get('duplicates')
   @ApiOperation({ summary: '查詢重複選民' })
   async findDuplicates(@Query('campaignId') campaignId: string) {

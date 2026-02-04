@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { NumericKeypad } from '@/components/ui/numeric-keypad';
 import {
   Select,
   SelectContent,
@@ -79,6 +80,7 @@ export default function EditVoterPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<VoterFormData>({
@@ -301,10 +303,11 @@ export default function EditVoterPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="age">年齡</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    {...register('age')}
+                  <NumericKeypad
+                    value={watch('age')}
+                    onChange={(val) => setValue('age', val as any)}
+                    min={0}
+                    max={150}
                     placeholder="45"
                   />
                 </div>
@@ -399,12 +402,11 @@ export default function EditVoterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="influenceScore">影響力分數 (0-100)</Label>
-                <Input
-                  id="influenceScore"
-                  type="number"
-                  min="0"
-                  max="100"
-                  {...register('influenceScore')}
+                <NumericKeypad
+                  value={watch('influenceScore')}
+                  onChange={(val) => setValue('influenceScore', val)}
+                  min={0}
+                  max={100}
                   placeholder="50"
                 />
               </div>

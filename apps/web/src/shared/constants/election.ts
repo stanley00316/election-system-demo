@@ -104,6 +104,7 @@ export const CONTACT_TYPE_LABELS = {
   HOME_VISIT: '家訪',
   STREET_VISIT: '掃街',
   PHONE_CALL: '電話',
+  LINE_CALL: 'LINE 通話',
   LIVING_ROOM: '客廳會',
   FUNERAL: '公祭',
   WEDDING: '喜事',

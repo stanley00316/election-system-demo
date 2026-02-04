@@ -175,6 +175,8 @@ model Voter {
   name            String
   phone           String?
   email           String?
+  lineId          String?         @map("line_id")
+  lineUrl         String?         @map("line_url")
   address         String?
   city            String?
   districtName    String?         @map("district_name")
@@ -212,6 +214,8 @@ model Voter {
   @@index([stance])
   @@index([influenceScore])
   @@index([createdAt])
+  @@index([lineId])
+  @@index([lineUrl])
   @@map("voters")
 }
 
@@ -568,6 +572,7 @@ enum ContactType {
   HOME_VISIT
   STREET_VISIT
   PHONE_CALL
+  LINE_CALL
   LIVING_ROOM
   FUNERAL
   WEDDING

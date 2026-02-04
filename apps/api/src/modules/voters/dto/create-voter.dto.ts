@@ -34,6 +34,16 @@ export class CreateVoterDto {
   @IsOptional()
   email?: string;
 
+  @ApiPropertyOptional({ description: 'LINE ID' })
+  @IsString()
+  @IsOptional()
+  lineId?: string;
+
+  @ApiPropertyOptional({ description: 'LINE 個人連結' })
+  @IsString()
+  @IsOptional()
+  lineUrl?: string;
+
   @ApiPropertyOptional({ description: '地址' })
   @IsString()
   @IsOptional()

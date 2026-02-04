@@ -13,7 +13,7 @@ import {
   useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { Phone, Navigation } from 'lucide-react';
+import { Phone, Navigation, MessageCircle } from 'lucide-react';
 import { getStanceLabel } from '@/lib/utils';
 import 'leaflet/dist/leaflet.css';
 
@@ -22,6 +22,8 @@ export interface NearbyVoter {
   name: string;
   address?: string;
   phone?: string;
+  lineId?: string;
+  lineUrl?: string;
   stance?: string;
   influenceScore?: number;
   latitude: number;
@@ -163,6 +165,19 @@ function VoterPopup({
         >
           <Phone className="h-3 w-3" />
           電話: {voter.phone}
+        </a>
+      )}
+
+      {(voter.lineId || voter.lineUrl) && (
+        <a
+          href={voter.lineUrl || `https://line.me/ti/p/~${voter.lineId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-green-600 hover:underline mb-1 flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MessageCircle className="h-3 w-3" />
+          LINE: {voter.lineId || '開啟聊天'}
         </a>
       )}
 

@@ -234,6 +234,48 @@ export class VotersService {
     return { message: '選民已刪除' };
   }
 
+  async searchByLine(campaignId: string, lineId?: string, lineUrl?: string) {
+    if (!lineId && !lineUrl) {
+      throw new BadRequestException('請提供 LINE ID 或 LINE URL');
+    }
+
+    const where: Prisma.VoterWhereInput = {
+      campaignId,
+      OR: [],
+    };
+
+    if (lineId) {
+      (where.OR as Prisma.VoterWhereInput[]).push({ lineId });
+    }
+
+    if (lineUrl) {
+      (where.OR as Prisma.VoterWhereInput[]).push({ lineUrl });
+    }
+
+    const voters = await this.prisma.voter.findMany({
+      where,
+      include: {
+        contacts: {
+          orderBy: { contactDate: 'desc' },
+          take: 5,
+          include: {
+            user: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+        _count: {
+          select: { contacts: true },
+        },
+      },
+    });
+
+    return {
+      found: voters.length > 0,
+      voters,
+    };
+  }
+
   async findNearby(
     campaignId: string,
     latitude: number,

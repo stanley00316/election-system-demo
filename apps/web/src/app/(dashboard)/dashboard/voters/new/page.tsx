@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { NumericKeypad } from '@/components/ui/numeric-keypad';
 import {
   Select,
   SelectContent,
@@ -66,10 +67,15 @@ type VoterFormData = z.infer<typeof voterSchema>;
 export default function NewVoterPage() {
   const hydrated = useHydration();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { currentCampaign } = useCampaignStore();
   const { toast } = useToast();
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
+
+  // 從 URL 取得預設的 LINE 資訊
+  const defaultLineId = searchParams.get('lineId') || '';
+  const defaultLineUrl = searchParams.get('lineUrl') || '';
 
   const {
     register,
@@ -82,6 +88,8 @@ export default function NewVoterPage() {
     defaultValues: {
       stance: 'UNDECIDED',
       influenceScore: 0,
+      lineId: defaultLineId,
+      lineUrl: defaultLineUrl,
     },
   });
 
@@ -278,10 +286,11 @@ export default function NewVoterPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="age">年齡</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    {...register('age')}
+                  <NumericKeypad
+                    value={watch('age')}
+                    onChange={(val) => setValue('age', val as any)}
+                    min={0}
+                    max={150}
                     placeholder="45"
                   />
                 </div>
@@ -374,12 +383,11 @@ export default function NewVoterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="influenceScore">影響力分數 (0-100)</Label>
-                <Input
-                  id="influenceScore"
-                  type="number"
-                  min="0"
-                  max="100"
-                  {...register('influenceScore')}
+                <NumericKeypad
+                  value={watch('influenceScore')}
+                  onChange={(val) => setValue('influenceScore', val)}
+                  min={0}
+                  max={100}
                   placeholder="50"
                 />
               </div>
