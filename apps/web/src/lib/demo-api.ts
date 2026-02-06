@@ -526,6 +526,16 @@ export const demoEventsApi = {
     return { success: true };
   },
   
+  updateAttendeeStatus: async (_eventId: string, _voterId: string, _status: string) => {
+    await delay(200);
+    return { success: true };
+  },
+  
+  removeAttendee: async (_eventId: string, _voterId: string) => {
+    await delay(200);
+    return { success: true };
+  },
+  
   checkIn: async (_id: string, _voterId: string) => {
     await delay(200);
     return { success: true };

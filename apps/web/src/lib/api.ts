@@ -269,6 +269,10 @@ const realEventsApi = {
   getAttendees: (id: string) => api.get<any[]>(`/events/${id}/attendees`),
   addAttendee: (id: string, voterId: string) =>
     api.post(`/events/${id}/attendees`, { voterId }),
+  updateAttendeeStatus: (eventId: string, voterId: string, status: string) =>
+    api.put(`/events/${eventId}/attendees/${voterId}/status`, { status }),
+  removeAttendee: (eventId: string, voterId: string) =>
+    api.delete(`/events/${eventId}/attendees/${voterId}`),
   checkIn: (id: string, voterId: string) =>
     api.post(`/events/${id}/check-in`, { voterId }),
 };

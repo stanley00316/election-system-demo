@@ -29,6 +29,8 @@ import { eventsApi, votersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStanceLabel } from '@/lib/utils';
 import { QuickRelationDialog } from '@/components/events';
+import { Input } from '@/components/ui/input';
+import { useCampaignStore } from '@/stores/campaign';
 import {
   ArrowLeft,
   Edit,
@@ -41,6 +43,7 @@ import {
   CheckCircle,
   Link as LinkIcon,
   ArrowRightLeft,
+  Search,
 } from 'lucide-react';
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
@@ -100,6 +103,10 @@ export default function EventDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quickRelationOpen, setQuickRelationOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
+  const [addAttendeeDialogOpen, setAddAttendeeDialogOpen] = useState(false);
+  const [voterSearch, setVoterSearch] = useState('');
+  const [selectedVoter, setSelectedVoter] = useState<any>(null);
+  const { currentCampaign } = useCampaignStore();
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', eventId],
@@ -146,10 +153,74 @@ export default function EventDetailPage() {
     },
   });
 
+  // 搜尋選民
+  const { data: voterSearchResults } = useQuery({
+    queryKey: ['voters', 'search', voterSearch, currentCampaign?.id],
+    queryFn: () =>
+      votersApi.getAll({
+        campaignId: currentCampaign?.id,
+        search: voterSearch,
+        limit: 10,
+      }),
+    enabled: !!voterSearch && voterSearch.length >= 2 && !!currentCampaign?.id,
+  });
+
+  // 新增參與者
+  const addAttendeeMutation = useMutation({
+    mutationFn: (voterId: string) => eventsApi.addAttendee(eventId, voterId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId, 'attendees'] });
+      setAddAttendeeDialogOpen(false);
+      setSelectedVoter(null);
+      setVoterSearch('');
+      toast({
+        title: '成功',
+        description: '已新增參與者',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: '新增失敗',
+        description: error.message || '無法新增參與者',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 更新參與者狀態
+  const updateAttendeeStatusMutation = useMutation({
+    mutationFn: ({ voterId, status }: { voterId: string; status: string }) =>
+      eventsApi.updateAttendeeStatus(eventId, voterId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId, 'attendees'] });
+      toast({
+        title: '狀態已更新',
+        description: '參與者狀態已更新',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: '更新失敗',
+        description: error.message || '無法更新狀態',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleStatusChange = (newStatus: string) => {
     if (newStatus !== event?.status) {
       updateStatusMutation.mutate(newStatus);
     }
+  };
+
+  const selectVoter = (voter: any) => {
+    setSelectedVoter(voter);
+    setVoterSearch('');
+  };
+
+  const handleAddAttendee = () => {
+    if (!selectedVoter) return;
+    addAttendeeMutation.mutate(selectedVoter.id);
   };
 
   if (isLoading) {
@@ -263,9 +334,9 @@ export default function EventDetailPage() {
           <TabsTrigger value="attendees" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             參與者
-            {attendees?.length > 0 && (
+            {(attendees?.length ?? 0) > 0 && (
               <Badge variant="secondary" className="ml-1">
-                {attendees.length}
+                {attendees?.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -457,15 +528,107 @@ export default function EventDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>參與者列表</CardTitle>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                新增參與者
-              </Button>
+              <Dialog open={addAttendeeDialogOpen} onOpenChange={setAddAttendeeDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    新增參與者
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>新增參與者</DialogTitle>
+                    <DialogDescription>
+                      搜尋並選擇要加入此活動的選民
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {selectedVoter ? (
+                      <div className="flex items-center justify-between p-4 rounded-lg bg-muted">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="font-medium">
+                              {selectedVoter.name?.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{selectedVoter.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedVoter.phone || selectedVoter.address || ''}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedVoter(null)}
+                        >
+                          更換
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="搜尋選民姓名或電話..."
+                            className="pl-10"
+                            value={voterSearch}
+                            onChange={(e) => setVoterSearch(e.target.value)}
+                          />
+                        </div>
+                        {(voterSearchResults?.data?.length ?? 0) > 0 && (
+                          <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                            {voterSearchResults?.data?.map((voter: any) => (
+                              <button
+                                key={voter.id}
+                                type="button"
+                                className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left"
+                                onClick={() => selectVoter(voter)}
+                              >
+                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                  <span className="text-sm">
+                                    {voter.name?.charAt(0)}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">{voter.name}</p>
+                                  <p className="text-sm text-muted-foreground truncate">
+                                    {voter.phone || voter.address || ''}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAddAttendeeDialogOpen(false);
+                        setSelectedVoter(null);
+                        setVoterSearch('');
+                      }}
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      onClick={handleAddAttendee}
+                      disabled={!selectedVoter || addAttendeeMutation.isPending}
+                    >
+                      {addAttendeeMutation.isPending ? '新增中...' : '新增'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              {attendees?.length > 0 ? (
+              {(attendees?.length ?? 0) > 0 ? (
                 <div className="space-y-3">
-                  {attendees.map((attendee: any) => (
+                  {attendees?.map((attendee: any) => (
                     <div
                       key={attendee.id}
                       className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
@@ -493,8 +656,17 @@ export default function EventDetailPage() {
                           {ATTENDEE_STATUS[attendee.status] || attendee.status}
                         </Badge>
                         {attendee.status !== 'ATTENDED' && (
-                          <Button size="sm" variant="ghost">
-                            <CheckCircle className="h-4 w-4" />
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => updateAttendeeStatusMutation.mutate({
+                              voterId: attendee.voter?.id,
+                              status: 'ATTENDED',
+                            })}
+                            disabled={updateAttendeeStatusMutation.isPending}
+                            title="標記為已出席"
+                          >
+                            <CheckCircle className="h-4 w-4 text-green-600" />
                           </Button>
                         )}
                       </div>
@@ -502,9 +674,16 @@ export default function EventDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  尚未新增參與者
-                </p>
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground mb-4">
+                    尚未新增參與者
+                  </p>
+                  <Button onClick={() => setAddAttendeeDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    新增參與者
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
