@@ -153,16 +153,17 @@ export default function EventDetailPage() {
     },
   });
 
-  // 搜尋選民
-  const { data: voterSearchResults } = useQuery({
-    queryKey: ['voters', 'search', voterSearch, currentCampaign?.id],
+  // 搜尋選民 - 使用活動的 campaignId 而非全局 currentCampaign
+  const searchCampaignId = event?.campaignId || currentCampaign?.id;
+  const { data: voterSearchResults, isLoading: isSearching, error: searchError } = useQuery({
+    queryKey: ['voters', 'search', voterSearch, searchCampaignId],
     queryFn: () =>
       votersApi.getAll({
-        campaignId: currentCampaign?.id,
+        campaignId: searchCampaignId,
         search: voterSearch,
         limit: 10,
       }),
-    enabled: !!voterSearch && voterSearch.length >= 2 && !!currentCampaign?.id,
+    enabled: !!voterSearch && voterSearch.length >= 2 && !!searchCampaignId,
   });
 
   // 新增參與者
