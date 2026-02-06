@@ -264,6 +264,9 @@ export class VotersService {
             },
           },
         },
+        creator: {
+          select: { id: true, name: true },
+        },
         _count: {
           select: { contacts: true },
         },

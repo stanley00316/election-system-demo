@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentProvider, PaymentStatus } from '@prisma/client';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { ReferralsService } from '../referrals/referrals.service';
 import { EcpayProvider } from './providers/ecpay.provider';
 import { NewebpayProvider } from './providers/newebpay.provider';
 import { StripeProvider } from './providers/stripe.provider';
@@ -16,6 +17,8 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private subscriptionsService: SubscriptionsService,
+    @Inject(forwardRef(() => ReferralsService))
+    private referralsService: ReferralsService,
     private ecpayProvider: EcpayProvider,
     private newebpayProvider: NewebpayProvider,
     private stripeProvider: StripeProvider,
@@ -209,6 +212,14 @@ export class PaymentsService {
 
       // 啟用訂閱
       await this.subscriptionsService.activateSubscription(payment.subscriptionId);
+
+      // 發放推薦獎勵（如果有推薦人）
+      try {
+        await this.referralsService.grantReferralReward(payment.subscription.userId);
+      } catch (error) {
+        // 推薦獎勵發放失敗不應影響付款流程
+        console.error('發放推薦獎勵失敗:', error);
+      }
     } else {
       // 更新付款為失敗
       await this.prisma.payment.update({

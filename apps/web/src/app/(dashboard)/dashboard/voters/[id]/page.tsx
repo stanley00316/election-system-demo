@@ -66,6 +66,7 @@ import {
 } from 'lucide-react';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
 import { VoterAttachments } from '@/components/voters/VoterAttachments';
+import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';
 import dynamic from 'next/dynamic';
 
 // 動態匯入 LINE 通話記錄對話框
@@ -282,19 +283,10 @@ export default function VoterDetailPage() {
           {/* LINE 按鈕 - 當選民有 LINE 資訊時顯示 */}
           {(voter.lineId || voter.lineUrl) && (
             <>
-              <Button
-                variant="outline"
-                className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                onClick={() => {
-                  const lineUrl = voter.lineUrl || (voter.lineId ? `https://line.me/ti/p/~${voter.lineId}` : null);
-                  if (lineUrl) {
-                    window.open(lineUrl, '_blank');
-                  }
-                }}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                開啟 LINE
-              </Button>
+              <LineOpenButton
+                lineId={voter.lineId}
+                lineUrl={voter.lineUrl}
+              />
               <Button
                 variant="outline"
                 onClick={() => setLineContactDialogOpen(true)}
@@ -374,27 +366,13 @@ export default function VoterDetailPage() {
                   </div>
                 </div>
               )}
-              {(voter.lineId || voter.lineUrl) && (
-                <div className="flex items-center gap-3">
-                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">LINE</p>
-                    {voter.lineUrl ? (
-                      <a
-                        href={voter.lineUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-green-600 hover:underline flex items-center gap-1"
-                      >
-                        {voter.lineId || '開啟 LINE'}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : (
-                      <p className="font-medium">{voter.lineId}</p>
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* LINE 資訊 - 使用 LineDisplay 元件 */}
+              <LineDisplay
+                lineId={voter.lineId}
+                lineUrl={voter.lineUrl}
+                variant="full"
+                showAddButton={true}
+              />
               {voter.address && (
                 <div className="flex items-center gap-3 md:col-span-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />

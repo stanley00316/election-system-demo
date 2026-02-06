@@ -36,7 +36,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useCampaignStore } from '@/stores/campaign';
 import { campaignsApi } from '@/lib/api';
-import { Plus, Trash2, UserPlus, Shield, Edit2, Eye, Link2, Copy, Check, Clock, Users } from 'lucide-react';
+import { Plus, Trash2, UserPlus, Shield, Edit2, Eye, Link2, Copy, Check, Clock, Users, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -222,11 +223,18 @@ export default function TeamPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">團隊管理</h1>
-          <p className="text-muted-foreground">
-            {currentCampaign.name} - 管理團隊成員與權限
-          </p>
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/settings">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">團隊管理</h1>
+            <p className="text-muted-foreground">
+              {currentCampaign.name} - 管理團隊成員與權限
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           {/* 建立邀請連結按鈕 */}

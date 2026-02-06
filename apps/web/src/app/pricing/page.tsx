@@ -1,12 +1,47 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Check, Zap, Shield, Users, BarChart3, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { Check, Zap, Shield, Users, BarChart3, Loader2, MapPin, Vote, ChevronDown, ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { subscriptionsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth';
+
+// 選舉類型中文標籤（用於顯示引導訊息）
+const upgradeElectionTypeLabels: Record<string, string> = {
+  VILLAGE_CHIEF: '里長',
+  TOWNSHIP_REP: '民代',
+  CITY_COUNCILOR: '議員',
+  MAYOR: '市長',
+  LEGISLATOR: '立委',
+  PRESIDENT: '總統',
+};
+
+interface CityGroup {
+  regionLevel: number;
+  label: string;
+  cities: string[];
+}
+
+interface ElectionType {
+  code: string;
+  label: string;
+  category: string;
+}
 
 interface Plan {
   id: string;
@@ -19,44 +54,102 @@ interface Plan {
   features: string[];
   isActive: boolean;
   sortOrder: number;
+  city: string | null;
+  category: string | null;
+  regionLevel: number | null;
+  description: string | null;
 }
 
-const featureIcons: Record<string, any> = {
-  '全功能試用': Zap,
-  '無限選民': Users,
-  '優先客服': Shield,
-  '資料匯出': BarChart3,
+const electionTypeLabels: Record<string, string> = {
+  VILLAGE_CHIEF: '里長',
+  TOWNSHIP_REP: '民代',
+  CITY_COUNCILOR: '議員',
+  MAYOR: '市長',
+  LEGISLATOR: '立委',
+};
+
+const regionLevelColors: Record<number, string> = {
+  1: 'bg-red-100 text-red-800',
+  2: 'bg-orange-100 text-orange-800',
+  3: 'bg-yellow-100 text-yellow-800',
+  4: 'bg-green-100 text-green-800',
+  5: 'bg-blue-100 text-blue-800',
 };
 
 export default function PricingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isStartingTrial, setIsStartingTrial] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  
+  // 智慧返回路徑：已登入返回主控台，未登入返回首頁
+  const backUrl = isAuthenticated ? '/dashboard' : '/';
+  
+  // 從 URL 參數取得預選的縣市和選舉類型（來自 Campaign 建立頁面的升級連結）
+  const urlCity = searchParams.get('city');
+  const urlElectionType = searchParams.get('electionType');
+  
+  // 選擇狀態
+  const [selectedCity, setSelectedCity] = useState<string>(urlCity || '');
+  const [selectedElectionType, setSelectedElectionType] = useState<string>(urlElectionType || '');
+  
+  // 資料狀態
+  const [cityGroups, setCityGroups] = useState<CityGroup[]>([]);
+  const [electionTypes, setElectionTypes] = useState<ElectionType[]>([]);
+  const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+  const [trialPlan, setTrialPlan] = useState<Plan | null>(null);
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+  
+  // 載入狀態
+  const [isLoadingCities, setIsLoadingCities] = useState(true);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(false);
+  const [isStartingTrial, setIsStartingTrial] = useState(false);
 
+  // 載入縣市和選舉類型
   useEffect(() => {
-    loadData();
+    loadInitialData();
   }, []);
 
-  const loadData = async () => {
+  // 當選擇變更時載入方案
+  useEffect(() => {
+    if (selectedCity && selectedElectionType) {
+      loadPlan();
+    }
+  }, [selectedCity, selectedElectionType]);
+
+  const loadInitialData = async () => {
     try {
-      const [plansData, subscriptionData] = await Promise.all([
-        subscriptionsApi.getPlans(),
+      const [cities, types, subscription] = await Promise.all([
+        subscriptionsApi.getAvailableCities(),
+        subscriptionsApi.getElectionTypes(),
         subscriptionsApi.checkSubscription().catch(() => null),
       ]);
-      setPlans(plansData);
-      setCurrentSubscription(subscriptionData);
+      setCityGroups(cities);
+      setElectionTypes(types);
+      setCurrentSubscription(subscription);
     } catch (error) {
-      console.error('載入方案失敗:', error);
+      console.error('載入資料失敗:', error);
       toast({
         title: '載入失敗',
-        description: '無法載入訂閱方案，請稍後再試',
+        description: '無法載入定價資料，請稍後再試',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingCities(false);
+    }
+  };
+
+  const loadPlan = async () => {
+    setIsLoadingPlan(true);
+    try {
+      const result = await subscriptionsApi.getPlanByLocation(selectedCity, selectedElectionType);
+      setCurrentPlan(result.plan);
+      setTrialPlan(result.trialPlan);
+    } catch (error) {
+      console.error('載入方案失敗:', error);
+      setCurrentPlan(null);
+    } finally {
+      setIsLoadingPlan(false);
     }
   };
 
@@ -66,7 +159,7 @@ export default function PricingPage() {
       await subscriptionsApi.startTrial();
       toast({
         title: '試用已開始！',
-        description: '您的 14 天免費試用已啟動，享受完整功能吧！',
+        description: '您的 7 天免費試用已啟動，享受完整功能吧！',
       });
       router.push('/dashboard');
     } catch (error: any) {
@@ -84,46 +177,31 @@ export default function PricingPage() {
     if (plan.code === 'FREE_TRIAL') {
       handleStartTrial();
     } else {
-      router.push(`/checkout?planId=${plan.id}`);
+      router.push(`/checkout?planId=${plan.id}&city=${encodeURIComponent(selectedCity)}&electionType=${selectedElectionType}`);
     }
   };
 
-  const formatPrice = (price: number, interval: string) => {
-    if (price === 0) return '免費';
-    const formattedPrice = price.toLocaleString('zh-TW');
-    const intervalText = interval === 'YEAR' ? '/年' : '/月';
-    return `NT$ ${formattedPrice}${intervalText}`;
+  const formatPrice = (price: number) => {
+    return `NT$ ${price.toLocaleString('zh-TW')}`;
   };
 
-  const getButtonText = (plan: Plan) => {
-    if (currentSubscription?.hasSubscription) {
-      if (currentSubscription.plan?.code === plan.code) {
-        return '目前方案';
-      }
-      if (plan.code === 'FREE_TRIAL') {
-        return '已使用過試用';
-      }
-      return '升級方案';
-    }
-    if (plan.code === 'FREE_TRIAL') {
-      return '開始免費試用';
-    }
-    return '立即訂閱';
+  const getRegionLevelBadge = (level: number | null) => {
+    if (!level) return null;
+    const labels: Record<number, string> = {
+      1: '一級戰區',
+      2: '二級戰區',
+      3: '三級戰區',
+      4: '四級戰區',
+      5: '五級戰區',
+    };
+    return (
+      <Badge className={regionLevelColors[level]}>
+        {labels[level]}
+      </Badge>
+    );
   };
 
-  const isButtonDisabled = (plan: Plan) => {
-    if (currentSubscription?.hasSubscription) {
-      if (currentSubscription.plan?.code === plan.code) {
-        return true;
-      }
-      if (plan.code === 'FREE_TRIAL') {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  if (isLoading) {
+  if (isLoadingCities) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -134,90 +212,132 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4">
       <div className="max-w-6xl mx-auto">
+        {/* 返回按鈕 - 頂部固定區塊 */}
+        <div className="sticky top-4 z-10 mb-6">
+          <Link href={backUrl}>
+            <Button variant="outline" size="lg" className="bg-white/95 backdrop-blur shadow-sm hover:bg-gray-50">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              {isAuthenticated ? '返回主控台' : '返回首頁'}
+            </Button>
+          </Link>
+        </div>
+
+        {/* 來自 Campaign 建立頁面的升級引導提示 */}
+        {urlCity && urlElectionType && (
+          <Alert className="mb-6 border-blue-500 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800">選擇適合您的方案</AlertTitle>
+            <AlertDescription className="text-blue-700">
+              建立「{urlCity}{upgradeElectionTypeLabels[urlElectionType] || urlElectionType}」選舉活動需要對應的訂閱方案。
+              我們已為您預選該選區，請確認後完成訂閱。
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* 標題區 */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             選擇適合您的方案
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            無論是小型選舉或大規模競選，我們都有合適的方案助您掌握選情
+            全台戰區分級定價，依據「戰區強度 × 人口比例」量身訂製
           </p>
         </div>
 
-        {/* 方案卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          {plans.map((plan) => {
-            const isPopular = plan.code === 'MONTHLY';
-            const isCurrent = currentSubscription?.plan?.code === plan.code;
+        {/* 選擇區域 */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              選擇您的選區
+            </CardTitle>
+            <CardDescription>
+              根據您的選舉區域和類型，顯示專屬定價方案
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 縣市選擇 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">縣市</label>
+                <Select value={selectedCity} onValueChange={setSelectedCity}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="請選擇縣市" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityGroups.map((group) => (
+                      <SelectGroup key={group.regionLevel}>
+                        <SelectLabel className="text-xs text-muted-foreground">
+                          {group.label}
+                        </SelectLabel>
+                        {group.cities.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            return (
-              <Card
-                key={plan.id}
-                className={`relative ${
-                  isPopular
-                    ? 'border-primary shadow-lg scale-105 z-10'
-                    : 'border-gray-200'
-                } ${isCurrent ? 'ring-2 ring-green-500' : ''}`}
-              >
-                {isPopular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-primary text-white text-sm font-medium px-4 py-1 rounded-full">
-                      最受歡迎
-                    </span>
-                  </div>
-                )}
-                {isCurrent && (
-                  <div className="absolute -top-4 right-4">
-                    <span className="bg-green-500 text-white text-sm font-medium px-4 py-1 rounded-full">
-                      目前方案
-                    </span>
-                  </div>
-                )}
+              {/* 選舉類型選擇 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">選舉類型</label>
+                <Select value={selectedElectionType} onValueChange={setSelectedElectionType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="請選擇選舉類型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {electionTypes.map((type) => (
+                      <SelectItem key={type.code} value={type.code}>
+                        <div className="flex items-center gap-2">
+                          <Vote className="h-4 w-4" />
+                          {type.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* 方案顯示區 */}
+        {!selectedCity || !selectedElectionType ? (
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <ChevronDown className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">請選擇您的選區</h3>
+            <p className="text-gray-500">
+              選擇縣市和選舉類型後，將顯示專屬定價方案
+            </p>
+          </div>
+        ) : isLoadingPlan ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : currentPlan ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* 免費試用卡片 */}
+            {trialPlan && (
+              <Card className="border-gray-200">
                 <CardHeader className="text-center pb-2">
-                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                  <CardDescription className="mt-2">
-                    {plan.code === 'FREE_TRIAL' && '體驗完整功能'}
-                    {plan.code === 'MONTHLY' && '適合中小型選舉'}
-                    {plan.code === 'YEARLY' && '長期使用最划算'}
-                  </CardDescription>
+                  <div className="flex justify-center mb-2">
+                    <Zap className="h-8 w-8 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold">{trialPlan.name}</CardTitle>
+                  <CardDescription>體驗完整功能</CardDescription>
                 </CardHeader>
-
                 <CardContent className="pt-4">
                   <div className="text-center mb-6">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {formatPrice(plan.price, plan.interval).split('/')[0]}
-                    </span>
-                    {plan.price > 0 && (
-                      <span className="text-gray-500">
-                        /{plan.interval === 'YEAR' ? '年' : '月'}
-                      </span>
-                    )}
-                    {plan.code === 'YEARLY' && (
-                      <p className="text-sm text-green-600 mt-1">
-                        相當於每月 NT$ {Math.round(plan.price / 12).toLocaleString()}
-                      </p>
-                    )}
+                    <span className="text-4xl font-bold text-gray-900">免費</span>
+                    <p className="text-sm text-gray-500 mt-1">7 天試用期</p>
                   </div>
-
                   <ul className="space-y-3">
-                    <li className="flex items-center gap-2 text-gray-700">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span>
-                        {plan.voterLimit
-                          ? `最多 ${plan.voterLimit.toLocaleString()} 位選民`
-                          : '無限選民數量'}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2 text-gray-700">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span>
-                        {plan.teamLimit
-                          ? `最多 ${plan.teamLimit} 位團隊成員`
-                          : '無限團隊成員'}
-                      </span>
-                    </li>
-                    {(plan.features as string[]).map((feature, index) => (
+                    {(trialPlan.features as string[]).map((feature, index) => (
                       <li key={index} className="flex items-center gap-2 text-gray-700">
                         <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                         <span>{feature}</span>
@@ -225,34 +345,141 @@ export default function PricingPage() {
                     ))}
                   </ul>
                 </CardContent>
-
                 <CardFooter>
                   <Button
                     className="w-full"
-                    variant={isPopular ? 'default' : 'outline'}
+                    variant="outline"
                     size="lg"
-                    disabled={isButtonDisabled(plan) || isStartingTrial}
-                    onClick={() => handleSubscribe(plan)}
+                    disabled={currentSubscription?.hasSubscription || isStartingTrial}
+                    onClick={handleStartTrial}
                   >
-                    {isStartingTrial && plan.code === 'FREE_TRIAL' ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : null}
-                    {getButtonText(plan)}
+                    {isStartingTrial ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        處理中...
+                      </>
+                    ) : currentSubscription?.hasSubscription ? (
+                      '已使用過試用'
+                    ) : (
+                      '開始免費試用'
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
-            );
-          })}
+            )}
+
+            {/* 付費方案卡片 */}
+            <Card className="border-primary shadow-lg relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <span className="bg-primary text-white text-sm font-medium px-4 py-1 rounded-full">
+                  推薦方案
+                </span>
+              </div>
+              <CardHeader className="text-center pb-2">
+                <div className="flex justify-center gap-2 mb-2">
+                  {getRegionLevelBadge(currentPlan.regionLevel)}
+                </div>
+                <CardTitle className="text-2xl font-bold">
+                  {selectedCity} {electionTypeLabels[selectedElectionType]}
+                </CardTitle>
+                <CardDescription>{currentPlan.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="text-center mb-6">
+                  <span className="text-4xl font-bold text-gray-900">
+                    {formatPrice(currentPlan.price)}
+                  </span>
+                  <span className="text-gray-500">/月</span>
+                  <p className="text-sm text-green-600 mt-1">
+                    年繳 {formatPrice(currentPlan.price * 10)} 享 83 折
+                  </p>
+                </div>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-2 text-gray-700">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span>無限選民數量</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-700">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span>
+                      {currentPlan.teamLimit
+                        ? `最多 ${currentPlan.teamLimit} 位團隊成員`
+                        : '無限團隊成員'}
+                    </span>
+                  </li>
+                  {(currentPlan.features as string[]).map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2 text-gray-700">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => handleSubscribe(currentPlan)}
+                >
+                  立即訂閱
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">
+              找不到符合條件的方案，請嘗試其他選擇
+            </p>
+          </div>
+        )}
+
+        {/* 價格說明 */}
+        <div className="mt-12 max-w-3xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle>定價說明</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <div key={level} className="text-center">
+                    <Badge className={`${regionLevelColors[level]} mb-2`}>
+                      {level}級戰區
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">
+                      {level === 1 && '六都（高競爭）'}
+                      {level === 2 && '次高強度'}
+                      {level === 3 && '基準（南投）'}
+                      {level === 4 && '低密度'}
+                      {level === 5 && '離島專案'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                價格依據「戰區強度 × 人口比例」計算，三級戰區（南投縣）為全台定價基準。
+                選舉類型包含：里長、民代（鄉鎮市民代表/區民代表）、議員、市長、立委。
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* FAQ 區塊 */}
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto mt-12">
           <h2 className="text-2xl font-bold text-center mb-8">常見問題</h2>
           <div className="space-y-6">
             <div className="bg-card p-6 rounded-lg shadow-sm border">
               <h3 className="font-semibold text-lg mb-2">試用期結束後會自動扣款嗎？</h3>
               <p className="text-muted-foreground">
                 不會。試用期結束後，您需要手動選擇付費方案才會開始計費。我們不會在未經您同意的情況下扣款。
+              </p>
+            </div>
+            <div className="bg-card p-6 rounded-lg shadow-sm border">
+              <h3 className="font-semibold text-lg mb-2">為什麼不同縣市價格不同？</h3>
+              <p className="text-muted-foreground">
+                我們依據「戰區強度 × 人口比例」計算價格。六都競爭激烈、選民眾多，需要更完整的系統支援；
+                離島地區選舉規模較小，因此價格也相應調整，讓各地候選人都能負擔得起。
               </p>
             </div>
             <div className="bg-card p-6 rounded-lg shadow-sm border">
@@ -267,12 +494,6 @@ export default function PricingPage() {
                 我們支援信用卡、ATM 轉帳、超商付款（透過綠界 ECPay）以及國際信用卡（透過 Stripe）。
               </p>
             </div>
-            <div className="bg-card p-6 rounded-lg shadow-sm border">
-              <h3 className="font-semibold text-lg mb-2">可以開發票嗎？</h3>
-              <p className="text-muted-foreground">
-                可以。付款完成後，我們會自動開立電子發票並寄送至您的電子郵件信箱。
-              </p>
-            </div>
           </div>
         </div>
 
@@ -281,9 +502,21 @@ export default function PricingPage() {
           <p className="text-muted-foreground mb-4">
             還有其他問題嗎？
           </p>
-          <Button variant="link" className="text-primary">
-            聯繫我們
+          <Button variant="link" className="text-primary" asChild>
+            <a href="https://line.me/ti/p/@487leezq" target="_blank" rel="noopener noreferrer">
+              聯繫客服 (LINE: @487leezq)
+            </a>
           </Button>
+        </div>
+
+        {/* 底部返回按鈕 */}
+        <div className="text-center mt-8 pb-8">
+          <Link href={backUrl}>
+            <Button variant="outline" size="lg">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              {isAuthenticated ? '返回主控台' : '返回首頁'}
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

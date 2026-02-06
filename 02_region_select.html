@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>地區選擇 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .region-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .region-item {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+            background: #fff;
+        }
+        .region-item:active {
+            background: #f0f0f0;
+        }
+        .breadcrumb {
+            padding: 12px 16px;
+            background: #e9ecef;
+            font-size: 0.9rem;
+            color: #666;
+            position: sticky;
+            top: var(--topbar-height);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand"><i class="fas fa-chevron-left"></i> 地區選擇</a>
+    </header>
+
+    <div class="breadcrumb" id="region-path">
+        目前選取：未選擇
+    </div>
+
+    <main id="region-container">
+        <!-- 地區清單動態生成 -->
+    </main>
+
+    <div class="bottom-actions">
+        <button class="btn-mobile btn-primary btn-large" id="confirm-region">確認地區</button>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        const regions = {
+            '北': {
+                '台北市': ['信義區', '大安區', '中山區'],
+                '新北市': ['板橋區', '三重區', '中和區']
+            },
+            '中': {
+                '台中市': ['西屯區', '北屯區', '南屯區']
+            },
+            '南': {
+                '高雄市': ['左營區', '三民區', '鳳山區']
+            }
+        };
+
+        let currentStep = 'area'; // area -> city -> district
+        let selection = { area: '', city: '', district: '' };
+
+        function render() {
+            const container = document.getElementById('region-container');
+            const pathDisplay = document.getElementById('region-path');
+            container.innerHTML = '';
+
+            let listHTML = '<ul class="region-list">';
+            
+            if (currentStep === 'area') {
+                pathDisplay.innerText = '目前選取：台灣';
+                Object.keys(regions).forEach(area => {
+                    listHTML += `<li class="region-item" onclick="selectArea('${area}')">${area}部 <i class="fas fa-chevron-right"></i></li>`;
+                });
+            } else if (currentStep === 'city') {
+                pathDisplay.innerText = `目前選取：${selection.area}部`;
+                Object.keys(regions[selection.area]).forEach(city => {
+                    listHTML += `<li class="region-item" onclick="selectCity('${city}')">${city} <i class="fas fa-chevron-right"></i></li>`;
+                });
+            } else if (currentStep === 'district') {
+                pathDisplay.innerText = `目前選取：${selection.area}部 > ${selection.city}`;
+                regions[selection.area][selection.city].forEach(dist => {
+                    const active = selection.district === dist ? 'style="color: var(--primary-color); font-weight: bold;"' : '';
+                    listHTML += `<li class="region-item" onclick="selectDistrict('${dist}')" ${active}>${dist} ${selection.district === dist ? '<i class="fas fa-check"></i>' : ''}</li>`;
+                });
+            }
+
+            listHTML += '</ul>';
+            container.innerHTML = listHTML;
+        }
+
+        function selectArea(area) {
+            selection.area = area;
+            currentStep = 'city';
+            render();
+        }
+
+        function selectCity(city) {
+            selection.city = city;
+            currentStep = 'district';
+            render();
+        }
+
+        function selectDistrict(dist) {
+            selection.district = dist;
+            render();
+        }
+
+        document.getElementById('confirm-region').addEventListener('click', () => {
+            if (!selection.district) {
+                alert('請先選擇地區');
+                return;
+            }
+            const data = VoteScope.getData();
+            data.currentRegion = { city: selection.city, district: selection.district, village: '全部' };
+            VoteScope.saveData(data);
+            VoteScope.addAuditLog('change_region', selection);
+            window.location.href = '00_home.html';
+        });
+
+        document.addEventListener('DOMContentLoaded', render);
+    </script>
+</body>
+</html>
+

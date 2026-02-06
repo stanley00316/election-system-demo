@@ -1,14 +1,15 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 import { EcpayProvider } from './providers/ecpay.provider';
 import { NewebpayProvider } from './providers/newebpay.provider';
 import { StripeProvider } from './providers/stripe.provider';
 
 @Module({
-  imports: [PrismaModule, SubscriptionsModule],
+  imports: [PrismaModule, SubscriptionsModule, forwardRef(() => ReferralsModule)],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,

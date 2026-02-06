@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>VoteScope - 首頁</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand">VoteScope</a>
+        <div class="topbar-info" id="current-region-display">
+            台北市 信義區
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="app-card text-center" style="background: linear-gradient(135deg, var(--primary-color), #5c97f5); color: #fff;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">今日已更新</div>
+            <div style="font-size: 2.5rem; font-weight: bold;" id="today-count">12</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">人</div>
+        </div>
+
+        <div class="dashboard-grid">
+            <a href="02_region_select.html" class="app-card text-center" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-map-marker-alt" style="font-size: 2rem; color: var(--primary-color); margin-bottom: 8px;"></i>
+                <div class="app-card-title">切換地區</div>
+            </a>
+            <a href="08_route_plan.html" class="app-card text-center" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-walking" style="font-size: 2rem; color: var(--success-color); margin-bottom: 8px;"></i>
+                <div class="app-card-title">今日掃街</div>
+            </a>
+            <a href="09_dashboard.html" class="app-card text-center" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-chart-pie" style="font-size: 2rem; color: var(--warning-color); margin-bottom: 8px;"></i>
+                <div class="app-card-title">數據儀表板</div>
+            </a>
+            <a href="03_import_excel.html" class="app-card text-center" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-file-import" style="font-size: 2rem; color: var(--neutral-color); margin-bottom: 8px;"></i>
+                <div class="app-card-title">匯入名單</div>
+            </a>
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">專案設定</div>
+            <button class="btn-mobile btn-neutral">建立/切換專案</button>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="00_home.html" class="nav-item active">
+            <i class="fas fa-home nav-icon"></i>
+            <span>首頁</span>
+        </a>
+        <a href="04_household_list.html" class="nav-item">
+            <i class="fas fa-list nav-icon"></i>
+            <span>名單</span>
+        </a>
+        <a href="07_map_mock.html" class="nav-item">
+            <i class="fas fa-map nav-icon"></i>
+            <span>地圖</span>
+        </a>
+        <a href="06_quick_update.html" class="nav-item">
+            <i class="fas fa-bolt nav-icon" style="color: var(--warning-color);"></i>
+            <span>快速更新</span>
+        </a>
+    </nav>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = VoteScope.getData();
+            document.getElementById('current-region-display').innerText = 
+                `${data.currentRegion.city} ${data.currentRegion.district}`;
+            
+            // 模擬今日更新人數
+            const todayCount = data.auditLogs.filter(log => {
+                const logDate = new Date(log.timestamp).toDateString();
+                const today = new Date().toDateString();
+                return logDate === today && log.action === 'update_person';
+            }).length;
+            document.getElementById('today-count').innerText = todayCount;
+        });
+    </script>
+</body>
+</html>
+

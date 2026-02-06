@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>快速更新 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .commitment-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: #fff;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #eee;
+        }
+        .commitment-item input {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+        }
+        .status-btn.active {
+            border: 3px solid #000;
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand"><i class="fas fa-bolt" style="color: var(--warning-color);"></i> 快速更新</a>
+        <div class="topbar-info" id="next-info">剩餘 5 人</div>
+    </header>
+
+    <main class="container">
+        <div class="app-card" id="person-info">
+            <div style="font-size: 1.4rem; font-weight: bold;" id="display-name">載入中...</div>
+            <div style="font-size: 0.9rem; color: #666;" id="display-address">...</div>
+        </div>
+
+        <div class="status-group">
+            <button class="btn-mobile btn-success status-btn" data-status="support" onclick="setStatus('support')">
+                <i class="fas fa-thumbs-up" style="font-size: 1.2rem;"></i>
+                支持
+            </button>
+            <button class="btn-mobile btn-warning status-btn" data-status="neutral" onclick="setStatus('neutral')">
+                <i class="fas fa-meh" style="font-size: 1.2rem;"></i>
+                中立
+            </button>
+            <button class="btn-mobile btn-danger status-btn" data-status="against" onclick="setStatus('against')">
+                <i class="fas fa-thumbs-down" style="font-size: 1.2rem;"></i>
+                反對
+            </button>
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">好感度: <span id="favor-val">50</span>%</div>
+            <input type="range" class="range-slider" min="0" max="100" value="50" id="favor-slider">
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">承諾事項</div>
+            <label class="commitment-item">
+                <input type="checkbox" value="vote" class="commit-check"> 會去投票
+            </label>
+            <label class="commitment-item">
+                <input type="checkbox" value="pull" class="commit-check"> 會幫忙拉票
+            </label>
+            <label class="commitment-item">
+                <input type="checkbox" value="event" class="commit-check"> 會出席活動
+            </label>
+        </div>
+    </main>
+
+    <div class="bottom-actions">
+        <button class="btn-mobile btn-neutral" onclick="save(false)">💾 儲存</button>
+        <button class="btn-mobile btn-primary" onclick="save(true)">➡️ 儲存並下一位</button>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        let currentPerson = null;
+        let selectedStatus = '';
+
+        function loadPerson() {
+            const data = VoteScope.getData();
+            // 找出未更新或隨機一位
+            currentPerson = data.persons[Math.floor(Math.random() * data.persons.length)];
+            
+            document.getElementById('display-name').innerText = currentPerson.name;
+            document.getElementById('display-address').innerText = currentPerson.address;
+            document.getElementById('favor-slider').value = currentPerson.favorability;
+            document.getElementById('favor-val').innerText = currentPerson.favorability;
+            
+            selectedStatus = currentPerson.status;
+            updateStatusUI();
+
+            // 清除勾選
+            document.querySelectorAll('.commit-check').forEach(cb => {
+                cb.checked = currentPerson.commitments.includes(cb.value);
+            });
+        }
+
+        function setStatus(status) {
+            selectedStatus = status;
+            updateStatusUI();
+        }
+
+        function updateStatusUI() {
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.status === selectedStatus) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        document.getElementById('favor-slider').addEventListener('input', (e) => {
+            document.getElementById('favor-val').innerText = e.target.value;
+        });
+
+        function save(goNext) {
+            const favors = document.getElementById('favor-slider').value;
+            const commits = Array.from(document.querySelectorAll('.commit-check:checked')).map(cb => cb.value);
+            
+            VoteScope.updatePerson(currentPerson.id, {
+                status: selectedStatus,
+                favorability: parseInt(favors),
+                commitments: commits
+            });
+
+            if (goNext) {
+                loadPerson();
+                window.scrollTo(0, 0);
+            } else {
+                alert('已儲存');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPerson);
+    </script>
+</body>
+</html>
+

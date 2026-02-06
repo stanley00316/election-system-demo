@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>地圖 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map {
+            height: calc(100vh - var(--topbar-height) - var(--bottom-nav-height) - var(--safe-area-bottom));
+            width: 100%;
+        }
+        .map-overlay {
+            position: fixed;
+            bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 16px);
+            left: 16px;
+            right: 16px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .map-btn-group {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        .map-btn {
+            background: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand">地圖監控</a>
+    </header>
+
+    <div id="map"></div>
+
+    <div class="map-overlay">
+        <div class="map-btn-group">
+            <button class="map-btn" onclick="filterRange(300)">300m</button>
+            <button class="map-btn" onclick="filterRange(500)">500m</button>
+            <button class="map-btn" onclick="locateMe()"><i class="fas fa-crosshairs"></i> 定位</button>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="00_home.html" class="nav-item">
+            <i class="fas fa-home nav-icon"></i>
+            <span>首頁</span>
+        </a>
+        <a href="04_household_list.html" class="nav-item">
+            <i class="fas fa-list nav-icon"></i>
+            <span>名單</span>
+        </a>
+        <a href="07_map_mock.html" class="nav-item active">
+            <i class="fas fa-map nav-icon"></i>
+            <span>地圖</span>
+        </a>
+        <a href="06_quick_update.html" class="nav-item">
+            <i class="fas fa-bolt nav-icon" style="color: var(--warning-color);"></i>
+            <span>快速更新</span>
+        </a>
+    </nav>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script>
+        let map;
+        let markers = [];
+
+        function initMap() {
+            // 預設台北 101 附近
+            map = L.map('map').setView([25.0330, 121.5654], 16);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            renderMarkers();
+        }
+
+        function renderMarkers() {
+            const data = VoteScope.getData();
+            // 模擬隨機座標
+            data.persons.forEach(p => {
+                const lat = 25.0330 + (Math.random() - 0.5) * 0.01;
+                const lng = 121.5654 + (Math.random() - 0.5) * 0.01;
+                const status = VoteScope.formatStatus(p.status);
+                
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 8,
+                    fillColor: status.class === 'bg-success' ? '#28a745' : (status.class === 'bg-warning' ? '#ffc107' : '#dc3545'),
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+
+                marker.bindPopup(`
+                    <b>${p.name}</b><br>
+                    ${p.address}<br>
+                    <a href="05_person_detail.html?id=${p.id}" class="btn-mobile btn-primary" style="height:30px; min-height:30px; font-size:0.8rem; margin-top:8px;">查看</a>
+                `);
+                markers.push(marker);
+            });
+        }
+
+        function filterRange(m) {
+            alert(`已圈選附近 ${m} 公尺內的 5 位選民`);
+        }
+
+        function locateMe() {
+            map.locate({setView: true, maxZoom: 16});
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof L !== 'undefined') {
+                initMap();
+            } else {
+                document.getElementById('map').innerHTML = `
+                    <div class="container text-center" style="padding-top: 100px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--warning-color);"></i>
+                        <h3>地圖模組載入失敗</h3>
+                        <p>目前顯示模擬名單模式</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
+

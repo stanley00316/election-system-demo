@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>人員詳細 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label { color: #666; }
+        .detail-value { font-weight: 500; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="04_household_list.html" class="topbar-brand"><i class="fas fa-chevron-left"></i> 人員詳細</a>
+    </header>
+
+    <main class="container">
+        <div class="app-card">
+            <div class="app-card-title" id="det-name">載入中...</div>
+            <div class="detail-row">
+                <span class="detail-label">電話</span>
+                <span class="detail-value" id="det-phone">...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">地址</span>
+                <span class="detail-value" id="det-address">...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">政黨傾向</span>
+                <span class="detail-value" id="det-party">...</span>
+            </div>
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">快速操作</div>
+            <button class="btn-mobile btn-primary" id="btn-to-quick">⚡ 進入快速更新</button>
+            <button class="btn-mobile btn-success" id="btn-toggle-route">🚶 加入今日掃街</button>
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">拜訪紀錄 (Audit Log)</div>
+            <div id="audit-list" style="font-size: 0.85rem; color: #666;">
+                <!-- 紀錄 -->
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const personId = parseInt(urlParams.get('id'));
+
+        function loadDetail() {
+            const data = VoteScope.getData();
+            const person = data.persons.find(p => p.id === personId);
+            const perms = VoteScope.getRolePermissions();
+
+            if (!person) return;
+
+            document.getElementById('det-name').innerText = person.name;
+            document.getElementById('det-address').innerText = person.address;
+            document.getElementById('det-party').innerText = person.party;
+            document.getElementById('det-phone').innerText = perms.canSeePhone ? person.phone : '********';
+
+            document.getElementById('btn-to-quick').onclick = () => {
+                window.location.href = `06_quick_update.html?id=${person.id}`;
+            };
+
+            const routeData = JSON.parse(localStorage.getItem('vs_route') || '[]');
+            const inRoute = routeData.includes(person.id);
+            const routeBtn = document.getElementById('btn-toggle-route');
+            routeBtn.innerText = inRoute ? '❌ 從掃街名單移除' : '🚶 加入今日掃街';
+            routeBtn.className = inRoute ? 'btn-mobile btn-danger' : 'btn-mobile btn-success';
+            
+            routeBtn.onclick = () => {
+                let rData = JSON.parse(localStorage.getItem('vs_route') || '[]');
+                if (rData.includes(person.id)) {
+                    rData = rData.filter(id => id !== person.id);
+                } else {
+                    rData.push(person.id);
+                }
+                localStorage.setItem('vs_route', JSON.stringify(rData));
+                loadDetail();
+            };
+
+            // 渲染 Audit Log
+            const logs = data.auditLogs.filter(l => l.details && l.details.id === personId);
+            const logContainer = document.getElementById('audit-list');
+            logContainer.innerHTML = logs.length ? '' : '暫無紀錄';
+            logs.forEach(l => {
+                const div = document.createElement('div');
+                div.style.marginBottom = '8px';
+                div.innerText = `${new Date(l.timestamp).toLocaleString()} - ${l.role} 更新了資料`;
+                logContainer.appendChild(div);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDetail);
+    </script>
+</body>
+</html>
+

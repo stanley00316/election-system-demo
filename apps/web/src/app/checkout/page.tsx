@@ -21,7 +21,35 @@ interface Plan {
   voterLimit: number | null;
   teamLimit: number | null;
   features: string[];
+  city?: string | null;
+  category?: string | null;
+  regionLevel?: number | null;
+  description?: string | null;
 }
+
+const categoryLabels: Record<string, string> = {
+  VILLAGE_CHIEF: '里長',
+  REPRESENTATIVE: '民代',
+  COUNCILOR: '議員',
+  MAYOR: '市長',
+  LEGISLATOR: '立委',
+};
+
+const electionTypeLabels: Record<string, string> = {
+  VILLAGE_CHIEF: '里長',
+  TOWNSHIP_REP: '民代',
+  CITY_COUNCILOR: '議員',
+  MAYOR: '市長',
+  LEGISLATOR: '立委',
+};
+
+const regionLevelLabels: Record<number, string> = {
+  1: '一級戰區',
+  2: '二級戰區',
+  3: '三級戰區',
+  4: '四級戰區',
+  5: '五級戰區',
+};
 
 const paymentProviders = [
   {
@@ -55,6 +83,8 @@ function CheckoutContent() {
   const planId = searchParams.get('planId');
   const sessionId = searchParams.get('session_id');
   const paymentId = searchParams.get('payment');
+  const cityParam = searchParams.get('city');
+  const electionTypeParam = searchParams.get('electionType');
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -230,6 +260,33 @@ function CheckoutContent() {
                   <span className="text-gray-600">方案</span>
                   <span className="font-medium">{plan.name}</span>
                 </div>
+                {(plan.city || cityParam) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">選區</span>
+                    <span className="font-medium">{plan.city || cityParam}</span>
+                  </div>
+                )}
+                {(plan.category || electionTypeParam) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">選舉類型</span>
+                    <span className="font-medium">
+                      {plan.category 
+                        ? categoryLabels[plan.category] || plan.category
+                        : electionTypeParam 
+                          ? electionTypeLabels[electionTypeParam] || electionTypeParam
+                          : ''
+                      }
+                    </span>
+                  </div>
+                )}
+                {plan.regionLevel && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">戰區</span>
+                    <span className="font-medium text-primary">
+                      {regionLevelLabels[plan.regionLevel] || `${plan.regionLevel}級`}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">計費週期</span>
                   <span className="font-medium">

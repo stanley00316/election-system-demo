@@ -71,7 +71,14 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      // 保留完整錯誤資訊供前端處理（包含訂閱驗證的額外欄位）
+      const err = new Error(error.message || `HTTP ${response.status}`) as any;
+      err.code = error.code;
+      err.statusCode = error.statusCode || response.status;
+      err.currentPlan = error.currentPlan;
+      err.requiredPlan = error.requiredPlan;
+      err.upgradeUrl = error.upgradeUrl;
+      throw err;
     }
 
     return response.json();
@@ -369,6 +376,28 @@ const realSubscriptionsApi = {
   startTrial: () => api.post<any>('/subscriptions/trial'),
   cancelSubscription: (reason?: string) => api.post<any>('/subscriptions/cancel', { reason }),
   getHistory: () => api.get<any[]>('/subscriptions/history'),
+  // 分級定價 API
+  getAvailableCities: () => api.get<{
+    regionLevel: number;
+    label: string;
+    cities: string[];
+  }[]>('/subscriptions/pricing/cities'),
+  getElectionTypes: () => api.get<{
+    code: string;
+    label: string;
+    category: string;
+  }[]>('/subscriptions/pricing/election-types'),
+  getPlansByCity: (city: string) => api.get<{
+    city: string;
+    trialPlan: any;
+    plans: any[];
+  }>('/subscriptions/pricing/by-city', { city }),
+  getPlanByLocation: (city: string, electionType: string) => api.get<{
+    city: string;
+    electionType: string;
+    plan: any;
+    trialPlan: any;
+  }>('/subscriptions/pricing/plan', { city, electionType }),
 };
 export const subscriptionsApi = isDemoMode ? demoApi.demoSubscriptionsApi : realSubscriptionsApi;
 
@@ -392,6 +421,29 @@ const realPaymentsApi = {
   refund: (id: string, reason?: string) => api.post<{ success: boolean }>(`/payments/${id}/refund`, { reason }),
 };
 export const paymentsApi = isDemoMode ? demoApi.demoPaymentsApi : realPaymentsApi;
+
+// Referrals API
+const realReferralsApi = {
+  getMyCode: () => api.get<{ code: string; shareUrl: string }>('/referrals/my-code'),
+  applyCode: (code: string) => api.post<{ success: boolean; message: string; referral?: any }>('/referrals/apply', { referralCode: code }),
+  getMyReferrals: () => api.get<any[]>('/referrals/my-referrals'),
+  getStats: () => api.get<{
+    totalReferrals: number;
+    completedReferrals: number;
+    pendingReferrals: number;
+    totalRewardMonths: number;
+  }>('/referrals/stats'),
+  getPending: () => api.get<{
+    hasPendingReferral: boolean;
+    referral?: {
+      id: string;
+      referrerName: string;
+      status: string;
+      createdAt: string;
+    };
+  }>('/referrals/pending'),
+};
+export const referralsApi = isDemoMode ? demoApi.demoReferralsApi : realReferralsApi;
 
 // ==================== Admin APIs ====================
 // 管理員 API 使用一般用戶的 Token（isAdmin 的用戶）

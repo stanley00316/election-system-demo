@@ -1,11 +1,13 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SubscriptionStatus, PlanInterval } from '@prisma/client';
+import { SubscriptionStatus, PlanInterval, PlanCategory } from '@prisma/client';
 
 @Injectable()
 export class SubscriptionsService {
-  // 試用期天數
-  private readonly TRIAL_DAYS = 14;
+  // 試用期天數（改為 7 天）
+  private readonly TRIAL_DAYS = 7;
+  // 未付款資料緩衝期（天）
+  private readonly GRACE_PERIOD_DAYS = 30;
 
   constructor(private prisma: PrismaService) {}
 
@@ -260,6 +262,146 @@ export class SubscriptionsService {
   }
 
   /**
+   * 取得可用縣市列表（按戰區分組）
+   */
+  async getAvailableCities() {
+    const plans = await this.prisma.plan.findMany({
+      where: {
+        isActive: true,
+        city: { not: null },
+      },
+      select: {
+        city: true,
+        regionLevel: true,
+      },
+      distinct: ['city'],
+      orderBy: [
+        { regionLevel: 'asc' },
+        { city: 'asc' },
+      ],
+    });
+
+    // 按戰區等級分組
+    const regionLabels: Record<number, string> = {
+      1: '一級戰區（六都）',
+      2: '二級戰區',
+      3: '三級戰區（基準）',
+      4: '四級戰區',
+      5: '五級戰區（離島）',
+    };
+
+    const grouped: Record<number, { label: string; cities: string[] }> = {};
+
+    for (const plan of plans) {
+      if (plan.regionLevel && plan.city) {
+        if (!grouped[plan.regionLevel]) {
+          grouped[plan.regionLevel] = {
+            label: regionLabels[plan.regionLevel] || `${plan.regionLevel}級戰區`,
+            cities: [],
+          };
+        }
+        if (!grouped[plan.regionLevel].cities.includes(plan.city)) {
+          grouped[plan.regionLevel].cities.push(plan.city);
+        }
+      }
+    }
+
+    return Object.entries(grouped).map(([level, data]) => ({
+      regionLevel: parseInt(level),
+      label: data.label,
+      cities: data.cities,
+    }));
+  }
+
+  /**
+   * 取得特定縣市的所有選舉類型方案
+   */
+  async getPlansByCity(city: string) {
+    const plans = await this.prisma.plan.findMany({
+      where: {
+        city,
+        isActive: true,
+      },
+      orderBy: {
+        sortOrder: 'asc',
+      },
+    });
+
+    // 加入免費試用方案
+    const trialPlan = await this.prisma.plan.findFirst({
+      where: {
+        code: 'FREE_TRIAL',
+        isActive: true,
+      },
+    });
+
+    return {
+      city,
+      trialPlan,
+      plans,
+    };
+  }
+
+  /**
+   * 根據縣市和選舉類型取得方案
+   */
+  async getPlanByLocation(city: string, electionType: string) {
+    // 將前端的選舉類型轉換為 PlanCategory
+    const categoryMap: Record<string, PlanCategory> = {
+      VILLAGE_CHIEF: PlanCategory.VILLAGE_CHIEF,
+      TOWNSHIP_REP: PlanCategory.REPRESENTATIVE,
+      CITY_COUNCILOR: PlanCategory.COUNCILOR,
+      LEGISLATOR: PlanCategory.LEGISLATOR,
+      MAYOR: PlanCategory.MAYOR,
+    };
+
+    const category = categoryMap[electionType];
+    if (!category) {
+      throw new BadRequestException('無效的選舉類型');
+    }
+
+    const plan = await this.prisma.plan.findFirst({
+      where: {
+        city,
+        category,
+        isActive: true,
+      },
+    });
+
+    if (!plan) {
+      throw new NotFoundException(`找不到 ${city} ${electionType} 的方案`);
+    }
+
+    // 同時取得免費試用方案
+    const trialPlan = await this.prisma.plan.findFirst({
+      where: {
+        code: 'FREE_TRIAL',
+        isActive: true,
+      },
+    });
+
+    return {
+      city,
+      electionType,
+      plan,
+      trialPlan,
+    };
+  }
+
+  /**
+   * 取得所有選舉類型
+   */
+  getElectionTypes() {
+    return [
+      { code: 'VILLAGE_CHIEF', label: '里長', category: 'VILLAGE_CHIEF' },
+      { code: 'TOWNSHIP_REP', label: '民代', category: 'REPRESENTATIVE' },
+      { code: 'CITY_COUNCILOR', label: '議員', category: 'COUNCILOR' },
+      { code: 'MAYOR', label: '市長', category: 'MAYOR' },
+      { code: 'LEGISLATOR', label: '立委', category: 'LEGISLATOR' },
+    ];
+  }
+
+  /**
    * 更新訂閱狀態（用於付款完成後）
    */
   async activateSubscription(subscriptionId: string) {
@@ -298,7 +440,7 @@ export class SubscriptionsService {
         interval: PlanInterval.MONTH,
         voterLimit: 500,
         teamLimit: 2,
-        features: ['全功能試用 14 天', '最多 500 位選民', '最多 2 位團隊成員'],
+        features: ['全功能試用 7 天', '最多 500 位選民', '最多 2 位團隊成員'],
         sortOrder: 0,
       },
       {
@@ -380,5 +522,171 @@ export class SubscriptionsService {
     });
 
     return result.count;
+  }
+
+  /**
+   * 設定過期訂閱的緩衝期
+   * 當訂閱過期後，為其關聯的 Campaign 設置緩衝期
+   */
+  async setGracePeriodForExpiredSubscriptions() {
+    const now = new Date();
+    const gracePeriodEnd = new Date(now.getTime() + this.GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+
+    // 找出剛過期且尚未設置緩衝期的訂閱
+    const expiredSubscriptions = await this.prisma.subscription.findMany({
+      where: {
+        status: SubscriptionStatus.EXPIRED,
+        user: {
+          campaigns: {
+            some: {
+              gracePeriodEndsAt: null,
+              markedForDeletion: false,
+              deletedAt: null,
+            },
+          },
+        },
+      },
+      include: {
+        user: {
+          include: {
+            campaigns: {
+              where: {
+                gracePeriodEndsAt: null,
+                markedForDeletion: false,
+                deletedAt: null,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let updatedCount = 0;
+
+    for (const subscription of expiredSubscriptions) {
+      for (const campaign of subscription.user.campaigns) {
+        await this.prisma.campaign.update({
+          where: { id: campaign.id },
+          data: {
+            gracePeriodEndsAt: gracePeriodEnd,
+          },
+        });
+        updatedCount++;
+      }
+    }
+
+    return updatedCount;
+  }
+
+  /**
+   * 標記緩衝期已過的 Campaign 為待刪除
+   */
+  async markCampaignsForDeletion() {
+    const now = new Date();
+
+    const result = await this.prisma.campaign.updateMany({
+      where: {
+        gracePeriodEndsAt: {
+          lt: now,
+        },
+        markedForDeletion: false,
+        deletedAt: null,
+      },
+      data: {
+        markedForDeletion: true,
+      },
+    });
+
+    return result.count;
+  }
+
+  /**
+   * 取得待刪除的 Campaign 列表（供超級管理者查看）
+   */
+  async getPendingDeletionCampaigns() {
+    return this.prisma.campaign.findMany({
+      where: {
+        markedForDeletion: true,
+        deletedAt: null,
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        _count: {
+          select: {
+            voters: true,
+            contacts: true,
+            events: true,
+          },
+        },
+      },
+      orderBy: {
+        gracePeriodEndsAt: 'asc',
+      },
+    });
+  }
+
+  /**
+   * 永久刪除 Campaign（軟刪除）
+   */
+  async permanentlyDeleteCampaign(campaignId: string) {
+    return this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+      },
+    });
+  }
+
+  /**
+   * 恢復 Campaign（取消刪除標記）
+   */
+  async restoreCampaign(campaignId: string) {
+    return this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        markedForDeletion: false,
+        gracePeriodEndsAt: null,
+      },
+    });
+  }
+
+  /**
+   * 延長訂閱期限（用於推薦獎勵等）
+   */
+  async extendSubscription(userId: string, months: number) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: {
+          in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE],
+        },
+      },
+    });
+
+    if (!subscription) {
+      return null;
+    }
+
+    const currentEnd = new Date(subscription.currentPeriodEnd);
+    const newEnd = new Date(currentEnd);
+    newEnd.setMonth(newEnd.getMonth() + months);
+
+    return this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        currentPeriodEnd: newEnd,
+      },
+      include: {
+        plan: true,
+      },
+    });
   }
 }

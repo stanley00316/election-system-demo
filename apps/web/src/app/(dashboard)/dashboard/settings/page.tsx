@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth';
 import { useCampaignStore } from '@/stores/campaign';
-import { Settings, User, Building, Users, Bell, Shield, Database, Loader2, Download, HardDrive, CreditCard } from 'lucide-react';
+import { Settings, User, Building, Users, Bell, Shield, Database, Loader2, Download, HardDrive, CreditCard, Gift, MessageCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
@@ -435,6 +435,54 @@ export default function SettingsPage() {
                 管理訂閱
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+
+        {/* Referral Program */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              推薦好友
+            </CardTitle>
+            <CardDescription>推薦好友使用，獲得免費訂閱</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              每成功推薦一位好友，您可獲得一個月免費使用
+            </p>
+            <Link href="/dashboard/settings/referral">
+              <Button variant="outline" className="w-full">
+                查看推薦碼
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Customer Support */}
+        <Card className="border-green-200 bg-green-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              客服支援
+            </CardTitle>
+            <CardDescription>需要協助？隨時與我們聯繫</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              透過官方 LINE 帳號與我們的客服團隊聯繫，我們會盡快回覆您
+            </p>
+            <a
+              href="https://line.me/ti/p/@487leezq"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button className="w-full bg-green-600 hover:bg-green-700">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                加入官方 LINE：@487leezq
+                <ExternalLink className="h-4 w-4 ml-2" />
+              </Button>
+            </a>
           </CardContent>
         </Card>
       </div>

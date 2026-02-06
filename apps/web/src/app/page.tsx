@@ -7,6 +7,7 @@ import {
   Calendar,
   Shield,
   Smartphone,
+  MessageCircle,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -111,9 +112,18 @@ export default function HomePage() {
       <footer className="container mx-auto px-4 py-8 border-t">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground">
-            © 2024 選情系統. All rights reserved.
+            © 2026 選情系統. All rights reserved.
           </p>
-          <div className="flex gap-6 text-muted-foreground">
+          <div className="flex items-center gap-6 text-muted-foreground">
+            <a
+              href="https://line.me/ti/p/@487leezq"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:text-foreground"
+            >
+              <MessageCircle className="h-4 w-4" />
+              官方 LINE：@487leezq
+            </a>
             <Link href="/privacy" className="hover:text-foreground">
               隱私政策
             </Link>

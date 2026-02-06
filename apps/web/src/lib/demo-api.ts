@@ -916,6 +916,78 @@ export const demoSubscriptionsApi = {
     await delay(100);
     return [];
   },
+
+  // 分級定價 API（Demo 版）
+  getAvailableCities: async () => {
+    await delay(100);
+    return [
+      { regionLevel: 1, label: '一級戰區（六都）', cities: ['新北市', '台北市', '桃園市', '台中市', '台南市', '高雄市'] },
+      { regionLevel: 2, label: '二級戰區', cities: ['彰化縣', '屏東縣', '新竹縣', '新竹市'] },
+      { regionLevel: 3, label: '三級戰區（基準）', cities: ['南投縣', '苗栗縣', '雲林縣', '宜蘭縣'] },
+      { regionLevel: 4, label: '四級戰區', cities: ['嘉義縣', '基隆市', '花蓮縣', '嘉義市', '台東縣'] },
+      { regionLevel: 5, label: '五級戰區（離島）', cities: ['金門縣', '澎湖縣', '連江縣'] },
+    ];
+  },
+
+  getElectionTypes: async () => {
+    await delay(100);
+    return [
+      { code: 'VILLAGE_CHIEF', label: '里長', category: 'VILLAGE_CHIEF' },
+      { code: 'TOWNSHIP_REP', label: '民代', category: 'REPRESENTATIVE' },
+      { code: 'CITY_COUNCILOR', label: '議員', category: 'COUNCILOR' },
+      { code: 'MAYOR', label: '市長', category: 'MAYOR' },
+      { code: 'LEGISLATOR', label: '立委', category: 'LEGISLATOR' },
+    ];
+  },
+
+  getPlansByCity: async (city: string) => {
+    await delay(100);
+    return {
+      city,
+      trialPlan: demoPlans[0],
+      plans: demoPlans.slice(1),
+    };
+  },
+
+  getPlanByLocation: async (city: string, electionType: string) => {
+    await delay(100);
+    // Demo 模式返回示範價格
+    const demoPrice = {
+      VILLAGE_CHIEF: 26800,
+      TOWNSHIP_REP: 29800,
+      CITY_COUNCILOR: 39800,
+      MAYOR: 168000,
+      LEGISLATOR: 116800,
+    };
+    const electionLabels: Record<string, string> = {
+      VILLAGE_CHIEF: '里長',
+      TOWNSHIP_REP: '民代',
+      CITY_COUNCILOR: '議員',
+      MAYOR: '市長',
+      LEGISLATOR: '立委',
+    };
+    return {
+      city,
+      electionType,
+      plan: {
+        id: `demo-plan-${city}-${electionType}`,
+        name: `${city}${electionLabels[electionType] || electionType}方案`,
+        code: `${city}_${electionType}_MONTHLY`,
+        price: demoPrice[electionType as keyof typeof demoPrice] || 29800,
+        interval: 'MONTH',
+        voterLimit: null,
+        teamLimit: 10,
+        features: ['三級戰區定價', '無限選民數量', '10 位團隊成員', '完整選情分析'],
+        isActive: true,
+        sortOrder: 1,
+        city,
+        category: electionType,
+        regionLevel: 3,
+        description: `${city}${electionLabels[electionType] || electionType}選舉專用方案`,
+      },
+      trialPlan: demoPlans[0],
+    };
+  },
 };
 
 // ==================== Payments API ====================
@@ -944,6 +1016,78 @@ export const demoPaymentsApi = {
   refund: async (_id: string, _reason?: string) => {
     await delay(300);
     return { success: false };
+  },
+};
+
+// ==================== Referrals API ====================
+export const demoReferralsApi = {
+  getMyCode: async () => {
+    await delay(100);
+    return {
+      code: 'DEMO1234',
+      shareUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/register?ref=DEMO1234`,
+    };
+  },
+
+  applyCode: async (code: string) => {
+    await delay(300);
+    if (code === 'INVALID') {
+      throw new Error('推薦碼無效或已過期');
+    }
+    return {
+      success: true,
+      message: '推薦碼套用成功！付費後您和推薦人都將獲得一個月免費使用',
+      referral: {
+        id: 'demo-referral-' + Date.now(),
+        referrerName: '示範推薦人',
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+      },
+    };
+  },
+
+  getMyReferrals: async () => {
+    await delay(100);
+    return [
+      {
+        id: 'referral-1',
+        refereeId: 'user-1',
+        refereeName: '王小明',
+        refereeEmail: 'xiaoming@example.com',
+        status: 'COMPLETED',
+        rewardGranted: true,
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        completedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'referral-2',
+        refereeId: 'user-2',
+        refereeName: '李小華',
+        refereeEmail: 'xiaohua@example.com',
+        status: 'PENDING',
+        rewardGranted: false,
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        completedAt: null,
+      },
+    ];
+  },
+
+  getStats: async () => {
+    await delay(100);
+    return {
+      totalReferrals: 5,
+      completedReferrals: 2,
+      pendingReferrals: 3,
+      totalRewardMonths: 2,
+    };
+  },
+
+  getPending: async () => {
+    await delay(100);
+    return {
+      hasPendingReferral: false,
+      referral: undefined,
+    };
   },
 };
 

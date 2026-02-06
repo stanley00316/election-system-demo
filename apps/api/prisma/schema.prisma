@@ -14,15 +14,15 @@ datasource db {
 // ==================== 使用者 ====================
 
 model User {
-  id          String   @id @default(uuid())
-  lineUserId  String   @unique @map("line_user_id")
-  name        String
-  email       String?
-  phone       String?
-  avatarUrl   String?  @map("avatar_url")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  lineUserId String   @unique @map("line_user_id")
+  name       String
+  email      String?
+  phone      String?
+  avatarUrl  String?  @map("avatar_url")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   // 帳號停用
   isSuspended   Boolean   @default(false) @map("is_suspended")
@@ -30,7 +30,11 @@ model User {
   suspendReason String?   @map("suspend_reason")
 
   // 管理員權限
-  isAdmin Boolean @default(false) @map("is_admin")
+  isAdmin      Boolean @default(false) @map("is_admin")
+  isSuperAdmin Boolean @default(false) @map("is_super_admin")
+
+  // 推薦系統
+  referralCode String? @unique @map("referral_code")
 
   // Google Calendar 整合
   googleAccessToken  String?   @map("google_access_token")
@@ -39,17 +43,19 @@ model User {
   googleCalendarId   String?   @map("google_calendar_id")
 
   // Relations
-  campaigns          Campaign[]
-  teamMembers        TeamMember[]
-  contacts           Contact[]
-  schedules          Schedule[]
-  activityLogs       ActivityLog[]
-  createdVoters      Voter[]               @relation("VoterCreator")
-  createdEvents      Event[]
-  recordedMeetings   RelationshipMeeting[] @relation("MeetingRecorder")
-  createdInvites     CampaignInvite[]      @relation("InviteCreator")
-  subscriptions      Subscription[]
-  adminActionLogs    AdminActionLog[]      @relation("AdminActionLogs")
+  campaigns        Campaign[]
+  teamMembers      TeamMember[]
+  contacts         Contact[]
+  schedules        Schedule[]
+  activityLogs     ActivityLog[]
+  createdVoters    Voter[]               @relation("VoterCreator")
+  createdEvents    Event[]
+  recordedMeetings RelationshipMeeting[] @relation("MeetingRecorder")
+  createdInvites   CampaignInvite[]      @relation("InviteCreator")
+  subscriptions    Subscription[]
+  adminActionLogs  AdminActionLog[]      @relation("AdminActionLogs")
+  referralsGiven   Referral[]            @relation("ReferrerUser")
+  referralReceived Referral?             @relation("ReferredUser")
 
   @@map("users")
 }
@@ -59,10 +65,10 @@ model User {
 model AdminActionLog {
   id         String   @id @default(uuid())
   adminId    String   @map("admin_id") // 執行操作的管理員 User ID
-  action     String   // 操作類型: USER_SUSPEND, SUBSCRIPTION_UPDATE, PAYMENT_REFUND 等
+  action     String // 操作類型: USER_SUSPEND, SUBSCRIPTION_UPDATE, PAYMENT_REFUND 等
   targetType String   @map("target_type") // 目標類型: USER, SUBSCRIPTION, PAYMENT
   targetId   String   @map("target_id") // 目標 ID
-  details    Json?    // 操作詳情
+  details    Json? // 操作詳情
   ipAddress  String?  @map("ip_address")
   userAgent  String?  @map("user_agent")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -74,6 +80,30 @@ model AdminActionLog {
   @@index([targetType, targetId])
   @@index([createdAt])
   @@map("admin_action_logs")
+}
+
+// ==================== 推薦系統 ====================
+
+model Referral {
+  id              String         @id @default(uuid())
+  referrerUserId  String         @map("referrer_user_id")
+  referredUserId  String         @unique @map("referred_user_id")
+  referralCode    String         @map("referral_code")
+  status          ReferralStatus @default(PENDING)
+  rewardGrantedAt DateTime?      @map("reward_granted_at")
+  rewardMonths    Int            @default(1) @map("reward_months")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  referrer User @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred User @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerUserId])
+  @@index([referralCode])
+  @@index([status])
+  @@index([createdAt])
+  @@map("referrals")
 }
 
 model ActivityLog {
@@ -101,29 +131,34 @@ model ActivityLog {
 // ==================== 選舉活動 ====================
 
 model Campaign {
-  id            String       @id @default(uuid())
-  ownerId       String       @map("owner_id")
-  name          String
-  electionType  ElectionType @map("election_type")
-  electionDate  DateTime?    @map("election_date")
-  city          String
-  district      String?
-  village       String?
-  constituency  Int?
-  description   String?
-  isActive      Boolean      @default(true) @map("is_active")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  id           String       @id @default(uuid())
+  ownerId      String       @map("owner_id")
+  name         String
+  electionType ElectionType @map("election_type")
+  electionDate DateTime?    @map("election_date")
+  city         String
+  district     String?
+  village      String?
+  constituency Int?
+  description  String?
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // 資料保留與刪除（Phase 4）
+  gracePeriodEndsAt DateTime? @map("grace_period_ends_at")
+  markedForDeletion Boolean   @default(false) @map("marked_for_deletion")
+  deletedAt         DateTime? @map("deleted_at")
 
   // Relations
-  owner         User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  teamMembers   TeamMember[]
-  invites       CampaignInvite[]
-  voters        Voter[]
-  contacts      Contact[]
-  events        Event[]
-  schedules     Schedule[]
-  activityLogs  ActivityLog[]
+  owner        User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamMembers  TeamMember[]
+  invites      CampaignInvite[]
+  voters       Voter[]
+  contacts     Contact[]
+  events       Event[]
+  schedules    Schedule[]
+  activityLogs ActivityLog[]
 
   @@index([ownerId])
   @@index([isActive])
@@ -170,45 +205,45 @@ model CampaignInvite {
 // ==================== 選民 ====================
 
 model Voter {
-  id              String          @id @default(uuid())
-  campaignId      String          @map("campaign_id")
-  name            String
-  phone           String?
-  email           String?
-  lineId          String?         @map("line_id")
-  lineUrl         String?         @map("line_url")
-  address         String?
-  city            String?
-  districtName    String?         @map("district_name")
-  village         String?
-  neighborhood    String?
+  id             String                                @id @default(uuid())
+  campaignId     String                                @map("campaign_id")
+  name           String
+  phone          String?
+  email          String?
+  lineId         String?                               @map("line_id")
+  lineUrl        String?                               @map("line_url")
+  address        String?
+  city           String?
+  districtName   String?                               @map("district_name")
+  village        String?
+  neighborhood   String?
   // PostGIS geometry 欄位
-  location        Unsupported("geometry(Point, 4326)")?
-  latitude        Float?
-  longitude       Float?
-  politicalParty  PoliticalParty? @map("political_party")
-  stance          PoliticalStance @default(UNDECIDED)
-  influenceScore  Int             @default(0) @map("influence_score")
-  age             Int?
-  gender          Gender?
-  occupation      String?
-  tags            String[]        @default([])
-  notes           String?
-  contactCount    Int             @default(0) @map("contact_count")
-  lastContactAt   DateTime?       @map("last_contact_at")
-  createdBy       String          @map("created_by")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  location       Unsupported("geometry(Point, 4326)")?
+  latitude       Float?
+  longitude      Float?
+  politicalParty PoliticalParty?                       @map("political_party")
+  stance         PoliticalStance                       @default(UNDECIDED)
+  influenceScore Int                                   @default(0) @map("influence_score")
+  age            Int?
+  gender         Gender?
+  occupation     String?
+  tags           String[]                              @default([])
+  notes          String?
+  contactCount   Int                                   @default(0) @map("contact_count")
+  lastContactAt  DateTime?                             @map("last_contact_at")
+  createdBy      String                                @map("created_by")
+  createdAt      DateTime                              @default(now()) @map("created_at")
+  updatedAt      DateTime                              @updatedAt @map("updated_at")
 
   // Relations
-  campaign           Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  creator            User                @relation("VoterCreator", fields: [createdBy], references: [id])
-  contacts           Contact[]
-  hostedEvents       Event[]             @relation("EventHost")
-  eventAttendances   EventAttendee[]
-  scheduleItems      ScheduleItem[]
-  relationshipsFrom  VoterRelationship[] @relation("RelationshipSource")
-  relationshipsTo    VoterRelationship[] @relation("RelationshipTarget")
+  campaign          Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator           User                @relation("VoterCreator", fields: [createdBy], references: [id])
+  contacts          Contact[]
+  hostedEvents      Event[]             @relation("EventHost")
+  eventAttendances  EventAttendee[]
+  scheduleItems     ScheduleItem[]
+  relationshipsFrom VoterRelationship[] @relation("RelationshipSource")
+  relationshipsTo   VoterRelationship[] @relation("RelationshipTarget")
 
   @@index([campaignId])
   @@index([stance])
@@ -267,22 +302,22 @@ model RelationshipMeeting {
 // ==================== 接觸紀錄 ====================
 
 model Contact {
-  id             String         @id @default(uuid())
-  voterId        String         @map("voter_id")
-  userId         String         @map("user_id")
-  campaignId     String         @map("campaign_id")
-  type           ContactType
-  outcome        ContactOutcome
-  contactDate    DateTime       @default(now()) @map("contact_date")
-  location       String?
-  locationLat    Float?         @map("location_lat")
-  locationLng    Float?         @map("location_lng")
-  notes          String?
-  topics         String[]       @default([])
-  nextAction     String?        @map("next_action")
-  followUpDate   DateTime?      @map("follow_up_date")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  id           String         @id @default(uuid())
+  voterId      String         @map("voter_id")
+  userId       String         @map("user_id")
+  campaignId   String         @map("campaign_id")
+  type         ContactType
+  outcome      ContactOutcome
+  contactDate  DateTime       @default(now()) @map("contact_date")
+  location     String?
+  locationLat  Float?         @map("location_lat")
+  locationLng  Float?         @map("location_lng")
+  notes        String?
+  topics       String[]       @default([])
+  nextAction   String?        @map("next_action")
+  followUpDate DateTime?      @map("follow_up_date")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
 
   // Relations
   voter    Voter    @relation(fields: [voterId], references: [id], onDelete: Cascade)
@@ -368,9 +403,9 @@ model Schedule {
   updatedAt         DateTime       @updatedAt @map("updated_at")
 
   // Google Calendar 同步
-  googleEventId     String?        @map("google_event_id")
-  lastSyncedAt      DateTime?      @map("last_synced_at")
-  syncEnabled       Boolean        @default(false) @map("sync_enabled")
+  googleEventId String?   @map("google_event_id")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  syncEnabled   Boolean   @default(false) @map("sync_enabled")
 
   // Relations
   campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -384,23 +419,23 @@ model Schedule {
 }
 
 model ScheduleItem {
-  id              String             @id @default(uuid())
-  scheduleId      String             @map("schedule_id")
-  order           Int
-  type            ScheduleItemType
-  voterId         String?            @map("voter_id")
-  eventId         String?            @map("event_id")
-  address         String?
-  locationLat     Float?             @map("location_lat")
-  locationLng     Float?             @map("location_lng")
-  plannedTime     DateTime?          @map("planned_time")
-  actualTime      DateTime?          @map("actual_time")
-  duration        Int?
-  status          ScheduleItemStatus @default(PENDING)
-  notes           String?
-  travelDistance  Float?             @map("travel_distance")
-  travelDuration  Int?               @map("travel_duration")
-  createdAt       DateTime           @default(now()) @map("created_at")
+  id             String             @id @default(uuid())
+  scheduleId     String             @map("schedule_id")
+  order          Int
+  type           ScheduleItemType
+  voterId        String?            @map("voter_id")
+  eventId        String?            @map("event_id")
+  address        String?
+  locationLat    Float?             @map("location_lat")
+  locationLng    Float?             @map("location_lng")
+  plannedTime    DateTime?          @map("planned_time")
+  actualTime     DateTime?          @map("actual_time")
+  duration       Int?
+  status         ScheduleItemStatus @default(PENDING)
+  notes          String?
+  travelDistance Float?             @map("travel_distance")
+  travelDuration Int?               @map("travel_duration")
+  createdAt      DateTime           @default(now()) @map("created_at")
 
   // Relations
   schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
@@ -414,17 +449,17 @@ model ScheduleItem {
 // ==================== 選區 ====================
 
 model District {
-  id               String                                  @id @default(uuid())
+  id               String                                       @id @default(uuid())
   name             String
   level            DistrictLevel
-  parentId         String?                                 @map("parent_id")
+  parentId         String?                                      @map("parent_id")
   code             String?
-  registeredVoters Int?                                    @map("registered_voters")
+  registeredVoters Int?                                         @map("registered_voters")
   boundary         Unsupported("geometry(MultiPolygon, 4326)")?
-  centerLat        Float?                                  @map("center_lat")
-  centerLng        Float?                                  @map("center_lng")
-  createdAt        DateTime                                @default(now()) @map("created_at")
-  updatedAt        DateTime                                @updatedAt @map("updated_at")
+  centerLat        Float?                                       @map("center_lat")
+  centerLng        Float?                                       @map("center_lng")
+  createdAt        DateTime                                     @default(now()) @map("created_at")
+  updatedAt        DateTime                                     @updatedAt @map("updated_at")
 
   // Self-relation for hierarchy
   parent   District?  @relation("DistrictHierarchy", fields: [parentId], references: [id])
@@ -439,18 +474,28 @@ model District {
 // ==================== 訂閱與付款 ====================
 
 model Plan {
-  id          String   @id @default(uuid())
-  name        String   // 方案名稱
-  code        String   @unique // 方案代碼 (FREE_TRIAL, MONTHLY, YEARLY)
-  price       Int      // 價格（新台幣）
-  interval    PlanInterval // 計費週期
-  voterLimit  Int?     @map("voter_limit") // 選民數量上限 (null = 無限)
-  teamLimit   Int?     @map("team_limit") // 團隊成員上限
-  features    Json     @default("[]") // 功能清單
-  isActive    Boolean  @default(true) @map("is_active")
-  sortOrder   Int      @default(0) @map("sort_order")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String       @id @default(uuid())
+  name       String // 方案名稱
+  code       String       @unique // 方案代碼 (FREE_TRIAL, MONTHLY, YEARLY)
+  price      Int // 價格（新台幣）
+  interval   PlanInterval // 計費週期
+  voterLimit Int?         @map("voter_limit") // 選民數量上限 (null = 無限)
+  teamLimit  Int?         @map("team_limit") // 團隊成員上限
+  features   Json         @default("[]") // 功能清單
+  isActive   Boolean      @default(true) @map("is_active")
+  sortOrder  Int          @default(0) @map("sort_order")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  // 戰區分級定價
+  city            String? // 縣市名稱（用於分級定價）
+  category        PlanCategory? // 方案類別（里長/民代/議員等）
+  regionLevel     Int?          @map("region_level") // 戰區等級 1-5
+  populationRatio Decimal?      @map("population_ratio") @db.Decimal(10, 4) // 人口比例係數
+  basePrice       Int?          @map("base_price") // 基準價格（新台幣）
+  description     String? // 方案描述
+
+  @@index([city, category])
 
   // Relations
   subscriptions Subscription[]
@@ -483,22 +528,22 @@ model Subscription {
 }
 
 model Payment {
-  id                String        @id @default(uuid())
-  subscriptionId    String        @map("subscription_id")
-  amount            Int           // 金額（新台幣）
-  currency          String        @default("TWD")
-  status            PaymentStatus @default(PENDING)
+  id                String          @id @default(uuid())
+  subscriptionId    String          @map("subscription_id")
+  amount            Int // 金額（新台幣）
+  currency          String          @default("TWD")
+  status            PaymentStatus   @default(PENDING)
   provider          PaymentProvider
-  providerPaymentId String?       @map("provider_payment_id")
-  providerData      Json?         @map("provider_data") // 支付商回傳的原始資料
-  paidAt            DateTime?     @map("paid_at")
-  failedAt          DateTime?     @map("failed_at")
-  failureReason     String?       @map("failure_reason")
-  refundedAt        DateTime?     @map("refunded_at")
-  refundAmount      Int?          @map("refund_amount")
-  invoiceNumber     String?       @map("invoice_number") // 發票號碼
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  providerPaymentId String?         @map("provider_payment_id")
+  providerData      Json?           @map("provider_data") // 支付商回傳的原始資料
+  paidAt            DateTime?       @map("paid_at")
+  failedAt          DateTime?       @map("failed_at")
+  failureReason     String?         @map("failure_reason")
+  refundedAt        DateTime?       @map("refunded_at")
+  refundAmount      Int?            @map("refund_amount")
+  invoiceNumber     String?         @map("invoice_number") // 發票號碼
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
   // Relations
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
@@ -654,25 +699,39 @@ enum PlanInterval {
 }
 
 enum SubscriptionStatus {
-  TRIAL       // 試用中
-  ACTIVE      // 訂閱中
-  PAST_DUE    // 逾期未付款
-  CANCELLED   // 已取消
-  EXPIRED     // 已過期
+  TRIAL // 試用中
+  ACTIVE // 訂閱中
+  PAST_DUE // 逾期未付款
+  CANCELLED // 已取消
+  EXPIRED // 已過期
 }
 
 enum PaymentStatus {
-  PENDING     // 待付款
-  PROCESSING  // 處理中
-  COMPLETED   // 已完成
-  FAILED      // 失敗
-  REFUNDED    // 已退款
-  CANCELLED   // 已取消
+  PENDING // 待付款
+  PROCESSING // 處理中
+  COMPLETED // 已完成
+  FAILED // 失敗
+  REFUNDED // 已退款
+  CANCELLED // 已取消
 }
 
 enum PaymentProvider {
-  ECPAY       // 綠界
-  NEWEBPAY    // 藍新金流
-  STRIPE      // Stripe
-  MANUAL      // 人工處理
+  ECPAY // 綠界
+  NEWEBPAY // 藍新金流
+  STRIPE // Stripe
+  MANUAL // 人工處理
+}
+
+enum ReferralStatus {
+  PENDING // 被推薦人尚未完成付款
+  COMPLETED // 被推薦人已付款，獎勵已發放
+  EXPIRED // 推薦已過期（超過有效期限未付款）
+}
+
+enum PlanCategory {
+  VILLAGE_CHIEF // 里長
+  REPRESENTATIVE // 民代
+  COUNCILOR // 議員
+  MAYOR // 市長
+  LEGISLATOR // 立委
 }

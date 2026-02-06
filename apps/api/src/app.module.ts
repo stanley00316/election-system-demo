@@ -17,11 +17,16 @@ import { CalendarModule } from './modules/calendar/calendar.module';
 import { SentryModule } from './modules/sentry';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
 import { AdminUsersModule } from './modules/admin/users/admin-users.module';
 import { AdminSubscriptionsModule } from './modules/admin/subscriptions/admin-subscriptions.module';
 import { AdminPaymentsModule } from './modules/admin/payments/admin-payments.module';
 import { AdminAnalyticsModule } from './modules/admin/analytics/admin-analytics.module';
+import { AdminReferralsModule } from './modules/admin/referrals/admin-referrals.module';
+import { AdminPlansModule } from './modules/admin/plans/admin-plans.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { AdminDataRetentionModule } from './modules/admin/data-retention/admin-data-retention.module';
 
 @Module({
   imports: [
@@ -60,11 +65,16 @@ import { AdminAnalyticsModule } from './modules/admin/analytics/admin-analytics.
     CalendarModule,
     SubscriptionsModule,
     PaymentsModule,
+    ReferralsModule,
     AdminAuthModule,
     AdminUsersModule,
     AdminSubscriptionsModule,
     AdminPaymentsModule,
     AdminAnalyticsModule,
+    AdminReferralsModule,
+    AdminPlansModule,
+    TasksModule,
+    AdminDataRetentionModule,
   ],
 })
 export class AppModule {}

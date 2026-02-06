@@ -6,18 +6,50 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { UserRole } from '@prisma/client';
+import { UserRole, ElectionType, PlanCategory, SubscriptionStatus } from '@prisma/client';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { InviteTeamMemberDto } from './dto/invite-team-member.dto';
 import { CreateInviteLinkDto } from './dto/create-invite-link.dto';
 import { randomBytes } from 'crypto';
 
+// Campaign.electionType 對應 Plan.category 的映射
+const ELECTION_TYPE_TO_PLAN_CATEGORY: Record<ElectionType, PlanCategory> = {
+  [ElectionType.VILLAGE_CHIEF]: PlanCategory.VILLAGE_CHIEF,
+  [ElectionType.TOWNSHIP_REP]: PlanCategory.REPRESENTATIVE,
+  [ElectionType.CITY_COUNCILOR]: PlanCategory.COUNCILOR,
+  [ElectionType.MAYOR]: PlanCategory.MAYOR,
+  [ElectionType.LEGISLATOR]: PlanCategory.LEGISLATOR,
+  [ElectionType.PRESIDENT]: PlanCategory.LEGISLATOR, // 總統選舉使用立委方案
+};
+
+// 選舉類型的中文標籤
+const ELECTION_TYPE_LABELS: Record<ElectionType, string> = {
+  [ElectionType.VILLAGE_CHIEF]: '里長',
+  [ElectionType.TOWNSHIP_REP]: '民代',
+  [ElectionType.CITY_COUNCILOR]: '議員',
+  [ElectionType.MAYOR]: '市長',
+  [ElectionType.LEGISLATOR]: '立委',
+  [ElectionType.PRESIDENT]: '總統',
+};
+
+// 方案類別的中文標籤
+const PLAN_CATEGORY_LABELS: Record<PlanCategory, string> = {
+  [PlanCategory.VILLAGE_CHIEF]: '里長',
+  [PlanCategory.REPRESENTATIVE]: '民代',
+  [PlanCategory.COUNCILOR]: '議員',
+  [PlanCategory.MAYOR]: '市長',
+  [PlanCategory.LEGISLATOR]: '立委',
+};
+
 @Injectable()
 export class CampaignsService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateCampaignDto) {
+    // 驗證訂閱方案與 Campaign 的一致性
+    await this.validateSubscriptionForCampaign(userId, dto);
+
     const campaign = await this.prisma.campaign.create({
       data: {
         ...dto,
@@ -35,6 +67,96 @@ export class CampaignsService {
     });
 
     return campaign;
+  }
+
+  /**
+   * 驗證訂閱方案是否允許建立指定的 Campaign
+   * 防止用戶購買低價方案但建立高價選區的 Campaign
+   */
+  private async validateSubscriptionForCampaign(userId: string, dto: CreateCampaignDto) {
+    // 取得用戶當前有效訂閱
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: {
+          in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE],
+        },
+        currentPeriodEnd: {
+          gte: new Date(),
+        },
+      },
+      include: {
+        plan: true,
+      },
+    });
+
+    // 無訂閱時，提示用戶先訂閱
+    if (!subscription) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: '請先選擇訂閱方案後再建立選舉活動',
+        code: 'NO_SUBSCRIPTION',
+        upgradeUrl: '/pricing',
+      });
+    }
+
+    // 試用期間允許建立任何 Campaign（讓用戶體驗完整功能）
+    if (subscription.status === SubscriptionStatus.TRIAL) {
+      return; // 直接通過驗證
+    }
+
+    // 免費試用方案（FREE_TRIAL）允許任意建立
+    if (subscription.plan.code === 'FREE_TRIAL') {
+      return;
+    }
+
+    // 檢查方案是否為分級定價方案（有 city 和 category）
+    const plan = subscription.plan;
+    if (!plan.city || !plan.category) {
+      // 舊版本的通用方案，不做限制
+      return;
+    }
+
+    // 驗證縣市是否一致
+    if (plan.city !== dto.city) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: `您的訂閱方案（${plan.city}${PLAN_CATEGORY_LABELS[plan.category as PlanCategory] || plan.category}）與建立的選舉活動（${dto.city}${ELECTION_TYPE_LABELS[dto.electionType as ElectionType] || dto.electionType}）縣市不符`,
+        code: 'CITY_MISMATCH',
+        currentPlan: {
+          city: plan.city,
+          category: plan.category,
+          name: plan.name,
+        },
+        requiredPlan: {
+          city: dto.city,
+          electionType: dto.electionType,
+        },
+        upgradeUrl: `/pricing?city=${encodeURIComponent(dto.city)}&electionType=${dto.electionType}`,
+      });
+    }
+
+    // 驗證選舉類型是否對應
+    const requiredCategory = ELECTION_TYPE_TO_PLAN_CATEGORY[dto.electionType as ElectionType];
+    if (plan.category !== requiredCategory) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: `您的訂閱方案（${plan.city}${PLAN_CATEGORY_LABELS[plan.category as PlanCategory] || plan.category}）與建立的選舉活動（${dto.city}${ELECTION_TYPE_LABELS[dto.electionType as ElectionType] || dto.electionType}）選舉類型不符`,
+        code: 'ELECTION_TYPE_MISMATCH',
+        currentPlan: {
+          city: plan.city,
+          category: plan.category,
+          name: plan.name,
+        },
+        requiredPlan: {
+          city: dto.city,
+          electionType: dto.electionType,
+        },
+        upgradeUrl: `/pricing?city=${encodeURIComponent(dto.city)}&electionType=${dto.electionType}`,
+      });
+    }
+
+    // 驗證通過
   }
 
   async findById(id: string) {

@@ -28,6 +28,7 @@ import {
   Zap,
   Shield,
   Target,
+  MessageCircle,
 } from 'lucide-react';
 
 interface GuideSection {
@@ -560,7 +561,7 @@ export default function GuidePage() {
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="text-3xl font-bold mb-4">準備好開始了嗎？</h2>
           <p className="text-xl opacity-90 mb-8">
-            立即免費試用 14 天，體驗專業的選民管理系統
+            立即免費試用 7 天，體驗專業的選民管理系統
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button size="lg" variant="secondary" asChild>
@@ -582,7 +583,26 @@ export default function GuidePage() {
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-4xl">
           <h2 className="text-3xl font-bold text-center mb-12">需要更多協助？</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="text-center border-green-200 bg-green-50/50">
+              <CardContent className="pt-6">
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="font-semibold mb-2">官方 LINE</h3>
+                <a
+                  href="https://line.me/ti/p/@487leezq"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-600 font-medium hover:underline"
+                >
+                  @487leezq
+                </a>
+                <p className="text-muted-foreground text-xs mt-1">
+                  點擊加入好友
+                </p>
+              </CardContent>
+            </Card>
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">

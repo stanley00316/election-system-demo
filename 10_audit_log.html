@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>稽核紀錄 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .log-item {
+            border-left: 4px solid var(--primary-color);
+            padding: 12px;
+            margin-bottom: 12px;
+            background: #fff;
+            border-radius: 0 12px 12px 0;
+            font-size: 0.85rem;
+        }
+        .log-time { color: #999; font-size: 0.75rem; margin-bottom: 4px; }
+        .log-action { font-weight: bold; margin-bottom: 2px; }
+        .log-details { color: #666; font-family: monospace; }
+        .badge-role {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #fff;
+            margin-left: 8px;
+        }
+        .bg-director { background: #6f42c1; }
+        .bg-officer { background: #007bff; }
+        .bg-volunteer { background: #17a2b8; }
+        .bg-system { background: #6c757d; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand"><i class="fas fa-history"></i> 操作稽核紀錄</a>
+    </header>
+
+    <main class="container">
+        <div id="log-container">
+            <!-- 紀錄清單 -->
+        </div>
+    </main>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        function renderLogs() {
+            const data = VoteScope.getData();
+            const container = document.getElementById('log-container');
+            
+            if (data.role !== 'director') {
+                container.innerHTML = `
+                    <div class="app-card text-center" style="margin-top: 50px;">
+                        <i class="fas fa-lock" style="font-size: 3rem; color: var(--danger-color); margin-bottom: 16px;"></i>
+                        <h3>權限不足</h3>
+                        <p>僅有「主任」角色可查看此頁面。</p>
+                        <button class="btn-mobile btn-primary" onclick="window.location.href='00_home.html'">回首頁</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            data.auditLogs.forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'log-item';
+                
+                let detailText = JSON.stringify(log.details);
+                if (log.action === 'update_person') {
+                    detailText = `更新了 ${log.details.personName || '選民'}: ${JSON.stringify(log.details.updates)}`;
+                }
+
+                item.innerHTML = `
+                    <div class="log-time">${new Date(log.timestamp).toLocaleString()}</div>
+                    <div class="log-action">
+                        ${log.action}
+                        <span class="badge-role bg-${log.role}">${log.role}</span>
+                    </div>
+                    <div class="log-details">${detailText}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', renderLogs);
+    </script>
+</body>
+</html>
+

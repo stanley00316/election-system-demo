@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>儀表板 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .stat-card {
+            text-align: center;
+            padding: 20px 16px;
+        }
+        .stat-val {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 4px 0;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        .progress-box {
+            margin-top: 20px;
+        }
+        .progress-bar-bg {
+            height: 24px;
+            background: #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.5s;
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand"><i class="fas fa-chart-pie"></i> 數據儀表板</a>
+    </header>
+
+    <main class="container">
+        <div class="app-card progress-box">
+            <div class="app-card-title">今日拜訪進度</div>
+            <div class="progress-bar-bg">
+                <div class="progress-text" id="prog-text">0 / 20 (0%)</div>
+                <div class="progress-bar-fill" id="prog-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="app-card stat-card">
+                <div class="stat-label">支持 👍</div>
+                <div class="stat-val" id="count-support" style="color: var(--success-color);">0</div>
+            </div>
+            <div class="app-card stat-card">
+                <div class="stat-label">中立 😐</div>
+                <div class="stat-val" id="count-neutral" style="color: var(--warning-color);">0</div>
+            </div>
+            <div class="app-card stat-card">
+                <div class="stat-label">反對 👎</div>
+                <div class="stat-val" id="count-against" style="color: var(--danger-color);">0</div>
+            </div>
+            <div class="app-card stat-card">
+                <div class="stat-label">未拜訪</div>
+                <div class="stat-val" id="count-unvisited">0</div>
+            </div>
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">政黨傾向分佈</div>
+            <div id="party-chart" style="margin-top: 16px;">
+                <!-- 動態生成條形圖 -->
+            </div>
+        </div>
+
+        <div class="app-card">
+            <div class="app-card-title">承諾分析</div>
+            <div class="detail-row">
+                <span>會去投票</span>
+                <span id="commit-vote">0</span>
+            </div>
+            <div class="detail-row">
+                <span>會拉票</span>
+                <span id="commit-pull">0</span>
+            </div>
+            <div class="detail-row">
+                <span>會出席活動</span>
+                <span id="commit-event">0</span>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        function updateStats() {
+            const data = VoteScope.getData();
+            const stats = {
+                support: 0,
+                neutral: 0,
+                against: 0,
+                unvisited: 0,
+                vote: 0,
+                pull: 0,
+                event: 0
+            };
+            const partyStats = {};
+
+            data.persons.forEach(p => {
+                if (p.status === 'support') stats.support++;
+                else if (p.status === 'neutral') stats.neutral++;
+                else if (p.status === 'against') stats.against++;
+                
+                // 未拜訪：好感度 50 且中立視為初始狀態
+                if (p.favorability === 50 && p.status === 'neutral') stats.unvisited++;
+
+                if (p.commitments.includes('vote')) stats.vote++;
+                if (p.commitments.includes('pull')) stats.pull++;
+                if (p.commitments.includes('event')) stats.event++;
+
+                partyStats[p.party] = (partyStats[p.party] || 0) + 1;
+            });
+
+            document.getElementById('count-support').innerText = stats.support;
+            document.getElementById('count-neutral').innerText = stats.neutral;
+            document.getElementById('count-against').innerText = stats.against;
+            document.getElementById('count-unvisited').innerText = stats.unvisited;
+            
+            document.getElementById('commit-vote').innerText = stats.vote + ' 人';
+            document.getElementById('commit-pull').innerText = stats.pull + ' 人';
+            document.getElementById('commit-event').innerText = stats.event + ' 人';
+
+            // 渲染政黨圖表 (CSS 條形圖)
+            const partyChart = document.getElementById('party-chart');
+            partyChart.innerHTML = '';
+            const maxPartyCount = Math.max(...Object.values(partyStats));
+            
+            Object.keys(partyStats).sort((a,b) => partyStats[b] - partyStats[a]).forEach(party => {
+                const count = partyStats[party];
+                const width = (count / maxPartyCount) * 100;
+                const bar = document.createElement('div');
+                bar.style.marginBottom = '12px';
+                bar.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+                        <span>${party}</span>
+                        <span>${count} 人</span>
+                    </div>
+                    <div style="height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; width: ${width}%; background: var(--primary-color);"></div>
+                    </div>
+                `;
+                partyChart.appendChild(bar);
+            });
+
+            // 進度條
+            const updatedToday = data.auditLogs.filter(log => {
+                const logDate = new Date(log.timestamp).toDateString();
+                const today = new Date().toDateString();
+                return logDate === today && log.action === 'update_person';
+            }).length;
+            const target = 20;
+            const percent = Math.min(100, Math.floor((updatedToday / target) * 100));
+            document.getElementById('prog-text').innerText = `${updatedToday} / ${target} (${percent}%)`;
+            document.getElementById('prog-fill').style.width = percent + '%';
+        }
+
+        document.addEventListener('DOMContentLoaded', updateStats);
+    </script>
+</body>
+</html>
+

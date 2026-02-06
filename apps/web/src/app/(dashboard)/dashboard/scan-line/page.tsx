@@ -23,10 +23,15 @@ import {
   History,
   Search,
   RefreshCw,
+  Tag,
+  FileText,
+  Clock,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useHydration } from '@/hooks/use-hydration';
 import { ContactType, ContactOutcome } from '@shared/types/contact';
+import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';
+import { getContactTypeLabel } from '@/lib/utils';
 
 // 動態匯入 QR 掃描器元件，避免 SSR 錯誤
 const LineQrScanner = dynamic(
@@ -112,14 +117,6 @@ export default function ScanLinePage() {
     params.set('lineUrl', scanResult.lineUrl);
     
     router.push(`/dashboard/voters/new?${params.toString()}`);
-  };
-
-  // 開啟 LINE 聯繫
-  const handleOpenLine = (voter: any) => {
-    const lineUrl = voter.lineUrl || (voter.lineId ? `https://line.me/ti/p/~${voter.lineId}` : null);
-    if (lineUrl) {
-      window.open(lineUrl, '_blank');
-    }
   };
 
   // 記錄 LINE 通話
@@ -262,12 +259,13 @@ export default function ScanLinePage() {
                       <span>{voter.email}</span>
                     </div>
                   )}
-                  {(voter.lineId || voter.lineUrl) && (
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                      <span>{voter.lineId || 'LINE 連結'}</span>
-                    </div>
-                  )}
+                  {/* LINE 資訊 - 使用 LineDisplay 元件 */}
+                  <LineDisplay
+                    lineId={voter.lineId}
+                    lineUrl={voter.lineUrl}
+                    variant="inline"
+                    showAddButton={true}
+                  />
                   {voter.address && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -276,7 +274,43 @@ export default function ScanLinePage() {
                   )}
                 </div>
 
-                {/* 最近接觸紀錄 */}
+                {/* 標籤 */}
+                {voter.tags && voter.tags.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Tag className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">標籤</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {voter.tags.map((tag: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* 備註 */}
+                {voter.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">備註</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">
+                        {voter.notes}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* 最近接觸紀錄（增強版：顯示接觸內容） */}
                 {voter.contacts && voter.contacts.length > 0 && (
                   <>
                     <Separator />
@@ -285,16 +319,24 @@ export default function ScanLinePage() {
                         <History className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">最近接觸</span>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {voter.contacts.slice(0, 3).map((contact: any) => (
-                          <div key={contact.id} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {new Date(contact.contactDate).toLocaleDateString('zh-TW')}
-                              {contact.user?.name && ` - ${contact.user.name}`}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {contact.type === 'LINE_CALL' ? 'LINE' : contact.type}
-                            </Badge>
+                          <div key={contact.id} className="border-l-2 border-muted pl-3 py-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {new Date(contact.contactDate).toLocaleDateString('zh-TW')}
+                                {contact.user?.name && ` - ${contact.user.name}`}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {getContactTypeLabel(contact.type)}
+                              </Badge>
+                            </div>
+                            {/* 顯示接觸內容/備註 */}
+                            {(contact.notes || contact.summary) && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {contact.notes || contact.summary}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -305,14 +347,27 @@ export default function ScanLinePage() {
                   </>
                 )}
 
+                {/* 建立資訊 */}
+                {voter.creator && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>
+                        由 {voter.creator.name} 於 {new Date(voter.createdAt).toLocaleDateString('zh-TW')} 建立
+                      </span>
+                    </div>
+                  </>
+                )}
+
                 <Separator />
 
                 {/* 操作按鈕 */}
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => handleOpenLine(voter)}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    開啟 LINE
-                  </Button>
+                  <LineOpenButton
+                    lineId={voter.lineId}
+                    lineUrl={voter.lineUrl}
+                  />
                   <Button variant="outline" onClick={() => handleRecordLineCall(voter)}>
                     <MessageCircle className="h-4 w-4 mr-2" />
                     記錄 LINE 通話

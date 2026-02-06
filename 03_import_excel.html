@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>名單匯入 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .import-box {
+            border: 2px dashed #ccc;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #fff;
+            margin-bottom: 24px;
+        }
+        .import-success {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand"><i class="fas fa-chevron-left"></i> 名單匯入</a>
+    </header>
+
+    <main class="container">
+        <div id="upload-step">
+            <div class="import-box" onclick="simulateUpload()">
+                <i class="fas fa-file-excel" style="font-size: 3rem; color: #217346; margin-bottom: 16px;"></i>
+                <h3>點擊或拖放 Excel 檔案</h3>
+                <p style="color: #666; font-size: 0.9rem;">支援 .xlsx, .csv 格式</p>
+                <input type="file" id="file-input" style="display: none;">
+            </div>
+            
+            <div class="app-card">
+                <div class="app-card-title">匯入說明</div>
+                <ul style="font-size: 0.9rem; color: #666; padding-left: 20px;">
+                    <li>請包含「姓名」、「地址」、「電話」欄位</li>
+                    <li>系統會自動根據地址進行歸類</li>
+                    <li>重複的人員將自動合併</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="result-step" class="import-success">
+            <div class="app-card text-center" style="border: 2px solid var(--success-color);">
+                <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--success-color); margin-bottom: 16px;"></i>
+                <h2>匯入成功！</h2>
+                <div class="detail-row">
+                    <span>成功匯入</span>
+                    <span class="detail-value">150 筆</span>
+                </div>
+                <div class="detail-row">
+                    <span>重複跳過</span>
+                    <span class="detail-value">3 筆</span>
+                </div>
+            </div>
+            
+            <button class="btn-mobile btn-primary btn-large" onclick="window.location.href='04_household_list.html'">前往名單</button>
+        </div>
+    </main>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        function simulateUpload() {
+            const uploadStep = document.getElementById('upload-step');
+            const resultStep = document.getElementById('result-step');
+            
+            // 模擬上傳動畫
+            uploadStep.style.opacity = '0.5';
+            uploadStep.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                uploadStep.style.display = 'none';
+                resultStep.style.display = 'block';
+                VoteScope.addAuditLog('import_data', { count: 150 });
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
+

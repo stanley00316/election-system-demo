@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>名單 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .person-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+        }
+        .status-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #fff;
+        }
+        .favor-bar-container {
+            height: 4px;
+            background: #eee;
+            margin-top: 12px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .favor-bar {
+            height: 100%;
+            background: var(--primary-color);
+        }
+        .search-bar {
+            position: sticky;
+            top: var(--topbar-height);
+            background: var(--bg-color);
+            padding: 12px 16px;
+            z-index: 10;
+        }
+        .search-input {
+            width: 100%;
+            height: 44px;
+            border-radius: 22px;
+            border: 1px solid #ddd;
+            padding: 0 16px 0 40px;
+            font-size: 1rem;
+        }
+        .search-icon {
+            position: absolute;
+            left: 30px;
+            top: 24px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand">人員名單</a>
+        <div class="topbar-info" id="region-info">信義區</div>
+    </header>
+
+    <div class="search-bar">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="search-input" placeholder="搜尋姓名、地址..." id="person-search">
+    </div>
+
+    <main class="container" id="person-list">
+        <!-- 人員卡片 -->
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="00_home.html" class="nav-item">
+            <i class="fas fa-home nav-icon"></i>
+            <span>首頁</span>
+        </a>
+        <a href="04_household_list.html" class="nav-item active">
+            <i class="fas fa-list nav-icon"></i>
+            <span>名單</span>
+        </a>
+        <a href="07_map_mock.html" class="nav-item">
+            <i class="fas fa-map nav-icon"></i>
+            <span>地圖</span>
+        </a>
+        <a href="06_quick_update.html" class="nav-item">
+            <i class="fas fa-bolt nav-icon" style="color: var(--warning-color);"></i>
+            <span>快速更新</span>
+        </a>
+    </nav>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        function renderList(filter = '') {
+            const data = VoteScope.getData();
+            const list = document.getElementById('person-list');
+            list.innerHTML = '';
+
+            const filtered = data.persons.filter(p => 
+                p.name.includes(filter) || p.address.includes(filter)
+            );
+
+            filtered.forEach(p => {
+                const status = VoteScope.formatStatus(p.status);
+                const card = document.createElement('a');
+                card.href = `05_person_detail.html?id=${p.id}`;
+                card.className = 'app-card person-card';
+                card.innerHTML = `
+                    <div class="status-badge ${status.class}">${status.text}</div>
+                    <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 4px;">${p.name}</div>
+                    <div style="font-size: 0.85rem; color: #666; width: 80%;">${p.address}</div>
+                    <div class="favor-bar-container">
+                        <div class="favor-bar" style="width: ${p.favorability}%"></div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        document.getElementById('person-search').addEventListener('input', (e) => {
+            renderList(e.target.value);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = VoteScope.getData();
+            document.getElementById('region-info').innerText = data.currentRegion.district;
+            renderList();
+        });
+    </script>
+</body>
+</html>
+

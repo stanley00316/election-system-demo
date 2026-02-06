@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>今日掃街 - VoteScope</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .route-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .route-handle {
+            color: #ccc;
+            padding: 8px;
+        }
+        .route-content {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="00_home.html" class="topbar-brand"><i class="fas fa-chevron-left"></i> 今日掃街名單</a>
+    </header>
+
+    <main class="container" id="route-list">
+        <!-- 掃街名單 -->
+    </main>
+
+    <div class="bottom-actions">
+        <button class="btn-mobile btn-primary btn-large" onclick="window.location.href='06_quick_update.html'">🏃 開始掃街 (進入快速更新)</button>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+    <script>
+        function renderRoute() {
+            const data = VoteScope.getData();
+            const routeIds = JSON.parse(localStorage.getItem('vs_route') || '[]');
+            const container = document.getElementById('route-list');
+            container.innerHTML = '';
+
+            if (routeIds.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 40px 0;">
+                        <i class="fas fa-walking" style="font-size: 3rem; color: #eee; margin-bottom: 16px;"></i>
+                        <p style="color: #999;">尚未加入任何名單<br>請從「名單」或「地圖」加入</p>
+                        <a href="04_household_list.html" class="btn-mobile btn-neutral" style="width: auto; display: inline-flex;">去名單看看</a>
+                    </div>
+                `;
+                return;
+            }
+
+            const routePersons = data.persons.filter(p => routeIds.includes(p.id));
+
+            routePersons.forEach((p, index) => {
+                const item = document.createElement('div');
+                item.className = 'app-card route-item';
+                item.innerHTML = `
+                    <div class="route-handle"><i class="fas fa-bars"></i></div>
+                    <div class="route-content">
+                        <div style="font-weight: bold;">${p.name}</div>
+                        <div style="font-size: 0.85rem; color: #666;">${p.address}</div>
+                    </div>
+                    <button class="btn-mobile btn-danger" style="width: 44px; min-height: 44px; padding: 0;" onclick="removeFromRoute(${p.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function removeFromRoute(id) {
+            let rData = JSON.parse(localStorage.getItem('vs_route') || '[]');
+            rData = rData.filter(rid => rid !== id);
+            localStorage.setItem('vs_route', JSON.stringify(rData));
+            renderRoute();
+        }
+
+        document.addEventListener('DOMContentLoaded', renderRoute);
+    </script>
+</body>
+</html>
+

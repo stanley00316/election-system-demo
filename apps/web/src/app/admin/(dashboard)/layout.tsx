@@ -14,6 +14,9 @@ import {
   X,
   Shield,
   UserCog,
+  Gift,
+  Database,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,7 +28,14 @@ const navigation = [
   { name: '使用者管理', href: '/admin/users', icon: Users },
   { name: '訂閱管理', href: '/admin/subscriptions', icon: CreditCard },
   { name: '付款管理', href: '/admin/payments', icon: Receipt },
+  { name: '推薦管理', href: '/admin/referrals', icon: Gift },
   { name: '數據分析', href: '/admin/analytics', icon: BarChart3 },
+];
+
+// 超級管理者專用選單
+const superAdminNavigation = [
+  { name: '方案管理', href: '/admin/plans', icon: CreditCard },
+  { name: '資料保留', href: '/admin/data-retention', icon: Database },
 ];
 
 export default function AdminDashboardLayout({
@@ -151,6 +161,38 @@ export default function AdminDashboardLayout({
                 );
               })}
             </ul>
+
+            {/* 超級管理者專用選單 */}
+            {admin?.isSuperAdmin && (
+              <div className="mt-4 pt-4 border-t border-gray-800">
+                <p className="px-3 mb-2 text-xs text-gray-500 uppercase tracking-wider">
+                  超級管理者
+                </p>
+                <ul className="space-y-1">
+                  {superAdminNavigation.map((item) => {
+                    const isActive = pathname === item.href ||
+                      (item.href !== '/admin' && pathname.startsWith(item.href));
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                            isActive
+                              ? 'bg-purple-600 text-white'
+                              : 'text-purple-300 hover:bg-gray-800 hover:text-white'
+                          )}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {item.name}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
 
             {/* 返回用戶端 */}
             <div className="mt-8 pt-4 border-t border-gray-800">
