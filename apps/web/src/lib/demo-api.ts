@@ -404,6 +404,23 @@ export const demoContactsApi = {
     if (params.outcome) {
       filtered = filtered.filter(c => c.outcome === params.outcome);
     }
+
+    if (params.timeRange) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      let startDate: Date = now;
+
+      if (params.timeRange === 'today') {
+        startDate = now;
+      } else if (params.timeRange === 'week') {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+      } else if (params.timeRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+
+      filtered = filtered.filter(c => new Date(c.contactDate) >= startDate);
+    }
     
     return paginate(filtered, params.page || 1, params.limit || 20);
   },

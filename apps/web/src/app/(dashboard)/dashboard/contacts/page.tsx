@@ -36,6 +36,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const TIME_RANGE_OPTIONS = [
+  { value: 'today', label: '本日' },
+  { value: 'week', label: '本週' },
+  { value: 'month', label: '本月' },
+];
+
 const CONTACT_TYPE_OPTIONS = [
   { value: 'HOME_VISIT', label: '家訪' },
   { value: 'PHONE_CALL', label: '電訪' },
@@ -223,6 +229,27 @@ export default function ContactsPage() {
                     )}
                   </div>
                   
+                  {/* 時間範圍篩選 */}
+                  <div className="space-y-2">
+                    <Label>時間範圍</Label>
+                    <Select
+                      value={filters.timeRange || '__all__'}
+                      onValueChange={(value) => handleFilterChange('timeRange', value === '__all__' ? undefined : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="全部" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">全部</SelectItem>
+                        {TIME_RANGE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* 接觸類型篩選 */}
                   <div className="space-y-2">
                     <Label>接觸類型</Label>
@@ -305,7 +332,7 @@ export default function ContactsPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link
                           href={`/dashboard/voters/${contact.voter?.id}`}
-                          className="font-medium hover:underline"
+                          className="font-medium text-primary hover:underline"
                         >
                           {contact.voter?.name}
                         </Link>
