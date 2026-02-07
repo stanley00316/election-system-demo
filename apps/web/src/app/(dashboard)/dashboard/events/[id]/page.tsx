@@ -29,7 +29,9 @@ import { eventsApi, votersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStanceLabel } from '@/lib/utils';
 import { QuickRelationDialog } from '@/components/events';
+import { LineQrScanner } from '@/components/common/LineQrScanner';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useCampaignStore } from '@/stores/campaign';
 import {
   ArrowLeft,
@@ -44,6 +46,8 @@ import {
   Link as LinkIcon,
   ArrowRightLeft,
   Search,
+  QrCode,
+  ExternalLink,
 } from 'lucide-react';
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
@@ -106,9 +110,14 @@ export default function EventDetailPage() {
   const [addAttendeeDialogOpen, setAddAttendeeDialogOpen] = useState(false);
   const [voterSearch, setVoterSearch] = useState('');
   const [selectedVoter, setSelectedVoter] = useState<any>(null);
-  const [dialogMode, setDialogMode] = useState<'search' | 'create'>('search');
+  const [dialogMode, setDialogMode] = useState<'search' | 'create' | 'scan'>('search');
   const [newVoterName, setNewVoterName] = useState('');
   const [newVoterPhone, setNewVoterPhone] = useState('');
+  const [newVoterAddress, setNewVoterAddress] = useState('');
+  const [newVoterLineId, setNewVoterLineId] = useState('');
+  const [newVoterLineUrl, setNewVoterLineUrl] = useState('');
+  const [newVoterNotes, setNewVoterNotes] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
   const { currentCampaign } = useCampaignStore();
 
   const { data: event, isLoading, error } = useQuery({
@@ -193,7 +202,7 @@ export default function EventDetailPage() {
 
   // 快速新增選民
   const createVoterMutation = useMutation({
-    mutationFn: (data: { name: string; phone?: string }) =>
+    mutationFn: (data: { name: string; phone?: string; address?: string; lineId?: string; lineUrl?: string; notes?: string }) =>
       votersApi.create({
         ...data,
         campaignId: searchCampaignId,
@@ -202,8 +211,7 @@ export default function EventDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['voters'] });
       setSelectedVoter(newVoter);
       setDialogMode('search');
-      setNewVoterName('');
-      setNewVoterPhone('');
+      resetCreateForm();
       toast({
         title: '選民已建立',
         description: `已成功建立選民「${newVoter.name}」，請按新增加入活動`,
@@ -217,6 +225,60 @@ export default function EventDetailPage() {
       });
     },
   });
+
+  // 重置快速新增表單
+  const resetCreateForm = () => {
+    setNewVoterName('');
+    setNewVoterPhone('');
+    setNewVoterAddress('');
+    setNewVoterLineId('');
+    setNewVoterLineUrl('');
+    setNewVoterNotes('');
+  };
+
+  // 重置整個對話框
+  const resetDialog = () => {
+    setSelectedVoter(null);
+    setVoterSearch('');
+    setDialogMode('search');
+    resetCreateForm();
+  };
+
+  // LINE QR 掃描結果處理
+  const handleLineScanResult = async (result: { lineId?: string; lineUrl: string }) => {
+    setScannerOpen(false);
+    try {
+      // 搜尋是否已有此 LINE 的選民
+      const searchResult = await votersApi.searchByLine({
+        campaignId: searchCampaignId || '',
+        lineId: result.lineId,
+        lineUrl: result.lineUrl,
+      });
+      if (searchResult?.found && searchResult.voters?.length > 0) {
+        // 找到現有選民 → 自動選取
+        setSelectedVoter(searchResult.voters[0]);
+        setDialogMode('search');
+        toast({
+          title: '找到選民',
+          description: `已找到選民「${searchResult.voters[0].name}」`,
+        });
+      } else {
+        // 未找到 → 切到建立模式，預填 LINE 資訊
+        setDialogMode('create');
+        if (result.lineId) setNewVoterLineId(result.lineId);
+        setNewVoterLineUrl(result.lineUrl);
+        toast({
+          title: '未找到對應選民',
+          description: '已預填 LINE 資訊，請填寫其他資料後建立選民',
+        });
+      }
+    } catch {
+      // 搜尋失敗 → 仍切到建立模式預填
+      setDialogMode('create');
+      if (result.lineId) setNewVoterLineId(result.lineId);
+      setNewVoterLineUrl(result.lineUrl);
+    }
+  };
 
   // 更新參與者狀態
   const updateAttendeeStatusMutation = useMutation({
@@ -561,13 +623,7 @@ export default function EventDetailPage() {
               <CardTitle>參與者列表</CardTitle>
               <Dialog open={addAttendeeDialogOpen} onOpenChange={(open) => {
                 setAddAttendeeDialogOpen(open);
-                if (!open) {
-                  setSelectedVoter(null);
-                  setVoterSearch('');
-                  setDialogMode('search');
-                  setNewVoterName('');
-                  setNewVoterPhone('');
-                }
+                if (!open) resetDialog();
               }}>
                 <DialogTrigger asChild>
                   <Button size="sm">
@@ -619,7 +675,7 @@ export default function EventDetailPage() {
                             返回搜尋
                           </Button>
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
                           <div>
                             <label className="text-sm font-medium mb-1 block">
                               姓名 <span className="text-destructive">*</span>
@@ -640,6 +696,55 @@ export default function EventDetailPage() {
                               onChange={(e) => setNewVoterPhone(e.target.value)}
                             />
                           </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              地址
+                            </label>
+                            <Input
+                              placeholder="請輸入地址（選填）"
+                              value={newVoterAddress}
+                              onChange={(e) => setNewVoterAddress(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              LINE ID
+                            </label>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="LINE ID（選填）"
+                                value={newVoterLineId}
+                                onChange={(e) => setNewVoterLineId(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setScannerOpen(true)}
+                                title="掃描 LINE QR Code"
+                              >
+                                <QrCode className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {newVoterLineUrl && (
+                              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                已掃描 LINE 連結
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              備註
+                            </label>
+                            <Textarea
+                              placeholder="備註事項（選填）"
+                              value={newVoterNotes}
+                              onChange={(e) => setNewVoterNotes(e.target.value)}
+                              rows={2}
+                            />
+                          </div>
                         </div>
                         <Button
                           type="button"
@@ -649,6 +754,10 @@ export default function EventDetailPage() {
                             createVoterMutation.mutate({
                               name: newVoterName.trim(),
                               ...(newVoterPhone.trim() ? { phone: newVoterPhone.trim() } : {}),
+                              ...(newVoterAddress.trim() ? { address: newVoterAddress.trim() } : {}),
+                              ...(newVoterLineId.trim() ? { lineId: newVoterLineId.trim() } : {}),
+                              ...(newVoterLineUrl.trim() ? { lineUrl: newVoterLineUrl.trim() } : {}),
+                              ...(newVoterNotes.trim() ? { notes: newVoterNotes.trim() } : {}),
                             });
                           }}
                         >
@@ -724,7 +833,17 @@ export default function EventDetailPage() {
                           </div>
                           );
                         })()}
-                        <div className="pt-2 border-t">
+                        <div className="pt-2 border-t space-y-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-muted-foreground"
+                            onClick={() => setScannerOpen(true)}
+                          >
+                            <QrCode className="h-4 w-4 mr-1" />
+                            掃描 LINE QR Code
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
@@ -744,11 +863,7 @@ export default function EventDetailPage() {
                       variant="outline"
                       onClick={() => {
                         setAddAttendeeDialogOpen(false);
-                        setSelectedVoter(null);
-                        setVoterSearch('');
-                        setDialogMode('search');
-                        setNewVoterName('');
-                        setNewVoterPhone('');
+                        resetDialog();
                       }}
                     >
                       取消
@@ -969,6 +1084,13 @@ export default function EventDetailPage() {
         eventName={event.name}
         attendees={attendees}
         campaignId={event.campaignId}
+      />
+
+      {/* LINE QR Scanner */}
+      <LineQrScanner
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onScan={handleLineScanResult}
       />
     </div>
   );
