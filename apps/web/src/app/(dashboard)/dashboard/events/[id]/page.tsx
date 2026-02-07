@@ -167,6 +167,19 @@ export default function EventDetailPage() {
 
   // 搜尋選民 - 使用活動的 campaignId 而非全局 currentCampaign
   const searchCampaignId = event?.campaignId || currentCampaign?.id;
+
+  // 預設選民清單：對話框開啟且無搜尋文字時載入
+  const { data: defaultVoters, isLoading: isLoadingDefault } = useQuery({
+    queryKey: ['voters', 'default', searchCampaignId],
+    queryFn: () =>
+      votersApi.getAll({
+        campaignId: searchCampaignId,
+        limit: 10,
+      }),
+    enabled: addAttendeeDialogOpen && !voterSearch && !!searchCampaignId,
+  });
+
+  // 搜尋選民：輸入 1 個字元即開始搜尋
   const { data: voterSearchResults, isLoading: isSearching, error: searchError } = useQuery({
     queryKey: ['voters', 'search', voterSearch, searchCampaignId],
     queryFn: () =>
@@ -175,7 +188,7 @@ export default function EventDetailPage() {
         search: voterSearch,
         limit: 10,
       }),
-    enabled: !!voterSearch && voterSearch.length >= 2 && !!searchCampaignId,
+    enabled: !!voterSearch && voterSearch.length >= 1 && !!searchCampaignId,
   });
 
   // 新增參與者
@@ -778,12 +791,20 @@ export default function EventDetailPage() {
                         {(() => {
                           // 過濾掉已是參與者的選民
                           const existingVoterIds = new Set(attendees?.map((a: any) => a.voterId) || []);
-                          const filteredResults = voterSearchResults?.data?.filter(
+                          const hasSearch = voterSearch.length >= 1;
+                          const isLoading = hasSearch ? isSearching : isLoadingDefault;
+
+                          // 根據是否有搜尋文字決定資料來源
+                          const sourceData = hasSearch
+                            ? voterSearchResults?.data
+                            : defaultVoters?.data;
+                          const filteredResults = sourceData?.filter(
                             (voter: any) => !existingVoterIds.has(voter.id)
                           ) || [];
-                          const hasSearch = voterSearch.length >= 2;
+
                           const isSearchDone = hasSearch && !isSearching;
 
+                          // 搜尋完成但無結果
                           if (isSearchDone && filteredResults.length === 0) {
                             return (
                               <div className="text-center py-6 border rounded-lg">
@@ -806,10 +827,29 @@ export default function EventDetailPage() {
                             );
                           }
 
+                          // 載入中
+                          if (isLoading) {
+                            return (
+                              <div className="text-center py-4">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
+                                <p className="text-xs text-muted-foreground mt-2">搜尋中...</p>
+                              </div>
+                            );
+                          }
+
+                          if (filteredResults.length === 0 && !hasSearch && !isLoadingDefault) {
+                            return null;
+                          }
+
                           if (filteredResults.length === 0) return null;
 
                           return (
                           <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                            {!hasSearch && (
+                              <div className="px-3 py-1.5 text-xs text-muted-foreground bg-muted/50">
+                                現有選民（輸入關鍵字篩選）
+                              </div>
+                            )}
                             {filteredResults.map((voter: any) => (
                               <button
                                 key={voter.id}
