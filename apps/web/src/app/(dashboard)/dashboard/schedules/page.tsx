@@ -481,7 +481,11 @@ export default function SchedulesPage() {
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
                               <p className="font-medium">
-                                {item.voter?.name || item.event?.name || item.address || '未命名'}
+                                {item.voter ? (
+                                  <Link href={`/dashboard/voters/${item.voter.id}`} className="text-primary hover:underline">
+                                    {item.voter.name}
+                                  </Link>
+                                ) : (item.event?.name || item.address || '未命名')}
                               </p>
                               <Badge
                                 variant={
@@ -519,7 +523,9 @@ export default function SchedulesPage() {
                               {item.voter && (
                                 <span className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
-                                  {item.voter.name}
+                                  <Link href={`/dashboard/voters/${item.voter.id}`} className="text-primary hover:underline">
+                                    {item.voter.name}
+                                  </Link>
                                 </span>
                               )}
                             </div>

@@ -250,7 +250,9 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium">{contact.voter?.name}</p>
+                    <Link href={`/dashboard/voters/${contact.voter?.id}`} className="font-medium text-primary hover:underline">
+                      {contact.voter?.name}
+                    </Link>
                     <p className="text-sm text-muted-foreground">
                       {getContactTypeLabel(contact.type)} · {contact.user?.name}
                     </p>

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getStanceLabel } from '@/lib/utils';
+import Link from 'next/link';
 import { Search, MapPin, User, Users, Navigation, Phone, GripVertical } from 'lucide-react';
 import type { ScheduleItem, NearbyVoter } from './RouteMapView';
 import {
@@ -95,9 +96,15 @@ function SortableVoterItem({ item, index, onRemoveItem }: SortableVoterItemProps
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm truncate">
-            {item.voter?.name || item.address || '未命名'}
-          </span>
+          {item.voter ? (
+            <Link href={`/dashboard/voters/${item.voter.id}`} className="font-medium text-sm truncate text-primary hover:underline">
+              {item.voter.name}
+            </Link>
+          ) : (
+            <span className="font-medium text-sm truncate">
+              {item.address || '未命名'}
+            </span>
+          )}
           <StanceBadge stance={item.voter?.stance} />
         </div>
         {item.address && (
@@ -128,7 +135,9 @@ function SortableVoterItem({ item, index, onRemoveItem }: SortableVoterItemProps
             <Users className="h-3 w-3 text-muted-foreground shrink-0" />
             {item.voter.relationsInSchedule.map((rel: any) => (
               <Badge key={rel.id} variant="outline" className="text-xs py-0 px-1">
-                {rel.relatedVoter?.name}（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
+                <Link href={`/dashboard/voters/${rel.relatedVoter?.id}`} className="text-primary hover:underline">
+                  {rel.relatedVoter?.name}
+                </Link>（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
               </Badge>
             ))}
           </div>
@@ -309,9 +318,9 @@ export function VoterSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate">
+                      <Link href={`/dashboard/voters/${voter.id}`} className="font-medium text-sm truncate text-primary hover:underline">
                         {voter.name}
-                      </span>
+                      </Link>
                       <StanceBadge stance={voter.stance} />
                     </div>
                     {voter.address && (

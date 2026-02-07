@@ -401,7 +401,11 @@ export default function ScheduleDetailPage() {
                         <div className="flex items-start sm:items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-sm sm:text-base truncate">
-                              {item.voter?.name || item.event?.name || item.address || '未命名'}
+                              {item.voter ? (
+                                <Link href={`/dashboard/voters/${item.voter.id}`} className="text-primary hover:underline">
+                                  {item.voter.name}
+                                </Link>
+                              ) : (item.event?.name || item.address || '未命名')}
                             </p>
                             <div className="flex flex-wrap gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-1">
                               {item.plannedTime && (
@@ -470,7 +474,9 @@ export default function ScheduleDetailPage() {
                             <div className="flex flex-wrap gap-1">
                               {item.voter.relationsInSchedule.map((rel: any) => (
                                 <Badge key={rel.id} variant="secondary" className="text-xs">
-                                  {rel.relatedVoter?.name}（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
+                                  <Link href={`/dashboard/voters/${rel.relatedVoter?.id}`} className="text-primary hover:underline">
+                                    {rel.relatedVoter?.name}
+                                  </Link>（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
                                 </Badge>
                               ))}
                             </div>

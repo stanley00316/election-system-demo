@@ -1086,13 +1086,13 @@ export default function EventDetailPage() {
                       className="flex items-center justify-between p-3 rounded-lg border"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="font-medium">
+                        <Link href={`/dashboard/voters/${meeting.relationship?.sourceVoter?.id}`} className="font-medium text-primary hover:underline">
                           {meeting.relationship?.sourceVoter?.name}
-                        </span>
+                        </Link>
                         <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
+                        <Link href={`/dashboard/voters/${meeting.relationship?.targetVoter?.id}`} className="font-medium text-primary hover:underline">
                           {meeting.relationship?.targetVoter?.name}
-                        </span>
+                        </Link>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>記錄者: {meeting.recorder?.name}</span>

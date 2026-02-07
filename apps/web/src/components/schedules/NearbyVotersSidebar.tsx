@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getStanceLabel } from '@/lib/utils';
+import Link from 'next/link';
 import { 
   Search, 
   MapPin, 
@@ -167,9 +168,9 @@ export function NearbyVotersSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate">
+                      <Link href={`/dashboard/voters/${voter.id}`} className="font-medium text-sm truncate text-primary hover:underline">
                         {voter.name}
-                      </span>
+                      </Link>
                       <StanceBadge stance={voter.stance} />
                     </div>
                     {voter.address && (
@@ -272,9 +273,9 @@ export function NearbyVotersSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate">
+                      <Link href={`/dashboard/voters/${voter.id}`} className="font-medium text-sm truncate text-primary hover:underline">
                         {voter.name}
-                      </span>
+                      </Link>
                       <StanceBadge stance={voter.stance} />
                     </div>
                     {voter.address && (

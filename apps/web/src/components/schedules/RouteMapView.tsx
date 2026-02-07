@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip
 import L from 'leaflet';
 import { Phone, Navigation, MessageCircle } from 'lucide-react';
 import { getStanceLabel } from '@/lib/utils';
+import Link from 'next/link';
 import 'leaflet/dist/leaflet.css';
 
 export interface RelationInSchedule {
@@ -121,7 +122,11 @@ function ItemPopup({ item, onRemove }: { item: ScheduleItem; onRemove?: () => vo
   return (
     <div className="p-1 min-w-[200px]">
       <div className="flex items-center gap-2 mb-2">
-        <span className="font-bold text-sm">{voter?.name || item.address || '未命名'}</span>
+        {voter ? (
+          <Link href={`/dashboard/voters/${voter.id}`} className="font-bold text-sm text-primary hover:underline">{voter.name}</Link>
+        ) : (
+          <span className="font-bold text-sm">{item.address || '未命名'}</span>
+        )}
         {voter?.stance && (
           <span
             className="text-xs px-2 py-0.5 rounded-full text-white"
@@ -170,7 +175,7 @@ function ItemPopup({ item, onRemove }: { item: ScheduleItem; onRemove?: () => vo
                 key={rel.id}
                 className="text-xs px-1.5 py-0.5 bg-gray-100 rounded text-gray-700"
               >
-                {rel.relatedVoter?.name}（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
+                <Link href={`/dashboard/voters/${rel.relatedVoter?.id}`} className="text-primary hover:underline">{rel.relatedVoter?.name}</Link>（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
               </span>
             ))}
           </div>
@@ -195,7 +200,7 @@ function NearbyVoterPopup({ voter, onAdd }: { voter: NearbyVoter; onAdd?: () => 
   return (
     <div className="p-1 min-w-[200px]">
       <div className="flex items-center gap-2 mb-2">
-        <span className="font-bold text-sm">{voter.name}</span>
+        <Link href={`/dashboard/voters/${voter.id}`} className="font-bold text-sm text-primary hover:underline">{voter.name}</Link>
         {voter.stance && (
           <span
             className="text-xs px-2 py-0.5 rounded-full text-white"
