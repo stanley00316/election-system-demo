@@ -43,6 +43,29 @@ let tempContacts = [...demoContacts];
 let tempEvents = [...demoEvents];
 let tempSchedules = [...demoSchedules];
 
+// 暫存活動參與者資料（eventId -> attendees[]）
+const tempEventAttendees = new Map<string, Array<{ voterId: string; status: string; joinedAt: string }>>();
+
+// 初始化：為每個活動隨機分配 5-15 位選民作為初始參與者
+function initEventAttendees() {
+  tempEvents.forEach((event, eventIndex) => {
+    const attendeeCount = 5 + Math.floor((eventIndex * 7 + 3) % 11); // 確定性偽隨機 5-15
+    const startIdx = (eventIndex * 13) % tempVoters.length;
+    const attendees: Array<{ voterId: string; status: string; joinedAt: string }> = [];
+    const statuses = ['INVITED', 'CONFIRMED', 'ATTENDED', 'CONFIRMED', 'ATTENDED'];
+    for (let i = 0; i < attendeeCount && i < tempVoters.length; i++) {
+      const voterIdx = (startIdx + i) % tempVoters.length;
+      attendees.push({
+        voterId: tempVoters[voterIdx].id,
+        status: statuses[i % statuses.length],
+        joinedAt: new Date(Date.now() - (attendeeCount - i) * 3600000).toISOString(),
+      });
+    }
+    tempEventAttendees.set(event.id, attendees);
+  });
+}
+initEventAttendees();
+
 // ==================== Auth API ====================
 export const demoAuthApi = {
   lineCallback: async (_code: string, _redirectUri: string) => {
@@ -512,27 +535,59 @@ export const demoEventsApi = {
     return { success: true };
   },
   
-  getAttendees: async (_id: string) => {
+  getAttendees: async (id: string) => {
     await delay(100);
-    return tempVoters.slice(0, 10).map(v => ({
-      voterId: v.id,
+    const attendeeRecords = tempEventAttendees.get(id) || [];
+    return attendeeRecords.map(record => {
+      const voter = tempVoters.find(v => v.id === record.voterId);
+      return {
+        id: `${id}-${record.voterId}`,
+        voterId: record.voterId,
+        status: record.status,
+        joinedAt: record.joinedAt,
+        voter: voter ? { id: voter.id, name: voter.name, phone: voter.phone } : null,
+      };
+    });
+  },
+
+  addAttendee: async (id: string, voterId: string) => {
+    await delay(200);
+    const attendees = tempEventAttendees.get(id) || [];
+    // 檢查是否已存在
+    if (attendees.some(a => a.voterId === voterId)) {
+      throw new Error('該選民已是此活動的參與者');
+    }
+    const newRecord = {
+      voterId,
       status: 'CONFIRMED',
-      voter: { id: v.id, name: v.name, phone: v.phone },
-    }));
+      joinedAt: new Date().toISOString(),
+    };
+    attendees.push(newRecord);
+    tempEventAttendees.set(id, attendees);
+    const voter = tempVoters.find(v => v.id === voterId);
+    return {
+      id: `${id}-${voterId}`,
+      voterId,
+      status: 'CONFIRMED',
+      joinedAt: newRecord.joinedAt,
+      voter: voter ? { id: voter.id, name: voter.name, phone: voter.phone } : null,
+    };
   },
-  
-  addAttendee: async (_id: string, _voterId: string) => {
+
+  updateAttendeeStatus: async (eventId: string, voterId: string, status: string) => {
     await delay(200);
+    const attendees = tempEventAttendees.get(eventId) || [];
+    const record = attendees.find(a => a.voterId === voterId);
+    if (!record) throw new Error('參與者不存在');
+    record.status = status;
     return { success: true };
   },
-  
-  updateAttendeeStatus: async (_eventId: string, _voterId: string, _status: string) => {
+
+  removeAttendee: async (eventId: string, voterId: string) => {
     await delay(200);
-    return { success: true };
-  },
-  
-  removeAttendee: async (_eventId: string, _voterId: string) => {
-    await delay(200);
+    const attendees = tempEventAttendees.get(eventId) || [];
+    const filtered = attendees.filter(a => a.voterId !== voterId);
+    tempEventAttendees.set(eventId, filtered);
     return { success: true };
   },
   

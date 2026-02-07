@@ -106,6 +106,9 @@ export default function EventDetailPage() {
   const [addAttendeeDialogOpen, setAddAttendeeDialogOpen] = useState(false);
   const [voterSearch, setVoterSearch] = useState('');
   const [selectedVoter, setSelectedVoter] = useState<any>(null);
+  const [dialogMode, setDialogMode] = useState<'search' | 'create'>('search');
+  const [newVoterName, setNewVoterName] = useState('');
+  const [newVoterPhone, setNewVoterPhone] = useState('');
   const { currentCampaign } = useCampaignStore();
 
   const { data: event, isLoading, error } = useQuery({
@@ -183,6 +186,33 @@ export default function EventDetailPage() {
       toast({
         title: '新增失敗',
         description: error.message || '無法新增參與者',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 快速新增選民
+  const createVoterMutation = useMutation({
+    mutationFn: (data: { name: string; phone?: string }) =>
+      votersApi.create({
+        ...data,
+        campaignId: searchCampaignId,
+      }),
+    onSuccess: (newVoter: any) => {
+      queryClient.invalidateQueries({ queryKey: ['voters'] });
+      setSelectedVoter(newVoter);
+      setDialogMode('search');
+      setNewVoterName('');
+      setNewVoterPhone('');
+      toast({
+        title: '選民已建立',
+        description: `已成功建立選民「${newVoter.name}」，請按新增加入活動`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: '建立失敗',
+        description: error.message || '無法建立選民',
         variant: 'destructive',
       });
     },
@@ -529,7 +559,16 @@ export default function EventDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>參與者列表</CardTitle>
-              <Dialog open={addAttendeeDialogOpen} onOpenChange={setAddAttendeeDialogOpen}>
+              <Dialog open={addAttendeeDialogOpen} onOpenChange={(open) => {
+                setAddAttendeeDialogOpen(open);
+                if (!open) {
+                  setSelectedVoter(null);
+                  setVoterSearch('');
+                  setDialogMode('search');
+                  setNewVoterName('');
+                  setNewVoterPhone('');
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
@@ -567,6 +606,55 @@ export default function EventDetailPage() {
                           更換
                         </Button>
                       </div>
+                    ) : dialogMode === 'create' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium">快速新增選民</h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDialogMode('search')}
+                          >
+                            返回搜尋
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              姓名 <span className="text-destructive">*</span>
+                            </label>
+                            <Input
+                              placeholder="請輸入選民姓名"
+                              value={newVoterName}
+                              onChange={(e) => setNewVoterName(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              電話
+                            </label>
+                            <Input
+                              placeholder="請輸入電話（選填）"
+                              value={newVoterPhone}
+                              onChange={(e) => setNewVoterPhone(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          className="w-full"
+                          disabled={!newVoterName.trim() || createVoterMutation.isPending}
+                          onClick={() => {
+                            createVoterMutation.mutate({
+                              name: newVoterName.trim(),
+                              ...(newVoterPhone.trim() ? { phone: newVoterPhone.trim() } : {}),
+                            });
+                          }}
+                        >
+                          {createVoterMutation.isPending ? '建立中...' : '建立選民'}
+                        </Button>
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         <div className="relative">
@@ -578,9 +666,42 @@ export default function EventDetailPage() {
                             onChange={(e) => setVoterSearch(e.target.value)}
                           />
                         </div>
-                        {(voterSearchResults?.data?.length ?? 0) > 0 && (
+                        {(() => {
+                          // 過濾掉已是參與者的選民
+                          const existingVoterIds = new Set(attendees?.map((a: any) => a.voterId) || []);
+                          const filteredResults = voterSearchResults?.data?.filter(
+                            (voter: any) => !existingVoterIds.has(voter.id)
+                          ) || [];
+                          const hasSearch = voterSearch.length >= 2;
+                          const isSearchDone = hasSearch && !isSearching;
+
+                          if (isSearchDone && filteredResults.length === 0) {
+                            return (
+                              <div className="text-center py-6 border rounded-lg">
+                                <Search className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  {(voterSearchResults?.data?.length ?? 0) > 0
+                                    ? '符合條件的選民皆已是參與者'
+                                    : `找不到「${voterSearch}」相關的選民`}
+                                </p>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setDialogMode('create')}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  快速新增選民
+                                </Button>
+                              </div>
+                            );
+                          }
+
+                          if (filteredResults.length === 0) return null;
+
+                          return (
                           <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                            {voterSearchResults?.data?.map((voter: any) => (
+                            {filteredResults.map((voter: any) => (
                               <button
                                 key={voter.id}
                                 type="button"
@@ -601,7 +722,20 @@ export default function EventDetailPage() {
                               </button>
                             ))}
                           </div>
-                        )}
+                          );
+                        })()}
+                        <div className="pt-2 border-t">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-muted-foreground"
+                            onClick={() => setDialogMode('create')}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            找不到？快速新增選民
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -612,6 +746,9 @@ export default function EventDetailPage() {
                         setAddAttendeeDialogOpen(false);
                         setSelectedVoter(null);
                         setVoterSearch('');
+                        setDialogMode('search');
+                        setNewVoterName('');
+                        setNewVoterPhone('');
                       }}
                     >
                       取消
