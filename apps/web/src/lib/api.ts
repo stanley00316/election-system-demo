@@ -502,3 +502,33 @@ const realAdminAnalyticsApi = {
   getRecentActivity: (limit?: number) => api.get<any>('/admin/analytics/recent', { limit }),
 };
 export const adminAnalyticsApi = isDemoMode ? demoApi.demoAdminAnalyticsApi : realAdminAnalyticsApi;
+
+// Admin Plans API
+const realAdminPlansApi = {
+  getPlans: () => api.get<any[]>('/admin/plans'),
+  createPlan: (data: any) => api.post<any>('/admin/plans', data),
+  updatePlan: (id: string, data: any) => api.put<any>(`/admin/plans/${id}`, data),
+  deactivatePlan: (id: string) => api.put<any>(`/admin/plans/${id}/deactivate`),
+};
+export const adminPlansApi = isDemoMode ? demoApi.demoAdminPlansApi : realAdminPlansApi;
+
+// Admin Referrals API
+const realAdminReferralsApi = {
+  getReferrals: (params?: any) => api.get<{ data: any[]; pagination: any }>('/admin/referrals', params),
+  getStats: () => api.get<any>('/admin/referrals/stats'),
+  getLeaderboard: (limit?: number) => api.get<any[]>('/admin/referrals/leaderboard', { limit }),
+  expireOld: () => api.post<any>('/admin/referrals/expire-old'),
+};
+export const adminReferralsApi = isDemoMode ? demoApi.demoAdminReferralsApi : realAdminReferralsApi;
+
+// Admin Data Retention API
+const realAdminDataRetentionApi = {
+  getStats: () => api.get<any>('/admin/data-retention/stats'),
+  getPendingCampaigns: () => api.get<any[]>('/admin/data-retention/pending'),
+  getDeletedCampaigns: () => api.get<any[]>('/admin/data-retention/deleted'),
+  restoreCampaign: (id: string) => api.post<any>(`/admin/data-retention/${id}/restore`),
+  deleteCampaign: (id: string) => api.delete<any>(`/admin/data-retention/${id}`),
+  hardDelete: (id: string) => api.delete<any>(`/admin/data-retention/${id}/hard`),
+  batchDelete: (ids: string[]) => api.post<any>('/admin/data-retention/batch-delete', { ids }),
+};
+export const adminDataRetentionApi = isDemoMode ? demoApi.demoAdminDataRetentionApi : realAdminDataRetentionApi;

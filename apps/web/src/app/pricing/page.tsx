@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Check, Zap, Shield, Users, BarChart3, Loader2, MapPin, Vote, ChevronDown, ArrowLeft, Info } from 'lucide-react';
@@ -76,7 +76,7 @@ const regionLevelColors: Record<number, string> = {
   5: 'bg-blue-100 text-blue-800',
 };
 
-export default function PricingPage() {
+function PricingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -520,5 +520,18 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 包裝組件以處理 Suspense 邊界
+export default function PricingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <PricingPageContent />
+    </Suspense>
   );
 }

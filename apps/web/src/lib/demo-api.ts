@@ -1173,3 +1173,27 @@ export const demoAdminAnalyticsApi = {
   getSubscriptionDistribution: async () => ({}),
   getRecentActivity: async () => ({ users: [], payments: [], subscriptions: [] }),
 };
+
+export const demoAdminPlansApi = {
+  getPlans: async () => demoPlans,
+  createPlan: async () => { throw new Error('示範模式不支援管理功能'); },
+  updatePlan: async () => { throw new Error('示範模式不支援管理功能'); },
+  deactivatePlan: async () => { throw new Error('示範模式不支援管理功能'); },
+};
+
+export const demoAdminReferralsApi = {
+  getReferrals: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
+  getStats: async () => ({ totalReferrals: 0, completedReferrals: 0, pendingReferrals: 0, totalRewards: 0 }),
+  getLeaderboard: async () => [],
+  expireOld: async () => ({ expired: 0 }),
+};
+
+export const demoAdminDataRetentionApi = {
+  getStats: async () => ({ pendingDeletion: 0, deleted: 0, totalData: 0 }),
+  getPendingCampaigns: async () => [],
+  getDeletedCampaigns: async () => [],
+  restoreCampaign: async () => { throw new Error('示範模式不支援管理功能'); },
+  deleteCampaign: async () => { throw new Error('示範模式不支援管理功能'); },
+  hardDelete: async () => { throw new Error('示範模式不支援管理功能'); },
+  batchDelete: async () => { throw new Error('示範模式不支援管理功能'); },
+};
