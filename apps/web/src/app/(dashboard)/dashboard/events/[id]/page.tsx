@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStanceLabel } from '@/lib/utils';
 
 import { LineQrScanner } from '@/components/common/LineQrScanner';
+import { QuickRelationDialog } from '@/components/events/QuickRelationDialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCampaignStore } from '@/stores/campaign';
@@ -118,6 +119,7 @@ export default function EventDetailPage() {
   const [newVoterLineUrl, setNewVoterLineUrl] = useState('');
   const [newVoterNotes, setNewVoterNotes] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [quickRelationOpen, setQuickRelationOpen] = useState(false);
   const { currentCampaign } = useCampaignStore();
 
   const { data: event, isLoading, error } = useQuery({
@@ -1055,9 +1057,13 @@ export default function EventDetailPage() {
               ) : (
                 <div className="text-center py-12">
                   <LinkIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-4">
                     尚未在此活動中發現選民關係
                   </p>
+                  <Button onClick={() => setQuickRelationOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    開始記錄
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -1114,6 +1120,14 @@ export default function EventDetailPage() {
         open={scannerOpen}
         onOpenChange={setScannerOpen}
         onScan={handleLineScanResult}
+      />
+
+      {/* Quick Relation Dialog */}
+      <QuickRelationDialog
+        open={quickRelationOpen}
+        onOpenChange={setQuickRelationOpen}
+        eventId={eventId}
+        attendees={attendees}
       />
     </div>
   );
