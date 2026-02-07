@@ -28,7 +28,7 @@ import {
 import { eventsApi, votersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStanceLabel } from '@/lib/utils';
-import { QuickRelationDialog } from '@/components/events';
+
 import { LineQrScanner } from '@/components/common/LineQrScanner';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,7 +105,7 @@ export default function EventDetailPage() {
   const { toast } = useToast();
   const eventId = params.id as string;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [quickRelationOpen, setQuickRelationOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState('info');
   const [addAttendeeDialogOpen, setAddAttendeeDialogOpen] = useState(false);
   const [voterSearch, setVoterSearch] = useState('');
@@ -992,10 +992,7 @@ export default function EventDetailPage() {
                   記錄在此活動中發現的選民關係
                 </CardDescription>
               </div>
-              <Button onClick={() => setQuickRelationOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                快速記錄
-              </Button>
+
             </CardHeader>
             <CardContent>
               {eventRelationships?.firstMetRelationships?.length > 0 ? (
@@ -1115,16 +1112,6 @@ export default function EventDetailPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Quick Relation Dialog */}
-      <QuickRelationDialog
-        open={quickRelationOpen}
-        onOpenChange={setQuickRelationOpen}
-        eventId={eventId}
-        eventName={event.name}
-        attendees={attendees}
-        campaignId={event.campaignId}
-      />
 
       {/* LINE QR Scanner */}
       <LineQrScanner
