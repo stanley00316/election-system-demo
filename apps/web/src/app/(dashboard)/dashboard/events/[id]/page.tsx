@@ -1055,13 +1055,9 @@ export default function EventDetailPage() {
               ) : (
                 <div className="text-center py-12">
                   <LinkIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground mb-4">
+                  <p className="text-muted-foreground">
                     尚未在此活動中發現選民關係
                   </p>
-                  <Button onClick={() => setQuickRelationOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    開始記錄
-                  </Button>
                 </div>
               )}
             </CardContent>
