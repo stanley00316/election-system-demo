@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/hooks/use-permissions';
 import {
   Popover,
@@ -74,6 +75,7 @@ const OUTCOME_STYLES: Record<string, string> = {
 };
 
 export default function ContactsPage() {
+  const router = useRouter();
   const { currentCampaign } = useCampaignStore();
   const campaignId = currentCampaign?.id;
   const { canCreateContact } = usePermissions();
@@ -323,19 +325,17 @@ export default function ContactsPage() {
                 return (
                   <div
                     key={contact.id}
-                    className="flex items-start gap-4 p-4 hover:bg-muted/50 transition-colors"
+                    className="flex items-start gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/dashboard/voters/${contact.voter?.id}`)}
                   >
                     <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          href={`/dashboard/voters/${contact.voter?.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
+                        <span className="font-medium text-primary">
                           {contact.voter?.name}
-                        </Link>
+                        </span>
                         <Badge className={OUTCOME_STYLES[contact.outcome]}>
                           {getContactOutcomeLabel(contact.outcome)}
                         </Badge>

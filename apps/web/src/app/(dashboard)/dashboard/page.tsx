@@ -239,9 +239,10 @@ export default function DashboardPage() {
         <CardContent>
           <div className="space-y-4">
             {contactSummary?.recentContacts?.slice(0, 5).map((contact: any) => (
-              <div
+              <Link
                 key={contact.id}
-                className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                href={`/dashboard/voters/${contact.voter?.id}`}
+                className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0 hover:bg-muted/50 transition-colors cursor-pointer rounded-lg px-2 -mx-2"
               >
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
@@ -250,9 +251,9 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div>
-                    <Link href={`/dashboard/voters/${contact.voter?.id}`} className="font-medium text-primary hover:underline">
+                    <span className="font-medium text-primary">
                       {contact.voter?.name}
-                    </Link>
+                    </span>
                     <p className="text-sm text-muted-foreground">
                       {getContactTypeLabel(contact.type)} · {contact.user?.name}
                     </p>
@@ -269,7 +270,7 @@ export default function DashboardPage() {
                 >
                   {getContactOutcomeLabel(contact.outcome)}
                 </Badge>
-              </div>
+              </Link>
             ))}
             {(!contactSummary?.recentContacts || contactSummary.recentContacts.length === 0) && (
               <p className="text-center text-muted-foreground py-4">

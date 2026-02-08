@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { VoterImportDialog } from '@/components/voters/VoterImportDialog';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
@@ -55,6 +56,7 @@ const STANCE_OPTIONS = [
 
 export default function VotersPage() {
   const hydrated = useHydration();
+  const router = useRouter();
   const { currentCampaign } = useCampaignStore();
   const campaignId = currentCampaign?.id;
   const { toast } = useToast();
@@ -334,7 +336,8 @@ export default function VotersPage() {
               {data?.data?.map((voter: any) => (
                 <div
                   key={voter.id}
-                  className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/dashboard/voters/${voter.id}`)}
                 >
                   {/* Checkbox */}
                   <Checkbox
