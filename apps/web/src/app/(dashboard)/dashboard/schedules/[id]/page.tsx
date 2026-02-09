@@ -44,6 +44,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
   FAMILY: '家人',
@@ -238,11 +239,7 @@ export default function ScheduleDetailPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/dashboard/schedules">
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
-              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          </Link>
+          <BackButton href="/dashboard/schedules" />
           <div className="min-w-0">
             <p className="text-xs sm:text-sm text-muted-foreground">
               {formatDate(schedule.date, {

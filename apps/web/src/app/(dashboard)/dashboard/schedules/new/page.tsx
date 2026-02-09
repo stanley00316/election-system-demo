@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCampaignStore } from '@/stores/campaign';
 import { schedulesApi } from '@/lib/api';
 import { ArrowLeft, Save } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 
 const scheduleSchema = z.object({
@@ -85,11 +86,7 @@ export default function NewSchedulePage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/schedules">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href="/dashboard/schedules" />
         <div>
           <h1 className="text-2xl font-bold">新增行程</h1>
           <p className="text-muted-foreground">規劃每日拜訪行程</p>

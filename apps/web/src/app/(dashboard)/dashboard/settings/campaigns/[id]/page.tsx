@@ -32,6 +32,7 @@ import {
 import { useCampaignStore } from '@/stores/campaign';
 import { campaignsApi, districtsApi } from '@/lib/api';
 import { ArrowLeft, Save, Trash2, Loader2 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 
 const campaignSchema = z.object({
@@ -199,11 +200,7 @@ export default function EditCampaignPage() {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/settings/campaigns">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <BackButton href="/dashboard/settings/campaigns" />
           <div>
             <h1 className="text-2xl font-bold">找不到活動</h1>
             <p className="text-muted-foreground">該活動可能已被刪除或您沒有權限存取</p>
@@ -218,11 +215,7 @@ export default function EditCampaignPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/settings/campaigns">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <BackButton href="/dashboard/settings/campaigns" />
           <div>
             <h1 className="text-2xl font-bold">編輯活動設定</h1>
             <p className="text-muted-foreground">{campaign.name}</p>

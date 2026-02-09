@@ -22,6 +22,7 @@ import {
 import { useCampaignStore } from '@/stores/campaign';
 import { eventsApi } from '@/lib/api';
 import { ArrowLeft, Save } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 
 const eventSchema = z.object({
@@ -112,11 +113,7 @@ export default function NewEventPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/events">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href="/dashboard/events" />
         <div>
           <h1 className="text-2xl font-bold">新增活動</h1>
           <p className="text-muted-foreground">建立客廳會、公祭等活動</p>

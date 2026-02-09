@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SubscriptionStatus, PlanInterval, PlanCategory } from '@prisma/client';
+import { SubscriptionStatus, PlanInterval, PlanCategory, TrialInviteStatus } from '@prisma/client';
 
 @Injectable()
 export class SubscriptionsService {
@@ -94,6 +94,80 @@ export class SubscriptionsService {
       },
       include: {
         plan: true,
+      },
+    });
+
+    return subscription;
+  }
+
+  /**
+   * 透過推廣者試用邀請碼開始試用
+   */
+  async startPromoterTrial(userId: string, trialInviteCode: string) {
+    // 查找試用邀請
+    const trialInvite = await this.prisma.trialInvite.findUnique({
+      where: { code: trialInviteCode },
+      include: { plan: true, promoter: true },
+    });
+
+    if (!trialInvite) {
+      throw new NotFoundException('無效的試用邀請碼');
+    }
+
+    // 驗證狀態
+    if (!['PENDING', 'SENT'].includes(trialInvite.status)) {
+      throw new BadRequestException('此試用邀請碼已被使用或已失效');
+    }
+
+    // 檢查使用者是否已有訂閱
+    const existingSubscription = await this.prisma.subscription.findFirst({
+      where: { userId },
+    });
+
+    if (existingSubscription) {
+      throw new BadRequestException('您已經使用過試用或訂閱服務');
+    }
+
+    // 決定使用的方案
+    let planId = trialInvite.planId;
+    if (!planId) {
+      // 使用預設試用方案
+      let trialPlan = await this.prisma.plan.findFirst({
+        where: { code: 'FREE_TRIAL', isActive: true },
+      });
+      if (!trialPlan) {
+        trialPlan = await this.createDefaultPlans();
+      }
+      planId = trialPlan.id;
+    }
+
+    // 計算試用期
+    const now = new Date();
+    const trialDays = trialInvite.trialDays;
+    const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+    // 建立訂閱
+    const subscription = await this.prisma.subscription.create({
+      data: {
+        userId,
+        planId,
+        status: SubscriptionStatus.TRIAL,
+        currentPeriodStart: now,
+        currentPeriodEnd: trialEndsAt,
+        trialEndsAt,
+      },
+      include: { plan: true },
+    });
+
+    // 更新試用邀請狀態
+    await this.prisma.trialInvite.update({
+      where: { id: trialInvite.id },
+      data: {
+        status: TrialInviteStatus.ACTIVE,
+        activatedUserId: userId,
+        activatedAt: now,
+        expiresAt: trialEndsAt,
+        subscriptionId: subscription.id,
       },
     });
 

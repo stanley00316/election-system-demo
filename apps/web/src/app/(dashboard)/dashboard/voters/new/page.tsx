@@ -24,6 +24,7 @@ import {
 import { useCampaignStore } from '@/stores/campaign';
 import { votersApi } from '@/lib/api';
 import { ArrowLeft, Save, QrCode } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 import { useHydration } from '@/hooks/use-hydration';
 
@@ -149,11 +150,7 @@ export default function NewVoterPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/voters">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href="/dashboard/voters" />
         <div>
           <h1 className="text-2xl font-bold">新增選民</h1>
           <p className="text-muted-foreground">建立新的選民資料</p>

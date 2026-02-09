@@ -37,6 +37,7 @@ import {
 import { useCampaignStore } from '@/stores/campaign';
 import { campaignsApi } from '@/lib/api';
 import { Plus, Trash2, UserPlus, Shield, Edit2, Eye, Link2, Copy, Check, Clock, Users, ArrowLeft } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -224,11 +225,7 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/settings">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <BackButton href="/dashboard/settings" />
           <div>
             <h1 className="text-2xl font-bold">團隊管理</h1>
             <p className="text-muted-foreground">

@@ -64,6 +64,7 @@ import {
   CalendarPlus,
   MessageCircle,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
 import { VoterAttachments } from '@/components/voters/VoterAttachments';
 import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';

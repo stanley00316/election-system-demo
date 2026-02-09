@@ -177,10 +177,11 @@ export const api = new ApiClient(API_URL);
 
 // Auth API
 const realAuthApi = {
-  lineCallback: (code: string, redirectUri: string) =>
+  lineCallback: (code: string, redirectUri: string, promoterCode?: string) =>
     api.post<{ accessToken: string; user: any }>('/auth/line/callback', {
       code,
       redirectUri,
+      ...(promoterCode && { promoterCode }),
     }),
   getMe: () => api.get<any>('/auth/me'),
   logout: () => api.post('/auth/logout'),
@@ -500,6 +501,13 @@ const realAdminAnalyticsApi = {
   getRevenueReport: (months?: number) => api.get<any[]>('/admin/analytics/revenue', { months }),
   getSubscriptionDistribution: () => api.get<any>('/admin/analytics/subscriptions'),
   getRecentActivity: (limit?: number) => api.get<any>('/admin/analytics/recent', { limit }),
+  // 用戶深度分析
+  getRetentionAnalysis: (months?: number) => api.get<any[]>('/admin/analytics/retention', { months }),
+  getActiveUserStats: (days?: number) => api.get<any>('/admin/analytics/active-users', { days }),
+  getSubscriptionLifecycle: () => api.get<any>('/admin/analytics/subscription-lifecycle'),
+  getGeographicDistribution: () => api.get<any[]>('/admin/analytics/geographic'),
+  getUserBehaviorAnalysis: () => api.get<any>('/admin/analytics/behavior'),
+  getUserValueAnalysis: () => api.get<any>('/admin/analytics/user-value'),
 };
 export const adminAnalyticsApi = isDemoMode ? demoApi.demoAdminAnalyticsApi : realAdminAnalyticsApi;
 
@@ -532,3 +540,89 @@ const realAdminDataRetentionApi = {
   batchDelete: (ids: string[]) => api.post<any>('/admin/data-retention/batch-delete', { ids }),
 };
 export const adminDataRetentionApi = isDemoMode ? demoApi.demoAdminDataRetentionApi : realAdminDataRetentionApi;
+
+// Admin Promoters API（超級管理者專用）
+const realAdminPromotersApi = {
+  // 推廣者 CRUD
+  getPromoters: (params?: any) => api.get<{ data: any[]; pagination: any }>('/admin/promoters', params),
+  getPromoter: (id: string) => api.get<any>(`/admin/promoters/${id}`),
+  createPromoter: (data: any) => api.post<any>('/admin/promoters', data),
+  updatePromoter: (id: string, data: any) => api.put<any>(`/admin/promoters/${id}`, data),
+  approvePromoter: (id: string, data?: any) => api.post<any>(`/admin/promoters/${id}/approve`, data || {}),
+  rejectPromoter: (id: string) => api.post<any>(`/admin/promoters/${id}/reject`),
+  suspendPromoter: (id: string) => api.post<any>(`/admin/promoters/${id}/suspend`),
+  activatePromoter: (id: string) => api.post<any>(`/admin/promoters/${id}/activate`),
+
+  // 獎勵與試用設定
+  updateRewardConfig: (id: string, data: any) => api.put<any>(`/admin/promoters/${id}/reward-config`, data),
+  updateTrialConfig: (id: string, data: any) => api.put<any>(`/admin/promoters/${id}/trial-config`, data),
+
+  // 推廣者子資源
+  getPromoterReferrals: (id: string, params?: any) => api.get<{ data: any[]; pagination: any }>(`/admin/promoters/${id}/referrals`, params),
+  getPromoterTrialInvites: (id: string, params?: any) => api.get<{ data: any[]; pagination: any }>(`/admin/promoters/${id}/trial-invites`, params),
+  getPromoterShareLinks: (id: string) => api.get<any[]>(`/admin/promoters/${id}/share-links`),
+
+  // 統計
+  getOverviewStats: () => api.get<any>('/admin/promoters/stats/overview'),
+  getFunnelStats: () => api.get<any>('/admin/promoters/stats/funnel'),
+  getChannelStats: () => api.get<any[]>('/admin/promoters/stats/channels'),
+  getLeaderboard: (limit?: number) => api.get<any[]>('/admin/promoters/stats/leaderboard', { limit }),
+  getPendingPromoters: () => api.get<any[]>('/admin/promoters/pending'),
+
+  // 試用管理
+  getAllTrialInvites: (params?: any) => api.get<{ data: any[]; pagination: any }>('/admin/promoters/trial-invites', params),
+  getTrialStats: () => api.get<any>('/admin/promoters/trial-invites/stats'),
+  cancelTrialInvite: (trialId: string) => api.post<any>(`/admin/promoters/trial-invites/${trialId}/cancel`),
+  extendTrialInvite: (trialId: string, extraDays: number) => api.post<any>(`/admin/promoters/trial-invites/${trialId}/extend`, { extraDays }),
+};
+export const adminPromotersApi = isDemoMode ? demoApi.demoAdminPromotersApi : realAdminPromotersApi;
+
+// 推廣者公開 API（不需認證 / 部分需認證）
+export const promotersPublicApi = {
+  // 公開端點
+  register: (data: { name: string; phone?: string; email?: string; lineId?: string; notes?: string }) =>
+    api.post<{ success: boolean; message: string; promoter: any }>('/promoters/register', data),
+  validateCode: (code: string) =>
+    api.get<{ valid: boolean; promoter?: { name: string; referralCode: string }; message?: string }>(`/promoters/validate/${code}`),
+  getShareLink: (code: string) =>
+    api.get<{ promoter: { name: string; referralCode: string }; channel: string; targetUrl?: string }>(`/promoters/share/${code}`),
+  getTrialInfo: (code: string) =>
+    api.get<{ code: string; trialDays: number; promoterName: string; plan: any; status: string; isAvailable: boolean; message: string }>(`/promoters/trial/${code}`),
+  // 需認證端點
+  claimTrial: (code: string) =>
+    api.post<{ success: boolean; message: string; subscription: any }>('/promoters/trial/claim', { code }),
+  applyReferral: (code: string) =>
+    api.post<{ success: boolean; message: string; referral: any }>('/promoters/referral/apply', { code }),
+};
+
+// 推廣者自助 API（需認證 + 推廣者身份）
+const realPromoterSelfApi = {
+  getProfile: () => api.get<any>('/promoter/me'),
+  getStats: () => api.get<any>('/promoter/me/stats'),
+  getReferrals: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get<{ data: any[]; pagination: any }>('/promoter/me/referrals', params),
+  getShareLinks: () => api.get<any[]>('/promoter/me/share-links'),
+  createShareLink: (data: { channel: string; targetUrl?: string }) =>
+    api.post<any>('/promoter/me/share-links', data),
+  getTrialInvites: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get<{ data: any[]; pagination: any }>('/promoter/me/trial-invites', params),
+  createTrialInvite: (data: {
+    trialDays: number;
+    inviteMethod: string;
+    inviteeName?: string;
+    inviteePhone?: string;
+    inviteeEmail?: string;
+    channel?: string;
+  }) => api.post<any>('/promoter/me/trial-invites', data),
+};
+
+export const promoterSelfApi = isDemoMode ? demoApi.demoPromoterSelfApi : realPromoterSelfApi;
+
+// Role Invites API（超級管理者 QR 邀請）
+const realRoleInvitesApi = {
+  generate: (data: { role: 'ADMIN' | 'PROMOTER'; expiresInHours?: number; notes?: string }) =>
+    api.post<{ token: string; expiresAt: string; role: string }>('/admin/role-invites/generate', data),
+  claimInvite: (token: string) =>
+    api.post<{ message: string; role: string; user: any }>('/auth/claim-role-invite', { token }),
+};
+export const roleInvitesApi = isDemoMode ? demoApi.demoRoleInvitesApi : realRoleInvitesApi;

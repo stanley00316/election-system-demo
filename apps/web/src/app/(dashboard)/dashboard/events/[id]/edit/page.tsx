@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { eventsApi } from '@/lib/api';
 import { ArrowLeft, Save } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 
 const eventSchema = z.object({
@@ -157,11 +158,7 @@ export default function EditEventPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href={`/dashboard/events/${eventId}`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href={`/dashboard/events/${eventId}`} />
         <div>
           <h1 className="text-2xl font-bold">編輯活動</h1>
           <p className="text-muted-foreground">修改「{event.name}」活動資訊</p>

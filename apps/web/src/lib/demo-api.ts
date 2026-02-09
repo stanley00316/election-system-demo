@@ -68,7 +68,7 @@ initEventAttendees();
 
 // ==================== Auth API ====================
 export const demoAuthApi = {
-  lineCallback: async (_code: string, _redirectUri: string) => {
+  lineCallback: async (_code: string, _redirectUri: string, _promoterCode?: string) => {
     await delay(300);
     return {
       accessToken: 'demo-token-' + Date.now(),
@@ -967,6 +967,7 @@ export const demoSubscriptionsApi = {
         plan: demoPlans[0],
         status: 'TRIALING',
         trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        currentPeriodStart: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
         currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       },
     };
@@ -1184,73 +1185,495 @@ export const demoReferralsApi = {
 export const demoAdminAuthApi = {
   getMe: async () => {
     await delay(100);
-    throw new Error('示範模式不支援管理功能');
+    return { id: 'demo-user-id', name: '示範使用者', isAdmin: true, isSuperAdmin: true };
   },
   getAdmins: async () => {
     await delay(100);
-    return [];
+    return demoUsers.filter((u) => u.isAdmin);
   },
-  assignAdmin: async (_userId: string) => {
+  assignAdmin: async (userId: string) => {
     await delay(200);
-    throw new Error('示範模式不支援管理功能');
+    const user = demoUsers.find((u) => u.id === userId);
+    if (user) user.isAdmin = true;
+    return { message: '已指派為管理員', user };
   },
-  removeAdmin: async (_userId: string) => {
+  removeAdmin: async (userId: string) => {
     await delay(200);
-    throw new Error('示範模式不支援管理功能');
+    const user = demoUsers.find((u) => u.id === userId);
+    if (user) user.isAdmin = false;
+    return { message: '已移除管理員權限', user };
   },
 };
 
+// 示範用使用者資料
+const demoUsers = [
+  {
+    id: 'demo-user-1',
+    name: '王小明',
+    email: 'xiaoming@example.com',
+    phone: '0912-345-678',
+    avatarUrl: null,
+    isAdmin: false,
+    isSuperAdmin: false,
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2025-11-15T08:00:00Z',
+    promoter: null,
+    subscriptions: [{ id: 'demo-sub-1', plan: { id: 'plan-pro', name: '專業版' }, status: 'ACTIVE' }],
+    campaigns: [],
+    teamMembers: [],
+    _count: { contacts: 25, createdVoters: 80, campaigns: 1 },
+  },
+  {
+    id: 'demo-user-2',
+    name: '李美華',
+    email: 'meihua@example.com',
+    phone: '0923-456-789',
+    avatarUrl: null,
+    isAdmin: true,
+    isSuperAdmin: false,
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2025-10-20T10:00:00Z',
+    promoter: null,
+    subscriptions: [{ id: 'demo-sub-2', plan: { id: 'plan-free', name: '免費試用' }, status: 'TRIAL' }],
+    campaigns: [],
+    teamMembers: [],
+    _count: { contacts: 60, createdVoters: 200, campaigns: 2 },
+  },
+  {
+    id: 'demo-user-3',
+    name: '張志豪',
+    email: 'zhihao@example.com',
+    phone: '0934-567-890',
+    avatarUrl: null,
+    isAdmin: false,
+    isSuperAdmin: false,
+    isActive: true,
+    isSuspended: true,
+    createdAt: '2026-01-05T14:00:00Z',
+    promoter: {
+      id: 'demo-promoter-ext',
+      referralCode: 'ZH2026',
+      isActive: false,
+      status: 'SUSPENDED',
+    },
+    subscriptions: [{ id: 'demo-sub-3', plan: { id: 'plan-pro', name: '專業版' }, status: 'CANCELLED' }],
+    campaigns: [],
+    teamMembers: [],
+    _count: { contacts: 10, createdVoters: 30, campaigns: 0 },
+  },
+  {
+    id: 'demo-user-4',
+    name: '陳雅芳',
+    email: 'yafang@example.com',
+    phone: '0945-678-901',
+    avatarUrl: null,
+    isAdmin: false,
+    isSuperAdmin: false,
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2025-12-01T09:00:00Z',
+    promoter: null,
+    subscriptions: [{ id: 'demo-sub-4', plan: { id: 'plan-pro', name: '專業版' }, status: 'PAST_DUE' }],
+    campaigns: [],
+    teamMembers: [],
+    _count: { contacts: 5, createdVoters: 15, campaigns: 1 },
+  },
+  {
+    id: 'demo-user-id',
+    name: '示範使用者',
+    email: 'demo@example.com',
+    phone: '0912345678',
+    avatarUrl: null,
+    isAdmin: true,
+    isSuperAdmin: true,
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2024-01-01T00:00:00Z',
+    promoter: {
+      id: 'demo-promoter-id',
+      referralCode: 'DEMO1234',
+      isActive: true,
+      status: 'APPROVED',
+    },
+    subscriptions: [{ id: 'demo-sub', plan: { id: 'plan-free', name: '免費試用' }, status: 'TRIALING' }],
+    campaigns: [],
+    teamMembers: [],
+    _count: { contacts: 0, createdVoters: 500, campaigns: 1 },
+  },
+];;
+
 export const demoAdminUsersApi = {
-  getUsers: async () => {
+  getUsers: async (params?: any) => {
     await delay(100);
-    return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    let filtered = [...demoUsers];
+
+    // 依帳號停用狀態篩選
+    if (params?.isSuspended === true) {
+      filtered = filtered.filter((u) => u.isSuspended);
+    } else if (params?.isSuspended === false) {
+      filtered = filtered.filter((u) => !u.isSuspended);
+    }
+
+    // 依訂閱狀態篩選
+    if (params?.hasSubscription === true) {
+      filtered = filtered.filter((u) => u.subscriptions && u.subscriptions.length > 0);
+    } else if (params?.hasSubscription === false) {
+      filtered = filtered.filter((u) => !u.subscriptions || u.subscriptions.length === 0);
+    }
+    if (params?.subscriptionStatus) {
+      filtered = filtered.filter((u) =>
+        u.subscriptions?.some((s: any) => s.status === params.subscriptionStatus)
+      );
+    }
+
+    // 依搜尋關鍵字篩選
+    if (params?.search) {
+      const keyword = params.search.toLowerCase();
+      filtered = filtered.filter(
+        (u) =>
+          u.name?.toLowerCase().includes(keyword) ||
+          u.email?.toLowerCase().includes(keyword) ||
+          u.phone?.includes(keyword)
+      );
+    }
+
+
+
+    return {
+      data: filtered.map((u) => ({
+        ...u,
+        currentSubscription: u.subscriptions?.[0] || null,
+      })),
+      pagination: { page: 1, limit: 20, total: filtered.length, totalPages: 1 },
+    };
   },
   getStats: async () => {
     await delay(100);
-    return {};
+    return {
+      totalUsers: demoUsers.length,
+      activeUsers: demoUsers.filter((u) => !u.isSuspended).length,
+      trialUsers: demoUsers.filter((u) => u.subscriptions?.some((s: any) => ['TRIALING', 'TRIAL'].includes(s.status))).length,
+      paidUsers: demoUsers.filter((u) => u.subscriptions?.some((s: any) => s.status === 'ACTIVE')).length,
+    };
   },
-  getUser: async (_id: string) => {
+  getUser: async (id: string) => {
     await delay(100);
-    return null;
+    return demoUsers.find((u) => u.id === id) || null;
   },
   getUserActivity: async (_id: string) => {
     await delay(100);
     return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   },
-  suspendUser: async (_id: string, _reason: string) => {
+  suspendUser: async (id: string, _reason: string) => {
     await delay(200);
-    throw new Error('示範模式不支援管理功能');
+    const user = demoUsers.find((u) => u.id === id);
+    if (user) user.isSuspended = true;
+    return { message: '已停用帳號' };
   },
-  activateUser: async (_id: string) => {
+  activateUser: async (id: string) => {
     await delay(200);
-    throw new Error('示範模式不支援管理功能');
+    const user = demoUsers.find((u) => u.id === id);
+    if (user) user.isSuspended = false;
+    return { message: '已啟用帳號' };
   },
 };
 
+// ---- Demo 訂閱資料 ----
+const demoSubscriptions = [
+  {
+    id: 'demo-sub-1',
+    user: { id: 'demo-user-1', name: '王小明', email: 'xiaoming@example.com' },
+    plan: { id: 'plan-pro', name: '專業版' },
+    status: 'ACTIVE',
+    currentPeriodEnd: new Date(Date.now() + 25 * 86400000).toISOString(),
+    createdAt: '2025-12-01T08:00:00Z',
+  },
+  {
+    id: 'demo-sub-2',
+    user: { id: 'demo-user-2', name: '李美華', email: 'meihua@example.com' },
+    plan: { id: 'plan-free', name: '免費試用' },
+    status: 'TRIAL',
+    currentPeriodEnd: new Date(Date.now() + 5 * 86400000).toISOString(),
+    createdAt: '2026-01-20T10:00:00Z',
+  },
+  {
+    id: 'demo-sub-3',
+    user: { id: 'demo-user-3', name: '張志豪', email: 'zhihao@example.com' },
+    plan: { id: 'plan-pro', name: '專業版' },
+    status: 'CANCELLED',
+    currentPeriodEnd: '2026-01-15T00:00:00Z',
+    createdAt: '2025-09-10T14:00:00Z',
+  },
+  {
+    id: 'demo-sub-4',
+    user: { id: 'demo-user-4', name: '陳雅芳', email: 'yafang@example.com' },
+    plan: { id: 'plan-pro', name: '專業版' },
+    status: 'PAST_DUE',
+    currentPeriodEnd: new Date(Date.now() - 3 * 86400000).toISOString(),
+    createdAt: '2025-11-05T09:00:00Z',
+  },
+  {
+    id: 'demo-sub',
+    user: { id: 'demo-user-id', name: '示範使用者', email: 'demo@example.com' },
+    plan: { id: 'plan-free', name: '免費試用' },
+    status: 'TRIAL',
+    currentPeriodEnd: new Date(Date.now() + 14 * 86400000).toISOString(),
+    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+];;
+
 export const demoAdminSubscriptionsApi = {
-  getSubscriptions: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
-  getStats: async () => ({}),
+  getSubscriptions: async (params?: any) => {
+    await delay(100);
+    let filtered = [...demoSubscriptions];
+
+    if (params?.status) {
+      filtered = filtered.filter((s) => s.status === params.status);
+    }
+    if (params?.planCode) {
+      filtered = filtered.filter((s) => s.plan.id === params.planCode);
+    }
+
+
+
+    return {
+      data: filtered,
+      pagination: { page: params?.page || 1, limit: params?.limit || 20, total: filtered.length, totalPages: 1 },
+    };
+  },
+  getStats: async () => ({
+    totalSubscriptions: demoSubscriptions.length,
+    byStatus: {
+      trial: demoSubscriptions.filter((s) => s.status === 'TRIAL').length,
+      active: demoSubscriptions.filter((s) => s.status === 'ACTIVE').length,
+      cancelled: demoSubscriptions.filter((s) => s.status === 'CANCELLED').length,
+      expired: demoSubscriptions.filter((s) => s.status === 'EXPIRED').length,
+      past_due: demoSubscriptions.filter((s) => s.status === 'PAST_DUE').length,
+    },
+    expiringIn7Days: demoSubscriptions.filter((s) => {
+      if (!['TRIAL', 'ACTIVE'].includes(s.status)) return false;
+      const daysLeft = (new Date(s.currentPeriodEnd).getTime() - Date.now()) / 86400000;
+      return daysLeft >= 0 && daysLeft <= 7;
+    }).length,
+  }),
   getPlans: async () => demoPlans,
-  getSubscription: async (_id: string) => null,
+  getSubscription: async (id: string) => demoSubscriptions.find((s) => s.id === id) || null,
   updatePlan: async () => { throw new Error('示範模式不支援管理功能'); },
   extendTrial: async () => { throw new Error('示範模式不支援管理功能'); },
   cancelSubscription: async () => { throw new Error('示範模式不支援管理功能'); },
 };
 
+// ---- Demo 付款資料 ----
+const demoPayments = [
+  {
+    id: 'demo-pay-1',
+    subscription: {
+      user: { id: 'demo-user-1', name: '王小明', email: 'xiaoming@example.com' },
+      plan: { name: '專業版' },
+    },
+    amount: 1990,
+    provider: 'ECPAY',
+    status: 'COMPLETED',
+    paidAt: '2026-01-15T10:30:00Z',
+    refundedAt: null,
+  },
+  {
+    id: 'demo-pay-2',
+    subscription: {
+      user: { id: 'demo-user-2', name: '李美華', email: 'meihua@example.com' },
+      plan: { name: '專業版' },
+    },
+    amount: 1990,
+    provider: 'NEWEBPAY',
+    status: 'COMPLETED',
+    paidAt: '2026-01-10T14:00:00Z',
+    refundedAt: null,
+  },
+  {
+    id: 'demo-pay-3',
+    subscription: {
+      user: { id: 'demo-user-4', name: '陳雅芳', email: 'yafang@example.com' },
+      plan: { name: '專業版' },
+    },
+    amount: 1990,
+    provider: 'ECPAY',
+    status: 'FAILED',
+    paidAt: null,
+    refundedAt: null,
+  },
+  {
+    id: 'demo-pay-4',
+    subscription: {
+      user: { id: 'demo-user-1', name: '王小明', email: 'xiaoming@example.com' },
+      plan: { name: '專業版' },
+    },
+    amount: 1990,
+    provider: 'STRIPE',
+    status: 'REFUNDED',
+    paidAt: '2025-12-01T09:00:00Z',
+    refundedAt: '2025-12-05T16:00:00Z',
+  },
+];
+
 export const demoAdminPaymentsApi = {
-  getPayments: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
-  getStats: async () => ({}),
-  getPayment: async (_id: string) => null,
+  getPayments: async (params?: any) => {
+    await delay(100);
+    let filtered = [...demoPayments];
+
+    if (params?.status) {
+      filtered = filtered.filter((p) => p.status === params.status);
+    }
+    if (params?.provider) {
+      filtered = filtered.filter((p) => p.provider === params.provider);
+    }
+
+
+
+    return {
+      data: filtered,
+      pagination: { page: params?.page || 1, limit: params?.limit || 20, total: filtered.length, totalPages: 1 },
+    };
+  },
+  getStats: async () => {
+    const statusGroups = ['COMPLETED', 'PENDING', 'PROCESSING', 'FAILED', 'REFUNDED'];
+    const byStatus = statusGroups
+      .map((status) => {
+        const items = demoPayments.filter((p) => p.status === status);
+        return { status, count: items.length, amount: items.reduce((sum, p) => sum + p.amount, 0) };
+      })
+      .filter((s) => s.count > 0);
+
+    return {
+      totalRevenue: demoPayments.filter((p) => p.status === 'COMPLETED').reduce((sum, p) => sum + p.amount, 0),
+      byStatus,
+    };
+  },
+  getPayment: async (id: string) => demoPayments.find((p) => p.id === id) || null,
   refundPayment: async () => { throw new Error('示範模式不支援管理功能'); },
 };
 
 export const demoAdminAnalyticsApi = {
-  getOverview: async () => ({}),
-  getUserGrowth: async () => [],
-  getRevenueReport: async () => [],
-  getSubscriptionDistribution: async () => ({}),
-  getRecentActivity: async () => ({ users: [], payments: [], subscriptions: [] }),
-};
+  getOverview: async () => {
+    const completedPayments = demoPayments.filter((p) => p.status === 'COMPLETED');
+    const totalRevenue = completedPayments.reduce((sum, p) => sum + p.amount, 0);
+    const activeSubs = demoSubscriptions.filter((s) => ['ACTIVE', 'TRIAL'].includes(s.status)).length;
+    return {
+      totalUsers: demoUsers.length,
+      userGrowth: 15.3,
+      activeSubscriptions: activeSubs,
+      conversionRate: demoUsers.length > 0 ? Math.round((activeSubs / demoUsers.length) * 100) : 0,
+      monthlyRevenue: totalRevenue,
+      revenueGrowth: 12.5,
+      arpu: demoUsers.length > 0 ? Math.round(totalRevenue / demoUsers.length) : 0,
+      churnRate: 8.3,
+    };
+  },
+  getUserGrowth: async () => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (11 - i));
+      return { month: d.toISOString().slice(0, 7), newUsers: Math.floor(Math.random() * 10) + 2, totalUsers: 30 + i * 5 };
+    });
+  },
+  getRevenueReport: async () => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      return { month: d.toISOString().slice(0, 7), revenue: Math.floor(Math.random() * 5000) + 3000, transactions: Math.floor(Math.random() * 5) + 1 };
+    });
+  },
+  getSubscriptionDistribution: async () => ({
+    trial: demoSubscriptions.filter((s) => s.status === 'TRIAL').length,
+    active: demoSubscriptions.filter((s) => s.status === 'ACTIVE').length,
+    cancelled: demoSubscriptions.filter((s) => s.status === 'CANCELLED').length,
+    pastDue: demoSubscriptions.filter((s) => s.status === 'PAST_DUE').length,
+  }),
+  getRecentActivity: async (_limit?: number) => {
+    const limit = _limit || 5;
+    return {
+      newUsers: demoUsers
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit)
+        .map((u) => ({ id: u.id, name: u.name, email: u.email, createdAt: u.createdAt })),
+      newSubscriptions: demoSubscriptions
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit)
+        .map((s) => ({ id: s.id, user: { name: s.user.name }, plan: { name: s.plan.name }, status: s.status })),
+      recentPayments: demoPayments
+        .filter((p) => p.paidAt)
+        .sort((a, b) => new Date(b.paidAt!).getTime() - new Date(a.paidAt!).getTime())
+        .slice(0, limit)
+        .map((p) => ({ id: p.id, subscription: { user: { name: p.subscription.user.name } }, paidAt: p.paidAt, amount: p.amount })),
+    };
+  },
+  // 用戶深度分析
+  getRetentionAnalysis: async () => {
+    return Array.from({ length: 6 }, (_, i) => ({
+      cohort: `2025-${String(7 + i).padStart(2, '0')}`,
+      month0: 100, month1: 85 - i * 3, month2: 70 - i * 5, month3: 60 - i * 4,
+    }));
+  },
+  getActiveUserStats: async () => ({
+    dau: Array.from({ length: 30 }, (_, i) => ({ date: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10), count: Math.floor(Math.random() * 3) + 1 })),
+    wau: Array.from({ length: 12 }, (_, i) => ({ week: `W${i + 1}`, count: Math.floor(Math.random() * 4) + 2 })),
+    mau: Array.from({ length: 6 }, (_, i) => ({ month: new Date(Date.now() - (5 - i) * 30 * 86400000).toISOString().slice(0, 7), count: Math.floor(Math.random() * 5) + 3 })),
+    dauMauRatio: 0.35,
+  }),
+  getSubscriptionLifecycle: async () => ({
+    trialConversionRate: 40,
+    avgTrialDays: 10.5,
+    avgDurationMonths: 6.2,
+    cancelReasons: [
+      { reason: '價格因素', count: 3 },
+      { reason: '功能不足', count: 2 },
+      { reason: '競品替代', count: 1 },
+    ],
+    funnel: [
+      { stage: '註冊', count: demoUsers.length },
+      { stage: '試用', count: demoSubscriptions.filter((s) => s.status === 'TRIAL').length + 1 },
+      { stage: '付費', count: demoSubscriptions.filter((s) => s.status === 'ACTIVE').length },
+    ],
+    totalTrialSubs: demoSubscriptions.filter((s) => s.status === 'TRIAL').length,
+    convertedTrialSubs: 1,
+  }),
+  getGeographicDistribution: async () => [
+    { city: '台北市', count: 2 },
+    { city: '新北市', count: 1 },
+    { city: '桃園市', count: 1 },
+    { city: '台中市', count: 1 },
+  ],
+  getUserBehaviorAnalysis: async () => ({
+    featureUsage: [
+      { feature: '選民管理', usage: 85 },
+      { feature: '接觸紀錄', usage: 72 },
+      { feature: '行程規劃', usage: 60 },
+      { feature: '地圖檢視', usage: 55 },
+      { feature: '數據分析', usage: 40 },
+    ],
+    hourlyData: Array.from({ length: 24 }, (_, i) => ({ hour: i, count: i >= 8 && i <= 22 ? Math.floor(Math.random() * 5) + 1 : 0 })),
+    avgDaysToFirstCampaign: 2.3,
+  }),
+  getUserValueAnalysis: async () => ({
+    ltvDistribution: [
+      { range: '0-1000', count: 2 },
+      { range: '1001-5000', count: 1 },
+      { range: '5001+', count: 2 },
+    ],
+    valueTiers: [
+      { tier: '高價值', count: 1, avgLtv: 12000 },
+      { tier: '中價值', count: 2, avgLtv: 4000 },
+      { tier: '低價值', count: 2, avgLtv: 500 },
+    ],
+    arpuTrend: Array.from({ length: 6 }, (_, i) => ({
+      month: new Date(Date.now() - (5 - i) * 30 * 86400000).toISOString().slice(0, 7),
+      arpu: 700 + i * 50,
+    })),
+    avgLtv: 5600,
+    totalPaidUsers: 2,
+  }),
+};;
 
 export const demoAdminPlansApi = {
   getPlans: async () => demoPlans,
@@ -1259,11 +1682,294 @@ export const demoAdminPlansApi = {
   deactivatePlan: async () => { throw new Error('示範模式不支援管理功能'); },
 };
 
+// ---- Demo 推薦資料 ----
+const demoReferrals = [
+  {
+    id: 'demo-ref-1',
+    referrer: { id: 'demo-user-1', name: '王小明', email: 'xiaoming@example.com', phone: '0912-345-678', avatarUrl: null },
+    referred: { id: 'demo-user-2', name: '李美華', email: 'meihua@example.com', phone: '0923-456-789', avatarUrl: null },
+    referralCode: 'WANG2026',
+    status: 'COMPLETED',
+    rewardMonths: 1,
+    createdAt: '2025-12-20T08:00:00Z',
+  },
+  {
+    id: 'demo-ref-2',
+    referrer: { id: 'demo-user-2', name: '李美華', email: 'meihua@example.com', phone: '0923-456-789', avatarUrl: null },
+    referred: { id: 'demo-user-3', name: '張志豪', email: 'zhihao@example.com', phone: '0934-567-890', avatarUrl: null },
+    referralCode: 'LEE2026',
+    status: 'PENDING',
+    rewardMonths: 0,
+    createdAt: '2026-01-10T10:00:00Z',
+  },
+  {
+    id: 'demo-ref-3',
+    referrer: { id: 'demo-user-1', name: '王小明', email: 'xiaoming@example.com', phone: '0912-345-678', avatarUrl: null },
+    referred: { id: 'demo-user-4', name: '陳雅芳', email: 'yafang@example.com', phone: '0945-678-901', avatarUrl: null },
+    referralCode: 'WANG2026',
+    status: 'EXPIRED',
+    rewardMonths: 0,
+    createdAt: '2025-10-01T14:00:00Z',
+  },
+  {
+    id: 'demo-ref-4',
+    referrer: { id: 'demo-user-id', name: '示範使用者', email: 'demo@example.com', phone: '0912345678', avatarUrl: null },
+    referred: { id: 'demo-user-1', name: '王小明', email: 'xiaoming@example.com', phone: '0912-345-678', avatarUrl: null },
+    referralCode: 'DEMO1234',
+    status: 'COMPLETED',
+    rewardMonths: 1,
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-ref-5',
+    referrer: { id: 'demo-user-id', name: '示範使用者', email: 'demo@example.com', phone: '0912345678', avatarUrl: null },
+    referred: { id: 'demo-user-5', name: '李小華', email: 'xiaohua@example.com', phone: '0956-789-012', avatarUrl: null },
+    referralCode: 'DEMO1234',
+    status: 'PENDING',
+    rewardMonths: 0,
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
 export const demoAdminReferralsApi = {
-  getReferrals: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
-  getStats: async () => ({ totalReferrals: 0, completedReferrals: 0, pendingReferrals: 0, totalRewards: 0 }),
-  getLeaderboard: async () => [],
+  getReferrals: async (params?: any) => {
+    await delay(100);
+    let filtered = [...demoReferrals];
+
+    if (params?.status) {
+      filtered = filtered.filter((r) => r.status === params.status);
+    }
+    if (params?.startDate) {
+      const start = new Date(params.startDate).getTime();
+      filtered = filtered.filter((r) => new Date(r.createdAt).getTime() >= start);
+    }
+    if (params?.endDate) {
+      const end = new Date(params.endDate).getTime();
+      filtered = filtered.filter((r) => new Date(r.createdAt).getTime() <= end);
+    }
+
+
+
+    return {
+      data: filtered,
+      pagination: { page: params?.page || 1, limit: params?.limit || 20, total: filtered.length, totalPages: 1 },
+    };
+  },
+  getStats: async () => {
+    const completed = demoReferrals.filter((r) => r.status === 'COMPLETED').length;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const thisMonth = demoReferrals.filter((r) => new Date(r.createdAt).getTime() >= monthStart);
+    return {
+      totalReferrals: demoReferrals.length,
+      completedReferrals: completed,
+      pendingReferrals: demoReferrals.filter((r) => r.status === 'PENDING').length,
+      expiredReferrals: demoReferrals.filter((r) => r.status === 'EXPIRED').length,
+      conversionRate: demoReferrals.length > 0 ? Math.round((completed / demoReferrals.length) * 100) : 0,
+      totalRewardMonths: demoReferrals.filter((r) => r.status === 'COMPLETED').reduce((sum, r) => sum + r.rewardMonths, 0),
+      thisMonthReferrals: thisMonth.length,
+      thisMonthCompleted: thisMonth.filter((r) => r.status === 'COMPLETED').length,
+    };
+  },
+  getLeaderboard: async (limit?: number) => {
+    const referrerMap = new Map<string, any>();
+    for (const ref of demoReferrals) {
+      const key = ref.referrer.id;
+      if (!referrerMap.has(key)) {
+        referrerMap.set(key, { user: ref.referrer, completed: 0, total: 0, rewardMonths: 0 });
+      }
+      const entry = referrerMap.get(key)!;
+      entry.total++;
+      if (ref.status === 'COMPLETED') {
+        entry.completed++;
+        entry.rewardMonths += ref.rewardMonths;
+      }
+    }
+    const board = Array.from(referrerMap.values())
+      .sort((a, b) => b.completed - a.completed)
+      .map((entry, i) => ({
+        rank: i + 1,
+        user: { id: entry.user.id, name: entry.user.name, avatarUrl: entry.user.avatarUrl },
+        completedReferrals: entry.completed,
+        totalRewardMonths: entry.rewardMonths,
+        totalReferrals: entry.total,
+      }));
+    return limit ? board.slice(0, limit) : board;
+  },
   expireOld: async () => ({ expired: 0 }),
+};
+
+export const demoPromoters = [
+  {
+    id: 'demo-promoter-id',
+    name: '示範推廣者',
+    type: 'INTERNAL',
+    status: 'ACTIVE',
+    referralCode: 'DEMO1234',
+    isActive: true,
+    successCount: 15,
+    trialConvertedCount: 5,
+    totalReward: 15000,
+    _count: { trialInvites: 18 },
+    rewardConfig: { rewardType: 'COMMISSION', percentage: 10 },
+    trialConfig: { canIssueTrial: true, defaultTrialDays: 14 },
+    createdAt: '2024-06-01T08:00:00Z',
+  },
+  {
+    id: 'demo-promoter-1',
+    name: '王大同',
+    type: 'INTERNAL',
+    status: 'ACTIVE',
+    referralCode: 'WANG01',
+    isActive: true,
+    successCount: 8,
+    trialConvertedCount: 3,
+    totalReward: 8000,
+    _count: { trialInvites: 12 },
+    rewardConfig: { rewardType: 'COMMISSION', percentage: 10 },
+    trialConfig: { canIssueTrial: true, defaultTrialDays: 14 },
+    createdAt: '2025-09-15T08:00:00Z',
+  },
+  {
+    id: 'demo-promoter-2',
+    name: '林美玲',
+    type: 'EXTERNAL',
+    status: 'ACTIVE',
+    referralCode: 'LIN001',
+    isActive: true,
+    successCount: 15,
+    trialConvertedCount: 5,
+    totalReward: 15000,
+    _count: { trialInvites: 20 },
+    rewardConfig: { rewardType: 'FIXED', amount: 500 },
+    trialConfig: { canIssueTrial: true, defaultTrialDays: 7 },
+    createdAt: '2025-10-01T10:00:00Z',
+  },
+  {
+    id: 'demo-promoter-3',
+    name: '陳建志',
+    type: 'INTERNAL',
+    status: 'PENDING',
+    referralCode: 'CHEN01',
+    isActive: false,
+    successCount: 0,
+    trialConvertedCount: 0,
+    totalReward: 0,
+    _count: { trialInvites: 0 },
+    rewardConfig: null,
+    trialConfig: null,
+    createdAt: '2026-01-20T14:00:00Z',
+  },
+  {
+    id: 'demo-promoter-4',
+    name: '黃志偉',
+    type: 'EXTERNAL',
+    status: 'SUSPENDED',
+    referralCode: 'HUANG1',
+    isActive: false,
+    successCount: 2,
+    trialConvertedCount: 1,
+    totalReward: 1000,
+    _count: { trialInvites: 5 },
+    rewardConfig: { rewardType: 'COMMISSION', percentage: 8 },
+    trialConfig: { canIssueTrial: false, defaultTrialDays: 14 },
+    createdAt: '2025-08-10T09:00:00Z',
+  },
+  {
+    id: 'demo-promoter-ext',
+    name: '張志豪',
+    type: 'EXTERNAL',
+    status: 'SUSPENDED',
+    referralCode: 'ZH2026',
+    isActive: false,
+    successCount: 1,
+    trialConvertedCount: 0,
+    totalReward: 500,
+    _count: { trialInvites: 2 },
+    rewardConfig: { rewardType: 'COMMISSION', percentage: 8 },
+    trialConfig: { canIssueTrial: false, defaultTrialDays: 14 },
+    createdAt: '2026-01-05T14:00:00Z',
+  },
+];
+
+export const demoAdminPromotersApi = {
+  getPromoters: async (params?: any) => {
+    await delay(100);
+    let filtered = [...demoPromoters];
+
+    if (params?.type) {
+      filtered = filtered.filter((p) => p.type === params.type);
+    }
+    if (params?.status) {
+      filtered = filtered.filter((p) => p.status === params.status);
+    }
+    if (params?.search) {
+      const keyword = params.search.toLowerCase();
+      filtered = filtered.filter(
+        (p) => p.name.toLowerCase().includes(keyword) || p.referralCode.toLowerCase().includes(keyword)
+      );
+    }
+
+
+
+    return {
+      data: filtered,
+      pagination: { page: params?.page || 1, limit: params?.limit || 15, total: filtered.length, totalPages: 1 },
+    };
+  },
+  getPromoter: async (id: string) => demoPromoters.find((p) => p.id === id) || null,
+  createPromoter: async () => { throw new Error('示範模式不支援管理功能'); },
+  updatePromoter: async () => { throw new Error('示範模式不支援管理功能'); },
+  approvePromoter: async () => { throw new Error('示範模式不支援管理功能'); },
+  rejectPromoter: async () => { throw new Error('示範模式不支援管理功能'); },
+  suspendPromoter: async () => { throw new Error('示範模式不支援管理功能'); },
+  activatePromoter: async () => { throw new Error('示範模式不支援管理功能'); },
+  updateRewardConfig: async () => { throw new Error('示範模式不支援管理功能'); },
+  updateTrialConfig: async () => { throw new Error('示範模式不支援管理功能'); },
+  getPromoterReferrals: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
+  getPromoterTrialInvites: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
+  getPromoterShareLinks: async () => [],
+  getOverviewStats: async () => ({
+    totalPromoters: demoPromoters.length,
+    activePromoters: demoPromoters.filter((p) => p.status === 'ACTIVE').length,
+    pendingPromoters: demoPromoters.filter((p) => p.status === 'PENDING').length,
+    monthSuccess: 5,
+    conversionRate: 31.3,
+    totalReward: demoPromoters.reduce((sum, p) => sum + p.totalReward, 0),
+  }),
+  getFunnelStats: async () => ({
+    clicked: 320,
+    registered: 80,
+    trial: 35,
+    subscribed: 25,
+    renewed: 10,
+  }),
+  getChannelStats: async () => [],
+  getLeaderboard: async (limit?: number) => {
+    const board = demoPromoters
+      .filter((p) => p.status === 'ACTIVE')
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        referralCode: p.referralCode,
+        successCount: p.successCount,
+        trialConverted: p.trialConvertedCount,
+        totalReward: p.totalReward,
+      }))
+      .sort((a, b) => (b.successCount + b.trialConverted) - (a.successCount + a.trialConverted));
+    return limit ? board.slice(0, limit) : board;
+  },
+  getPendingPromoters: async () => demoPromoters.filter((p) => p.status === 'PENDING'),
+  getAllTrialInvites: async () => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }),
+  getTrialStats: async () => ({
+    total: demoPromoters.reduce((sum, p) => sum + (p._count?.trialInvites || 0), 0),
+    activated: 10,
+    converted: demoPromoters.reduce((sum, p) => sum + p.trialConvertedCount, 0),
+    conversionRate: 44.4,
+  }),
+  cancelTrialInvite: async () => { throw new Error('示範模式不支援管理功能'); },
+  extendTrialInvite: async () => { throw new Error('示範模式不支援管理功能'); },
 };
 
 export const demoAdminDataRetentionApi = {
@@ -1274,4 +1980,156 @@ export const demoAdminDataRetentionApi = {
   deleteCampaign: async () => { throw new Error('示範模式不支援管理功能'); },
   hardDelete: async () => { throw new Error('示範模式不支援管理功能'); },
   batchDelete: async () => { throw new Error('示範模式不支援管理功能'); },
+};
+
+// 推廣者自助 API（Demo）
+export const demoPromoterSelfApi = {
+  getProfile: async () => ({
+    id: 'demo-promoter-id',
+    name: '示範推廣者',
+    referralCode: 'DEMO1234',
+    type: 'INTERNAL',
+    status: 'APPROVED',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    rewardConfig: {
+      rewardType: 'COMMISSION',
+      percentage: 10,
+      maxRewardsPerMonth: 50,
+    },
+    trialConfig: {
+      canIssueTrial: true,
+      minTrialDays: 7,
+      maxTrialDays: 30,
+      defaultTrialDays: 14,
+      monthlyIssueLimit: 20,
+      totalIssueLimit: null,
+    },
+  }),
+  getStats: async () => ({
+    totalReferrals: 45,
+    clickedCount: 120,
+    registeredCount: 30,
+    subscribedCount: 12,
+    renewedCount: 3,
+    successCount: 15,
+    conversionRate: 33.3,
+    totalReward: 15000,
+    totalShareLinks: 8,
+    totalClicks: 320,
+    totalTrials: 18,
+    trialActivated: 10,
+    trialConverted: 5,
+    trend: Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      return {
+        date: d.toISOString().split('T')[0],
+        total: Math.floor(Math.random() * 5) + 1,
+        success: Math.floor(Math.random() * 2),
+      };
+    }),
+  }),
+  getReferrals: async (params?: any) => ({
+    data: Array.from({ length: 5 }, (_, i) => ({
+      id: `ref-${i}`,
+      referredUser: { id: `user-${i}`, name: `推薦使用者 ${i + 1}`, avatarUrl: null },
+      status: ['CLICKED', 'REGISTERED', 'SUBSCRIBED', 'RENEWED', 'REGISTERED'][i],
+      channel: ['LINE', 'FACEBOOK', 'SMS', 'QR_CODE', 'EMAIL'][i],
+      shareLink: { channel: ['LINE', 'FACEBOOK', 'SMS', 'QR_CODE', 'EMAIL'][i], code: `SL${i}` },
+      rewardAmount: i < 3 ? (i + 1) * 500 : null,
+      createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+      registeredAt: i > 0 ? new Date(Date.now() - (i - 1) * 86400000).toISOString() : null,
+      subscribedAt: i === 2 ? new Date(Date.now() - 86400000).toISOString() : null,
+    })),
+    pagination: { page: 1, limit: 20, total: 5, totalPages: 1 },
+  }),
+  getShareLinks: async () => Array.from({ length: 4 }, (_, i) => ({
+    id: `sl-${i}`,
+    code: `SHARE${i}ABC`,
+    channel: ['LINE', 'FACEBOOK', 'QR_CODE', 'DIRECT_LINK'][i],
+    targetUrl: null,
+    clickCount: Math.floor(Math.random() * 100) + 10,
+    isActive: true,
+    createdAt: new Date(Date.now() - i * 7 * 86400000).toISOString(),
+    _count: {
+      clicks: Math.floor(Math.random() * 100) + 10,
+      referrals: Math.floor(Math.random() * 10),
+    },
+  })),
+  createShareLink: async (data: any) => ({
+    id: 'new-sl',
+    code: 'NEW' + Math.random().toString(36).slice(2, 6).toUpperCase(),
+    channel: data.channel,
+    targetUrl: data.targetUrl,
+    clickCount: 0,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    _count: { clicks: 0, referrals: 0 },
+  }),
+  getTrialInvites: async (params?: any) => ({
+    data: Array.from({ length: 4 }, (_, i) => ({
+      id: `trial-${i}`,
+      code: `TRIAL${i}XY`,
+      trialDays: [7, 14, 14, 30][i],
+      inviteMethod: ['LINK', 'CODE', 'DIRECT', 'LINK'][i],
+      inviteeName: i < 3 ? `受邀者 ${i + 1}` : null,
+      status: ['PENDING', 'ACTIVATED', 'CONVERTED', 'EXPIRED'][i],
+      activatedUser: i > 0 ? { id: `u-${i}`, name: `試用者 ${i}`, avatarUrl: null } : null,
+      plan: { id: 'plan-1', name: '專業方案' },
+      createdAt: new Date(Date.now() - i * 5 * 86400000).toISOString(),
+      activatedAt: i > 0 ? new Date(Date.now() - (i - 1) * 5 * 86400000).toISOString() : null,
+      expiresAt: i > 0 ? new Date(Date.now() + (30 - i * 10) * 86400000).toISOString() : null,
+    })),
+    pagination: { page: 1, limit: 20, total: 4, totalPages: 1 },
+  }),
+  createTrialInvite: async (data: any) => ({
+    id: 'new-trial',
+    code: 'T' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+    trialDays: data.trialDays,
+    inviteMethod: data.inviteMethod,
+    inviteeName: data.inviteeName,
+    status: 'PENDING',
+    plan: { id: 'plan-1', name: '專業方案' },
+    createdAt: new Date().toISOString(),
+  }),
+};
+
+// Role Invites Demo API（QR 邀請碼）
+export const demoRoleInvitesApi = {
+  generate: async (data: { role: 'ADMIN' | 'PROMOTER'; expiresInHours?: number; notes?: string }) => {
+    await delay(300);
+    const hours = data.expiresInHours || 24;
+    // 產生一個假的 JWT 格式 token（base64 編碼的 JSON）
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({
+      type: 'role-invite',
+      role: data.role,
+      createdBy: 'demo-super-admin',
+      notes: data.notes,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + hours * 3600,
+    }));
+    const signature = btoa('demo-signature');
+    const token = `${header}.${payload}.${signature}`;
+    return {
+      token,
+      expiresAt: new Date(Date.now() + hours * 3600 * 1000).toISOString(),
+      role: data.role,
+    };
+  },
+  claimInvite: async (_token: string) => {
+    await delay(300);
+    return {
+      message: '已成功取得角色（示範模式）',
+      role: 'ADMIN',
+      user: {
+        id: 'demo-user',
+        name: '示範使用者',
+        isAdmin: true,
+        isSuperAdmin: false,
+        promoter: null,
+      },
+    };
+  },
 };

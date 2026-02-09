@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Building2, Store, Loader2, ArrowLeft, Shield, Check } from 'lucide-react';
+import { CreditCard, Building2, Store, Loader2, Shield, Check } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -239,14 +240,7 @@ function CheckoutContent() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* 返回按鈕 */}
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => router.push('/pricing')}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          返回方案選擇
-        </Button>
+        <BackButton href="/pricing" label="返回方案選擇" className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 訂單摘要 */}

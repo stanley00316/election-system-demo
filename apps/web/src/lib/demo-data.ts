@@ -85,9 +85,15 @@ export const demoUser = {
   name: '示範使用者',
   email: 'demo@example.com',
   phone: '0912345678',
-  avatarUrl: null,
+  avatarUrl: undefined as string | undefined,
   isActive: true,
-  isAdmin: false,
+  isAdmin: true,
+  isSuperAdmin: true,
+  promoter: {
+    id: 'demo-promoter-id',
+    status: 'APPROVED',
+    isActive: true,
+  },
   createdAt: new Date('2024-01-01').toISOString(),
   updatedAt: new Date().toISOString(),
 };

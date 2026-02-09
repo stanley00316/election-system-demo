@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/tabs';
 import { adminDataRetentionApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import SuperAdminGuard from '@/components/guards/SuperAdminGuard';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 
@@ -77,6 +78,14 @@ interface Stats {
 }
 
 export default function AdminDataRetentionPage() {
+  return (
+    <SuperAdminGuard>
+      <AdminDataRetentionContent />
+    </SuperAdminGuard>
+  );
+}
+
+function AdminDataRetentionContent() {
   const { toast } = useToast();
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCampaigns, setPendingCampaigns] = useState<Campaign[]>([]);

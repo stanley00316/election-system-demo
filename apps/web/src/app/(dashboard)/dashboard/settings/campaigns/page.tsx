@@ -10,6 +10,7 @@ import { useCampaignStore } from '@/stores/campaign';
 import { authApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Plus, Settings, Users, Check, Building, ArrowLeft } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   VILLAGE_CHIEF: '村里長',
@@ -46,11 +47,7 @@ export default function CampaignsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/settings">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <BackButton href="/dashboard/settings" />
           <div>
             <h1 className="text-2xl font-bold">選舉活動管理</h1>
             <p className="text-muted-foreground">管理您的選舉活動</p>

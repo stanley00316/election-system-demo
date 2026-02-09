@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { votersApi } from '@/lib/api';
 import { ArrowLeft, Save, QrCode } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 
@@ -166,11 +167,7 @@ export default function EditVoterPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href={`/dashboard/voters/${voterId}`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href={`/dashboard/voters/${voterId}`} />
         <div>
           <h1 className="text-2xl font-bold">編輯選民</h1>
           <p className="text-muted-foreground">{voter.name}</p>

@@ -51,4 +51,54 @@ export class AdminAnalyticsController {
   async getRecentActivity(@Query('limit') limit?: number) {
     return this.adminAnalyticsService.getRecentActivity(limit || 20);
   }
+
+  // ==================== 用戶深度分析 ====================
+
+  /**
+   * 留存率同期群分析
+   */
+  @Get('retention')
+  async getRetentionAnalysis(@Query('months') months?: number) {
+    return this.adminAnalyticsService.getRetentionAnalysis(months || 6);
+  }
+
+  /**
+   * DAU/MAU 活躍用戶統計
+   */
+  @Get('active-users')
+  async getActiveUserStats(@Query('days') days?: number) {
+    return this.adminAnalyticsService.getActiveUserStats(days || 30);
+  }
+
+  /**
+   * 訂閱生命週期分析
+   */
+  @Get('subscription-lifecycle')
+  async getSubscriptionLifecycle() {
+    return this.adminAnalyticsService.getSubscriptionLifecycle();
+  }
+
+  /**
+   * 地理分佈分析
+   */
+  @Get('geographic')
+  async getGeographicDistribution() {
+    return this.adminAnalyticsService.getGeographicDistribution();
+  }
+
+  /**
+   * 用戶行為分析
+   */
+  @Get('behavior')
+  async getUserBehaviorAnalysis() {
+    return this.adminAnalyticsService.getUserBehaviorAnalysis();
+  }
+
+  /**
+   * 用戶價值分析
+   */
+  @Get('user-value')
+  async getUserValueAnalysis() {
+    return this.adminAnalyticsService.getUserValueAnalysis();
+  }
 }

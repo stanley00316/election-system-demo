@@ -17,11 +17,16 @@ import {
   Gift,
   Database,
   Trash2,
+  Megaphone,
+  ArrowLeftRight,
+  QrCode,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import { SimpleBottomNavBar, type SimpleNavItem } from '@/components/navigation';
+import { BackButton, getParentPath } from '@/components/common/BackButton';
 
 const navigation = [
   { name: '總覽', href: '/admin', icon: LayoutDashboard },
@@ -34,8 +39,22 @@ const navigation = [
 
 // 超級管理者專用選單
 const superAdminNavigation = [
+  { name: '推廣管理', href: '/admin/promoters', icon: Megaphone },
+  { name: 'QR 邀請', href: '/admin/qr-invite', icon: QrCode },
   { name: '方案管理', href: '/admin/plans', icon: CreditCard },
   { name: '資料保留', href: '/admin/data-retention', icon: Database },
+];
+
+// 底部導航欄項目（行動裝置）
+const bottomNavItems: SimpleNavItem[] = [
+  { name: '總覽', href: '/admin', icon: LayoutDashboard },
+  { name: '使用者', href: '/admin/users', icon: Users },
+  { name: '訂閱', href: '/admin/subscriptions', icon: CreditCard },
+  { name: '分析', href: '/admin/analytics', icon: BarChart3 },
+  { name: '推薦', href: '/admin/referrals', icon: Gift },
+  { name: '付款', href: '/admin/payments', icon: Receipt },
+  { name: '推廣', href: '/admin/promoters', icon: Megaphone },
+  { name: 'QR 邀請', href: '/admin/qr-invite', icon: QrCode },
 ];
 
 export default function AdminDashboardLayout({
@@ -45,7 +64,7 @@ export default function AdminDashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, clearAuth } = useAuthStore();
+  const { user, isAuthenticated, logout: clearAuth } = useAuthStore();
   const [admin, setAdmin] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,6 +92,18 @@ export default function AdminDashboardLayout({
       }
 
       setAdmin(userData);
+
+      // 將 isSuperAdmin 和 promoter 同步存入 Auth Store
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser && (
+        currentUser.isSuperAdmin !== userData.isSuperAdmin ||
+        currentUser.promoter?.id !== userData.promoter?.id
+      )) {
+        useAuthStore.getState().setAuth(
+          { ...currentUser, isSuperAdmin: userData.isSuperAdmin, promoter: userData.promoter ?? null },
+          useAuthStore.getState().token!,
+        );
+      }
     } catch (error) {
       // 清除 token 並導向登入頁
       localStorage.removeItem('token');
@@ -194,8 +225,15 @@ export default function AdminDashboardLayout({
               </div>
             )}
 
-            {/* 返回用戶端 */}
-            <div className="mt-8 pt-4 border-t border-gray-800">
+            {/* 切換身份 / 返回用戶端 */}
+            <div className="mt-8 pt-4 border-t border-gray-800 space-y-1">
+              <Link
+                href="/role-select"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+              >
+                <ArrowLeftRight className="h-5 w-5" />
+                切換身份
+              </Link>
               <Link
                 href="/dashboard"
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
@@ -245,23 +283,43 @@ export default function AdminDashboardLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header */}
         <header className="h-16 border-b bg-card flex items-center px-4 lg:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <span className="ml-4 font-semibold">
-            {navigation.find((n) => pathname === n.href || (n.href !== '/admin' && pathname.startsWith(n.href)))?.name || '管理後台'}
+          {(() => {
+            const parentPath = getParentPath(pathname, '/admin');
+            return parentPath ? (
+              <BackButton href={parentPath} />
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            );
+          })()}
+          <span className="ml-2 font-semibold truncate">
+            {[...navigation, ...superAdminNavigation].find((n) => pathname === n.href || (n.href !== '/admin' && pathname.startsWith(n.href)))?.name || '管理後台'}
           </span>
+          {getParentPath(pathname, '/admin') && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
+        <main className="flex-1 overflow-y-auto bg-gray-50 pb-20 lg:pb-0">
           {children}
         </main>
       </div>
+
+      {/* 底部導航欄 - 僅行動裝置顯示 */}
+      <SimpleBottomNavBar items={admin?.isSuperAdmin ? bottomNavItems : bottomNavItems.slice(0, 6)} />
     </div>
   );
 }

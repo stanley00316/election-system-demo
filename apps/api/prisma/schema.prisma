@@ -57,6 +57,12 @@ model User {
   referralsGiven   Referral[]            @relation("ReferrerUser")
   referralReceived Referral?             @relation("ReferredUser")
 
+  // 推廣者系統
+  promoter            Promoter?           @relation("PromoterUser")
+  approvedPromoters   Promoter[]          @relation("PromoterApprover")
+  promoterReferrals   PromoterReferral?   @relation("PromoterReferred")
+  trialActivations    TrialInvite?        @relation("TrialActivatedUser")
+
   @@map("users")
 }
 
@@ -498,7 +504,9 @@ model Plan {
   @@index([city, category])
 
   // Relations
-  subscriptions Subscription[]
+  subscriptions    Subscription[]
+  trialConfigs     PromoterTrialConfig[] @relation("TrialPlan")
+  trialInvitePlans TrialInvite[]         @relation("TrialInvitePlan")
 
   @@map("plans")
 }
@@ -517,9 +525,11 @@ model Subscription {
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
   // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan     Plan      @relation(fields: [planId], references: [id])
-  payments Payment[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              Plan               @relation(fields: [planId], references: [id])
+  payments          Payment[]
+  promoterReferrals PromoterReferral[]
+  trialInvites      TrialInvite[]      @relation("TrialSubscription")
 
   @@index([userId])
   @@index([status])
@@ -734,4 +744,231 @@ enum PlanCategory {
   COUNCILOR // 議員
   MAYOR // 市長
   LEGISLATOR // 立委
+}
+
+// ==================== 推廣者系統 ====================
+
+model Promoter {
+  id           String         @id @default(uuid())
+  name         String
+  phone        String?
+  email        String?
+  lineId       String?        @map("line_id")
+  referralCode String         @unique @map("referral_code")
+  type         PromoterType
+  userId       String?        @unique @map("user_id")
+  status       PromoterStatus @default(PENDING)
+  approvedAt   DateTime?      @map("approved_at")
+  approvedBy   String?        @map("approved_by")
+  notes        String?
+  isActive     Boolean        @default(false) @map("is_active")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  user         User?                @relation("PromoterUser", fields: [userId], references: [id])
+  approver     User?                @relation("PromoterApprover", fields: [approvedBy], references: [id])
+  rewardConfig PromoterRewardConfig?
+  trialConfig  PromoterTrialConfig?
+  referrals    PromoterReferral[]
+  shareLinks   ShareLink[]
+  trialInvites TrialInvite[]
+
+  @@index([type])
+  @@index([status])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("promoters")
+}
+
+model PromoterRewardConfig {
+  id                 String     @id @default(uuid())
+  promoterId         String     @unique @map("promoter_id")
+  rewardType         RewardType
+  fixedAmount        Decimal?   @map("fixed_amount") @db.Decimal(10, 2)
+  percentage         Decimal?   @db.Decimal(5, 2)
+  extensionMonths    Int?       @map("extension_months")
+  maxRewardsPerMonth Int?       @map("max_rewards_per_month")
+  validFrom          DateTime?  @map("valid_from")
+  validUntil         DateTime?  @map("valid_until")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  promoter Promoter @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+
+  @@map("promoter_reward_configs")
+}
+
+model PromoterTrialConfig {
+  id                String    @id @default(uuid())
+  promoterId        String    @unique @map("promoter_id")
+  canIssueTrial     Boolean   @default(true) @map("can_issue_trial")
+  minTrialDays      Int       @default(7) @map("min_trial_days")
+  maxTrialDays      Int       @default(30) @map("max_trial_days")
+  defaultTrialDays  Int       @default(14) @map("default_trial_days")
+  trialPlanId       String?   @map("trial_plan_id")
+  monthlyIssueLimit Int?      @map("monthly_issue_limit")
+  totalIssueLimit   Int?      @map("total_issue_limit")
+  validFrom         DateTime? @map("valid_from")
+  validUntil        DateTime? @map("valid_until")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  promoter  Promoter @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+  trialPlan Plan?    @relation("TrialPlan", fields: [trialPlanId], references: [id])
+
+  @@map("promoter_trial_configs")
+}
+
+model ShareLink {
+  id         String       @id @default(uuid())
+  promoterId String       @map("promoter_id")
+  code       String       @unique
+  channel    ShareChannel
+  targetUrl  String?      @map("target_url")
+  clickCount Int          @default(0) @map("click_count")
+  isActive   Boolean      @default(true) @map("is_active")
+  expiresAt  DateTime?    @map("expires_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  promoter  Promoter           @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+  clicks    ShareLinkClick[]
+  referrals PromoterReferral[]
+
+  @@index([promoterId])
+  @@index([code])
+  @@map("share_links")
+}
+
+model ShareLinkClick {
+  id          String   @id @default(uuid())
+  shareLinkId String   @map("share_link_id")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  referer     String?
+  clickedAt   DateTime @default(now()) @map("clicked_at")
+
+  shareLink ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+
+  @@index([shareLinkId])
+  @@index([clickedAt])
+  @@map("share_link_clicks")
+}
+
+model PromoterReferral {
+  id              String                 @id @default(uuid())
+  promoterId      String                 @map("promoter_id")
+  shareLinkId     String?                @map("share_link_id")
+  referredUserId  String?                @unique @map("referred_user_id")
+  referredName    String?                @map("referred_name")
+  referredPhone   String?                @map("referred_phone")
+  referredEmail   String?                @map("referred_email")
+  channel         ShareChannel?
+  status          PromoterReferralStatus @default(CLICKED)
+  clickedAt       DateTime?              @map("clicked_at")
+  registeredAt    DateTime?              @map("registered_at")
+  subscribedAt    DateTime?              @map("subscribed_at")
+  renewedAt       DateTime?              @map("renewed_at")
+  subscriptionId  String?                @map("subscription_id")
+  rewardAmount    Decimal?               @map("reward_amount") @db.Decimal(10, 2)
+  rewardGrantedAt DateTime?              @map("reward_granted_at")
+  rewardNotes     String?                @map("reward_notes")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  promoter     Promoter      @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+  shareLink    ShareLink?    @relation(fields: [shareLinkId], references: [id])
+  referredUser User?         @relation("PromoterReferred", fields: [referredUserId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([promoterId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("promoter_referrals")
+}
+
+model TrialInvite {
+  id              String            @id @default(uuid())
+  promoterId      String            @map("promoter_id")
+  code            String            @unique
+  trialDays       Int               @map("trial_days")
+  planId          String?           @map("plan_id")
+  inviteeName     String?           @map("invitee_name")
+  inviteePhone    String?           @map("invitee_phone")
+  inviteeEmail    String?           @map("invitee_email")
+  inviteMethod    TrialInviteMethod @map("invite_method")
+  channel         ShareChannel?
+  status          TrialInviteStatus @default(PENDING)
+  activatedUserId String?           @unique @map("activated_user_id")
+  activatedAt     DateTime?         @map("activated_at")
+  expiresAt       DateTime?         @map("expires_at")
+  convertedAt     DateTime?         @map("converted_at")
+  subscriptionId  String?           @map("subscription_id")
+  linkClickCount  Int               @default(0) @map("link_click_count")
+  lastClickedAt   DateTime?         @map("last_clicked_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  promoter      Promoter      @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+  plan          Plan?         @relation("TrialInvitePlan", fields: [planId], references: [id])
+  activatedUser User?         @relation("TrialActivatedUser", fields: [activatedUserId], references: [id])
+  subscription  Subscription? @relation("TrialSubscription", fields: [subscriptionId], references: [id])
+
+  @@index([promoterId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("trial_invites")
+}
+
+enum PromoterType {
+  INTERNAL // 訂閱者推廣（現有使用者）
+  EXTERNAL // 外部推廣者（非使用者）
+}
+
+enum PromoterStatus {
+  PENDING   // 待審核
+  APPROVED  // 已通過審核
+  ACTIVE    // 啟用中
+  SUSPENDED // 已停用
+}
+
+enum RewardType {
+  NONE                   // 無獎勵（純追蹤）
+  FIXED_AMOUNT           // 固定金額
+  PERCENTAGE             // 訂閱費百分比
+  SUBSCRIPTION_EXTENSION // 延長訂閱
+}
+
+enum ShareChannel {
+  LINE
+  FACEBOOK
+  SMS
+  QR_CODE
+  EMAIL
+  DIRECT_LINK
+  OTHER
+}
+
+enum PromoterReferralStatus {
+  CLICKED    // 僅點擊連結
+  REGISTERED // 已註冊帳號
+  TRIAL      // 試用中
+  SUBSCRIBED // 已成功訂閱
+  RENEWED    // 已續訂
+  EXPIRED    // 已過期
+}
+
+enum TrialInviteMethod {
+  LINK   // 推廣者分享連結
+  DIRECT // 推廣者填寫對方資料
+}
+
+enum TrialInviteStatus {
+  PENDING   // 已建立尚未啟用
+  SENT      // 已發送邀請
+  ACTIVATED // 已啟用試用
+  ACTIVE    // 試用中
+  EXPIRED   // 試用到期未轉換
+  CONVERTED // 已轉為付費
+  CANCELLED // 已取消
 }

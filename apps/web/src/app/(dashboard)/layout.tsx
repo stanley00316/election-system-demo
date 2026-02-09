@@ -37,10 +37,12 @@ import {
   Shield,
   Edit2,
   Eye,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { BottomNavBar } from '@/components/navigation';
 import { SubscriptionBanner } from '@/components/subscription';
+import { BackButton, getParentPath } from '@/components/common/BackButton';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: '管理員',
@@ -284,6 +286,16 @@ export default function DashboardLayout({
 
           {/* User menu */}
           <div className="border-t p-4">
+            {/* 切換身份按鈕（多角色時顯示） */}
+            {(user?.isAdmin || user?.isSuperAdmin || user?.promoter?.isActive) && (
+              <Link
+                href="/role-select"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-sm text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                切換身份
+              </Link>
+            )}
             <div className="flex gap-2 mb-4">
               <Button
                 variant="outline"
@@ -337,16 +349,34 @@ export default function DashboardLayout({
 
         {/* Mobile header */}
         <header className="h-16 border-b bg-card flex items-center px-4 lg:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <span className="ml-4 font-semibold">
+          {(() => {
+            const parentPath = getParentPath(pathname, '/dashboard');
+            return parentPath ? (
+              <BackButton href={parentPath} />
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            );
+          })()}
+          <span className="ml-2 font-semibold truncate">
             {navigation.find((n) => n.href === pathname)?.name || '選情系統'}
           </span>
+          {/* 當有返回按鈕時，把漢堡選單放右邊 */}
+          {getParentPath(pathname, '/dashboard') && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
         </header>
 
         {/* Page content */}

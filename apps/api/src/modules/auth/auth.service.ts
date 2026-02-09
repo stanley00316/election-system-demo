@@ -9,6 +9,9 @@ export interface JwtPayload {
   lineUserId: string;
   name: string;
   isAdmin?: boolean;
+  isSuperAdmin?: boolean;
+  isPromoter?: boolean;
+  promoterId?: string;
 }
 
 export interface TokenResponse {
@@ -20,6 +23,12 @@ export interface TokenResponse {
     email?: string;
     avatarUrl?: string;
     isAdmin?: boolean;
+    isSuperAdmin?: boolean;
+    promoter?: {
+      id: string;
+      status: string;
+      isActive: boolean;
+    } | null;
   };
 }
 
@@ -43,7 +52,7 @@ export class AuthService {
     return !!this.adminLineUserId && lineUserId === this.adminLineUserId;
   }
 
-  async validateLineToken(code: string, redirectUri: string): Promise<TokenResponse> {
+  async validateLineToken(code: string, redirectUri: string, promoterCode?: string): Promise<TokenResponse> {
     // 使用 LINE 授權碼換取 access token
     const lineTokens = await this.lineService.getAccessToken(code, redirectUri);
     
@@ -58,19 +67,24 @@ export class AuthService {
       where: { lineUserId: lineProfile.userId },
     });
 
+    let isNewUser = false;
+
     if (!user) {
-      // 建立新使用者，若為初始管理員則設為 isAdmin = true
+      // 建立新使用者，若為初始管理員則設為 isAdmin + isSuperAdmin = true
       user = await this.prisma.user.create({
         data: {
           lineUserId: lineProfile.userId,
           name: lineProfile.displayName,
           avatarUrl: lineProfile.pictureUrl,
           isAdmin: shouldBeAdmin,
+          isSuperAdmin: shouldBeAdmin,
         },
       });
 
+      isNewUser = true;
+
       if (shouldBeAdmin) {
-        console.log(`初始管理員已建立: LINE User ID = ${lineProfile.userId}`);
+        console.log(`初始超級管理員已建立: LINE User ID = ${lineProfile.userId}`);
       }
     } else {
       // 更新使用者資料
@@ -80,10 +94,11 @@ export class AuthService {
         avatarUrl: lineProfile.pictureUrl,
       };
 
-      // 若為初始管理員且尚未設為管理員，則設為管理員
-      if (shouldBeAdmin && !user.isAdmin) {
+      // 若為初始管理員且尚未設為超級管理員，則升級
+      if (shouldBeAdmin && (!user.isAdmin || !user.isSuperAdmin)) {
         updateData.isAdmin = true;
-        console.log(`使用者已升級為管理員: LINE User ID = ${lineProfile.userId}`);
+        updateData.isSuperAdmin = true;
+        console.log(`使用者已升級為超級管理員: LINE User ID = ${lineProfile.userId}`);
       }
 
       user = await this.prisma.user.update({
@@ -92,12 +107,33 @@ export class AuthService {
       });
     }
 
-    // 產生 JWT（包含 isAdmin 資訊）
+    // 若是新使用者且有推廣碼，建立推廣者推薦記錄
+    if (isNewUser && promoterCode) {
+      try {
+        await this.linkPromoterReferral(user.id, promoterCode);
+      } catch (error) {
+        // 推廣碼處理失敗不應影響登入流程
+        console.error('處理推廣碼失敗:', error);
+      }
+    }
+
+    // 查詢使用者的推廣者紀錄
+    const promoter = await this.prisma.promoter.findUnique({
+      where: { userId: user.id },
+      select: { id: true, status: true, isActive: true },
+    });
+
+    const isPromoter = !!promoter && promoter.isActive && promoter.status === 'APPROVED';
+
+    // 產生 JWT（包含 isAdmin / isSuperAdmin / isPromoter 資訊）
     const payload: JwtPayload = {
       sub: user.id,
       lineUserId: user.lineUserId,
       name: user.name,
       isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin,
+      isPromoter,
+      promoterId: promoter?.id,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -111,8 +147,51 @@ export class AuthService {
         email: user.email ?? undefined,
         avatarUrl: user.avatarUrl ?? undefined,
         isAdmin: user.isAdmin,
+        isSuperAdmin: user.isSuperAdmin,
+        promoter: promoter ?? null,
       },
     };
+  }
+
+  /**
+   * 將新使用者連結到推廣者的推薦記錄
+   */
+  private async linkPromoterReferral(userId: string, promoterCode: string): Promise<void> {
+    // 查找推廣者（透過推廣碼）
+    const promoter = await this.prisma.promoter.findUnique({
+      where: { referralCode: promoterCode.toUpperCase() },
+    });
+
+    if (!promoter || !promoter.isActive) {
+      return; // 推廣碼無效或推廣者已停用，靜默忽略
+    }
+
+    // 檢查使用者是否已有推廣者推薦記錄
+    const existingReferral = await this.prisma.promoterReferral.findUnique({
+      where: { referredUserId: userId },
+    });
+
+    if (existingReferral) {
+      return; // 已有推薦記錄，不重複建立
+    }
+
+    // 查找是否有對應的分享連結
+    const shareLink = await this.prisma.shareLink.findFirst({
+      where: { promoterId: promoter.id, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // 建立推廣者推薦記錄
+    await this.prisma.promoterReferral.create({
+      data: {
+        promoterId: promoter.id,
+        referredUserId: userId,
+        shareLinkId: shareLink?.id,
+        channel: shareLink?.channel,
+        status: 'REGISTERED',
+        registeredAt: new Date(),
+      },
+    });
   }
 
   async validateUser(payload: JwtPayload) {
@@ -136,11 +215,21 @@ export class AuthService {
       throw new UnauthorizedException('使用者不存在或已停用');
     }
 
+    const promoter = await this.prisma.promoter.findUnique({
+      where: { userId: user.id },
+      select: { id: true, status: true, isActive: true },
+    });
+
+    const isPromoter = !!promoter && promoter.isActive && promoter.status === 'APPROVED';
+
     const payload: JwtPayload = {
       sub: user.id,
       lineUserId: user.lineUserId,
       name: user.name,
       isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin,
+      isPromoter,
+      promoterId: promoter?.id,
     };
 
     return this.jwtService.sign(payload);
@@ -158,6 +247,9 @@ export class AuthService {
           include: {
             campaign: true,
           },
+        },
+        promoter: {
+          select: { id: true, status: true, isActive: true },
         },
       },
     });

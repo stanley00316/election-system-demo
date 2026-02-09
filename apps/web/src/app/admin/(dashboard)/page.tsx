@@ -98,7 +98,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm font-medium text-gray-500">總使用者數</p>
                 <p className="text-3xl font-bold mt-1">
-                  {overview?.totalUsers.toLocaleString() || 0}
+                  {(overview?.totalUsers ?? 0).toLocaleString()}
                 </p>
                 <div className="flex items-center mt-2 text-sm">
                   {overview?.userGrowth && overview.userGrowth > 0 ? (
@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm font-medium text-gray-500">活躍訂閱數</p>
                 <p className="text-3xl font-bold mt-1">
-                  {overview?.activeSubscriptions.toLocaleString() || 0}
+                  {(overview?.activeSubscriptions ?? 0).toLocaleString()}
                 </p>
                 <div className="flex items-center mt-2 text-sm">
                   <span className="text-gray-500">

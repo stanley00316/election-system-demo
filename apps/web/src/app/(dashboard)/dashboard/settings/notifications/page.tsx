@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Bell, Mail, Smartphone, Clock, Loader2 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,11 +79,7 @@ export default function NotificationsSettingsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/settings">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href="/dashboard/settings" />
         <div>
           <h1 className="text-2xl font-bold">通知設定</h1>
           <p className="text-muted-foreground">管理您的通知偏好</p>

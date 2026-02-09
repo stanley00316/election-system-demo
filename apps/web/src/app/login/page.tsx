@@ -6,9 +6,25 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/stores/auth';
-import { authApi, isDemoMode } from '@/lib/api';
+import { authApi, roleInvitesApi, isDemoMode } from '@/lib/api';
 import { demoUser, demoCampaign } from '@/lib/demo-data';
 import { Loader2, AlertCircle, Play } from 'lucide-react';
+
+/**
+ * 根據使用者角色決定導向路徑
+ * 多角色 → /role-select，單角色 → 對應 Dashboard
+ */
+function getPostLoginPath(user: any): string {
+  const roles: string[] = [];
+  if (user?.isAdmin || user?.isSuperAdmin) roles.push('admin');
+  if (user?.promoter?.isActive && user?.promoter?.status === 'APPROVED') roles.push('promoter');
+  roles.push('user'); // 所有人都有使用者角色
+
+  if (roles.length > 1) {
+    return '/role-select';
+  }
+  return '/dashboard';
+}
 
 function LoginContent() {
   const router = useRouter();
@@ -52,17 +68,47 @@ function LoginContent() {
   useEffect(() => {
     if (isAuthenticated) {
       const pendingInviteCode = sessionStorage.getItem('pendingInviteCode');
-      if (pendingInviteCode) {
+      const pendingTrialCode = sessionStorage.getItem('pendingTrialCode');
+      const pendingPromoterCode = sessionStorage.getItem('pendingPromoterCode');
+      const pendingRoleInvite = sessionStorage.getItem('pendingRoleInvite');
+
+      // 讀取並清除意圖角色
+      const intendedRole = typeof window !== 'undefined'
+        ? sessionStorage.getItem('intendedRole')
+        : null;
+      if (intendedRole) {
+        sessionStorage.removeItem('intendedRole');
+      }
+
+      // 有角色邀請 → 導向邀請落地頁（由落地頁自動 claim）
+      if (pendingRoleInvite) {
+        sessionStorage.removeItem('pendingRoleInvite');
+        router.push(`/join-role/${pendingRoleInvite}`);
+      } else if (pendingInviteCode) {
         // 有待處理的邀請，導向邀請頁面
         router.push(`/join/${pendingInviteCode}`);
-      } else {
-        // 根據身分導向
+      } else if (pendingTrialCode) {
+        // 有待處理的試用邀請，導向試用啟用頁
+        router.push(`/trial/${pendingTrialCode}`);
+      } else if (pendingPromoterCode) {
+        // 有推廣碼，導向定價頁面（推廣碼已存入 sessionStorage）
+        router.push('/pricing');
+      } else if (intendedRole === 'user') {
+        router.push('/dashboard');
+      } else if (intendedRole === 'promoter') {
         const user = useAuthStore.getState().user;
-        if (user?.isAdmin) {
-          router.push('/admin');
+        const promoter = user?.promoter;
+        if (promoter?.isActive && promoter?.status === 'APPROVED') {
+          router.push('/promoter/dashboard');
+        } else if (promoter) {
+          router.push('/promoter/login?status=pending');
         } else {
-          router.push('/dashboard');
+          router.push('/promoter/register');
         }
+      } else {
+        // 根據身分導向（多角色 → 角色選擇頁）
+        const user = useAuthStore.getState().user;
+        router.push(getPostLoginPath(user));
       }
     }
   }, [isAuthenticated, router]);
@@ -71,14 +117,61 @@ function LoginContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await authApi.lineCallback(code, callbackUrl);
+      // 檢查是否有推廣碼需要傳遞
+      const pendingPromoterCode = typeof window !== 'undefined'
+        ? sessionStorage.getItem('pendingPromoterCode')
+        : null;
+
+      const result = await authApi.lineCallback(code, callbackUrl, pendingPromoterCode || undefined);
       setAuth(result.user, result.accessToken);
 
-      // 根據身分自動導向對應介面
-      if (result.user.isAdmin) {
-        router.push('/admin');  // 管理員導向管理後台
+      // 清除已使用的推廣碼
+      if (pendingPromoterCode) {
+        sessionStorage.removeItem('pendingPromoterCode');
+      }
+
+      // 讀取並清除意圖角色
+      const intendedRole = typeof window !== 'undefined'
+        ? sessionStorage.getItem('intendedRole')
+        : null;
+      if (intendedRole) {
+        sessionStorage.removeItem('intendedRole');
+      }
+
+      // 檢查是否有角色邀請碼
+      const pendingRoleInvite = typeof window !== 'undefined'
+        ? sessionStorage.getItem('pendingRoleInvite')
+        : null;
+
+      // 檢查是否有待處理的試用碼
+      const pendingTrialCode = typeof window !== 'undefined'
+        ? sessionStorage.getItem('pendingTrialCode')
+        : null;
+
+      if (pendingRoleInvite) {
+        // 有角色邀請 → 導向邀請落地頁自動 claim
+        sessionStorage.removeItem('pendingRoleInvite');
+        router.push(`/join-role/${pendingRoleInvite}`);
+      } else if (pendingTrialCode) {
+        router.push(`/trial/${pendingTrialCode}`);
+      } else if (intendedRole === 'user') {
+        // 使用者連結登入 → 直接進入使用者儀表板
+        router.push('/dashboard');
+      } else if (intendedRole === 'promoter') {
+        // 推廣者連結登入 → 根據推廣者狀態導向
+        const { promoter } = result.user;
+        if (promoter?.isActive && promoter?.status === 'APPROVED') {
+          router.push('/promoter/dashboard');
+        } else if (promoter) {
+          // 已申請但未通過 → 顯示狀態頁
+          router.push('/promoter/login?status=pending');
+        } else {
+          // 未申請 → 導向註冊頁
+          router.push('/promoter/register');
+        }
       } else {
-        router.push('/dashboard');  // 一般使用者導向儀表板
+        // 無特定意圖 → 原有邏輯（多角色偵測）
+        router.push(getPostLoginPath(result.user));
       }
     } catch (err: any) {
       console.error('LINE login failed:', err);
@@ -95,12 +188,16 @@ function LoginContent() {
     }
 
     setError(null);
+    // 標記意圖角色為使用者
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('intendedRole', 'user');
+    }
     const state = Math.random().toString(36).substring(7);
     const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}&scope=profile%20openid`;
     window.location.href = lineAuthUrl;
   };
 
-  // 示範模式快速登入
+  // 示範模式快速登入（使用者登入頁 → 直接進入使用者儀表板）
   const handleDemoLogin = async () => {
     setIsLoading(true);
     setError(null);
@@ -111,6 +208,8 @@ function LoginContent() {
       // 儲存示範活動 ID 到 localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('currentCampaignId', demoCampaign.id);
+        // 設定意圖角色，使 isAuthenticated useEffect 直接導向使用者儀表板
+        sessionStorage.setItem('intendedRole', 'user');
       }
       
       setAuth(demoUser, demoToken);
@@ -136,12 +235,8 @@ function LoginContent() {
       const result = await response.json();
       setAuth(result.user, result.accessToken);
       
-      // 根據身分自動導向對應介面
-      if (result.user.isAdmin) {
-        router.push('/admin');  // 管理員導向管理後台
-      } else {
-        router.push('/dashboard');  // 一般使用者導向儀表板
-      }
+      // 根據角色導向對應介面
+      router.push(getPostLoginPath(result.user));
     } catch (err: any) {
       console.error('Dev login failed:', err);
       setError(err?.message || '開發登入失敗，請確認後端服務是否運行');

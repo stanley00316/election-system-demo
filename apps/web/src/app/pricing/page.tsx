@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Check, Zap, Shield, Users, BarChart3, Loader2, MapPin, Vote, ChevronDown, ArrowLeft, Info } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -214,12 +215,7 @@ function PricingPageContent() {
       <div className="max-w-6xl mx-auto">
         {/* 返回按鈕 - 頂部固定區塊 */}
         <div className="sticky top-4 z-10 mb-6">
-          <Link href={backUrl}>
-            <Button variant="outline" size="lg" className="bg-white/95 backdrop-blur shadow-sm hover:bg-gray-50">
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              {isAuthenticated ? '返回主控台' : '返回首頁'}
-            </Button>
-          </Link>
+          <BackButton href={backUrl} label={isAuthenticated ? '返回主控台' : '返回首頁'} />
         </div>
 
         {/* 來自 Campaign 建立頁面的升級引導提示 */}
@@ -511,12 +507,7 @@ function PricingPageContent() {
 
         {/* 底部返回按鈕 */}
         <div className="text-center mt-8 pb-8">
-          <Link href={backUrl}>
-            <Button variant="outline" size="lg">
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              {isAuthenticated ? '返回主控台' : '返回首頁'}
-            </Button>
-          </Link>
+          <BackButton href={backUrl} label={isAuthenticated ? '返回主控台' : '返回首頁'} />
         </div>
       </div>
     </div>

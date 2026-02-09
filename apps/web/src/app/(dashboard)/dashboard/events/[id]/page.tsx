@@ -50,6 +50,7 @@ import {
   QrCode,
   ExternalLink,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
   FAMILY: '家人',

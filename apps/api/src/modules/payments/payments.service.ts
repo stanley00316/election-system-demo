@@ -220,6 +220,26 @@ export class PaymentsService {
         // 推薦獎勵發放失敗不應影響付款流程
         console.error('發放推薦獎勵失敗:', error);
       }
+
+      // 處理推廣者推薦記錄（如果有）
+      try {
+        await this.processPromoterReferralOnPayment(
+          payment.subscription.userId,
+          payment.subscriptionId,
+        );
+      } catch (error) {
+        console.error('處理推廣者推薦記錄失敗:', error);
+      }
+
+      // 處理試用邀請轉換（如果有）
+      try {
+        await this.processTrialInviteConversion(
+          payment.subscription.userId,
+          payment.subscriptionId,
+        );
+      } catch (error) {
+        console.error('處理試用邀請轉換失敗:', error);
+      }
     } else {
       // 更新付款為失敗
       await this.prisma.payment.update({
@@ -268,6 +288,105 @@ export class PaymentsService {
             user: true,
           },
         },
+      },
+    });
+  }
+
+  /**
+   * 處理推廣者推薦記錄 - 付款成功時更新狀態
+   */
+  private async processPromoterReferralOnPayment(
+    userId: string,
+    subscriptionId: string,
+  ): Promise<void> {
+    const promoterReferral = await this.prisma.promoterReferral.findUnique({
+      where: { referredUserId: userId },
+      include: {
+        promoter: {
+          include: { rewardConfig: true },
+        },
+      },
+    });
+
+    if (!promoterReferral) return;
+    if (['SUBSCRIBED', 'RENEWED'].includes(promoterReferral.status)) return;
+
+    // 更新推薦記錄狀態
+    const updateData: any = {
+      status: 'SUBSCRIBED',
+      subscribedAt: new Date(),
+      subscriptionId,
+    };
+
+    // 計算推廣者獎勵
+    const rewardConfig = promoterReferral.promoter.rewardConfig;
+    if (rewardConfig) {
+      switch (rewardConfig.rewardType) {
+        case 'FIXED_AMOUNT':
+          if (rewardConfig.fixedAmount) {
+            updateData.rewardAmount = rewardConfig.fixedAmount;
+            updateData.rewardGrantedAt = new Date();
+            updateData.rewardNotes = `固定獎勵 NT$${rewardConfig.fixedAmount}`;
+          }
+          break;
+        case 'SUBSCRIPTION_EXTENSION':
+          if (rewardConfig.extensionMonths) {
+            // 查找推廣者的訂閱並延長
+            if (promoterReferral.promoter.userId) {
+              const promoterSub = await this.prisma.subscription.findFirst({
+                where: {
+                  userId: promoterReferral.promoter.userId,
+                  status: { in: ['TRIAL', 'ACTIVE'] },
+                },
+              });
+              if (promoterSub) {
+                const currentEnd = new Date(promoterSub.currentPeriodEnd);
+                currentEnd.setMonth(currentEnd.getMonth() + rewardConfig.extensionMonths);
+                await this.prisma.subscription.update({
+                  where: { id: promoterSub.id },
+                  data: { currentPeriodEnd: currentEnd },
+                });
+              }
+            }
+            updateData.rewardNotes = `訂閱延長 ${rewardConfig.extensionMonths} 個月`;
+            updateData.rewardGrantedAt = new Date();
+          }
+          break;
+        case 'PERCENTAGE':
+          // 百分比獎勵需要知道付款金額，在此僅記錄
+          if (rewardConfig.percentage) {
+            updateData.rewardNotes = `待計算百分比獎勵 ${rewardConfig.percentage}%`;
+          }
+          break;
+      }
+    }
+
+    await this.prisma.promoterReferral.update({
+      where: { id: promoterReferral.id },
+      data: updateData,
+    });
+  }
+
+  /**
+   * 處理試用邀請轉換 - 付款成功時標記為已轉換
+   */
+  private async processTrialInviteConversion(
+    userId: string,
+    subscriptionId: string,
+  ): Promise<void> {
+    const trialInvite = await this.prisma.trialInvite.findUnique({
+      where: { activatedUserId: userId },
+    });
+
+    if (!trialInvite) return;
+    if (trialInvite.status === 'CONVERTED') return;
+
+    await this.prisma.trialInvite.update({
+      where: { id: trialInvite.id },
+      data: {
+        status: 'CONVERTED',
+        convertedAt: new Date(),
+        subscriptionId,
       },
     });
   }

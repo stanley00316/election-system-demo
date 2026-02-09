@@ -9,6 +9,12 @@ interface User {
   email?: string;
   avatarUrl?: string;
   isAdmin?: boolean;
+  isSuperAdmin?: boolean;
+  promoter?: {
+    id: string;
+    status: string;
+    isActive: boolean;
+  } | null;
 }
 
 interface AuthState {

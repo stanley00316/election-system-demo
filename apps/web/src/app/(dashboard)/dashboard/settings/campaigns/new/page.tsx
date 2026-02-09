@@ -33,6 +33,7 @@ import {
 import { useCampaignStore } from '@/stores/campaign';
 import { campaignsApi, districtsApi, subscriptionsApi } from '@/lib/api';
 import { ArrowLeft, Save, AlertTriangle, Info, ExternalLink, Loader2 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 import { DistrictSelector, type DistrictSelection } from '@/components/settings/DistrictSelector';
 
@@ -235,11 +236,7 @@ export default function NewCampaignPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/settings/campaigns">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href="/dashboard/settings/campaigns" />
         <div>
           <h1 className="text-2xl font-bold">建立選舉活動</h1>
           <p className="text-muted-foreground">設定新的選舉活動</p>

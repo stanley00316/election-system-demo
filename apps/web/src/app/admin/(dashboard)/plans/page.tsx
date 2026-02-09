@@ -59,6 +59,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { adminPlansApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import SuperAdminGuard from '@/components/guards/SuperAdminGuard';
 
 interface Plan {
   id: string;
@@ -112,6 +113,14 @@ const regionLevelColors: Record<number, string> = {
 };
 
 export default function AdminPlansPage() {
+  return (
+    <SuperAdminGuard>
+      <AdminPlansContent />
+    </SuperAdminGuard>
+  );
+}
+
+function AdminPlansContent() {
   const { toast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,7 +231,7 @@ export default function AdminPlansPage() {
   const stats = useMemo(() => {
     const cityCount = new Set(plans.filter(p => p.city).map(p => p.city)).size;
     const activeCount = plans.filter(p => p.isActive).length;
-    const totalSubscriptions = plans.reduce((sum, p) => sum + p._count.subscriptions, 0);
+    const totalSubscriptions = plans.reduce((sum, p) => sum + (p._count?.subscriptions ?? 0), 0);
     return { cityCount, activeCount, totalSubscriptions };
   }, [plans]);
 
@@ -597,7 +606,7 @@ export default function AdminPlansPage() {
                         <div>團隊: {plan.teamLimit ? `${plan.teamLimit}` : '無限'}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{plan._count.subscriptions}</TableCell>
+                    <TableCell>{plan._count?.subscriptions ?? 0}</TableCell>
                     <TableCell>
                       <Badge className={plan.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                         {plan.isActive ? '啟用' : '停用'}

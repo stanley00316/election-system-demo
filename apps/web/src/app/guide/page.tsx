@@ -18,6 +18,7 @@ import {
   Settings,
   LogIn,
   CheckCircle,
+  ArrowLeft,
   ArrowRight,
   ExternalLink,
   HelpCircle,
@@ -276,12 +277,17 @@ export default function GuidePage() {
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold">選</span>
-            </div>
-            <span className="font-bold text-xl">選情系統</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 mr-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <Link href="/" className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold">選</span>
+              </div>
+              <span className="font-bold text-xl">選情系統</span>
+            </Link>
+          </div>
           <div className="flex items-center gap-4">
             <Link href="/login">
               <Button>開始使用</Button>

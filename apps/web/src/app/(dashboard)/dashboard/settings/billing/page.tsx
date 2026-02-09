@@ -14,6 +14,7 @@ import {
   Receipt,
   ArrowLeft,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -156,11 +157,7 @@ export default function BillingPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/settings">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <BackButton href="/dashboard/settings" />
           <div>
             <h1 className="text-2xl font-bold">帳單與訂閱</h1>
             <p className="text-gray-500">管理您的訂閱方案與付款記錄</p>

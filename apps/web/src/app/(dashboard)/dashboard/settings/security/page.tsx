@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate } from '@/lib/utils';
@@ -131,11 +132,7 @@ export default function SecuritySettingsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/settings">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <BackButton href="/dashboard/settings" />
         <div>
           <h1 className="text-2xl font-bold">安全設定</h1>
           <p className="text-muted-foreground">管理帳號安全與登入裝置</p>

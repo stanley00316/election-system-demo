@@ -110,3 +110,79 @@ export function getEventTypeLabel(eventType: string) {
 export function getPartyLabel(party: string) {
   return PARTY_LABELS[party as keyof typeof PARTY_LABELS] || party;
 }
+
+// ==================== 推廣者系統翻譯 ====================
+
+export function getPromoterTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    INTERNAL: '訂閱者',
+    EXTERNAL: '外部推廣者',
+  };
+  return labels[type] || type;
+}
+
+export function getPromoterStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: '待審核',
+    APPROVED: '已通過',
+    ACTIVE: '活躍中',
+    SUSPENDED: '已停用',
+  };
+  return labels[status] || status;
+}
+
+export function getRewardTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    NONE: '無獎勵',
+    FIXED_AMOUNT: '固定金額',
+    PERCENTAGE: '百分比佣金',
+    SUBSCRIPTION_EXTENSION: '延長訂閱',
+  };
+  return labels[type] || type;
+}
+
+export function getShareChannelLabel(channel: string) {
+  const labels: Record<string, string> = {
+    LINE: 'LINE',
+    FACEBOOK: 'Facebook',
+    SMS: '簡訊',
+    QR_CODE: 'QR Code',
+    EMAIL: 'Email',
+    DIRECT_LINK: '直接連結',
+    OTHER: '其他',
+  };
+  return labels[channel] || channel;
+}
+
+export function getPromoterReferralStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    CLICKED: '僅點擊',
+    REGISTERED: '已註冊',
+    TRIAL: '試用中',
+    SUBSCRIBED: '已訂閱',
+    RENEWED: '已續訂',
+    EXPIRED: '已過期',
+  };
+  return labels[status] || status;
+}
+
+export function getTrialInviteStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: '待啟用',
+    SENT: '已發送',
+    ACTIVATED: '已啟用',
+    ACTIVE: '試用中',
+    EXPIRED: '已過期',
+    CONVERTED: '已轉付費',
+    CANCELLED: '已取消',
+  };
+  return labels[status] || status;
+}
+
+export function getTrialInviteMethodLabel(method: string) {
+  const labels: Record<string, string> = {
+    LINK: '連結',
+    DIRECT: '主動邀請',
+  };
+  return labels[method] || method;
+}
