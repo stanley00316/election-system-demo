@@ -60,6 +60,9 @@ COPY packages/shared/package.json ./packages/shared/
 # Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
 
+# Install prisma CLI for database schema sync on startup
+RUN npm install -g prisma@5.8.0
+
 # Copy built files
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/node_modules/.prisma ./apps/api/node_modules/.prisma
@@ -67,6 +70,10 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist 2>/dev/null
 
 # Copy Prisma schema (needed for migrations)
 COPY apps/api/prisma ./apps/api/prisma
+
+# Copy startup script
+COPY docker/start-api.sh ./apps/api/start-api.sh
+RUN chmod +x ./apps/api/start-api.sh
 
 # Set ownership
 RUN chown -R nestjs:nodejs /app
@@ -85,8 +92,8 @@ ENV PORT=3001
 EXPOSE 3001
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
     CMD node -e "require('http').get('http://localhost:3001/api/v1/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Start the application
-CMD ["node", "dist/main"]
+# Start the application with database schema sync
+CMD ["./start-api.sh"]
