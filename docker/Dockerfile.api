@@ -1,10 +1,9 @@
 # =============================================
 # 選情系統 API Dockerfile
-# Multi-stage build for production
+# Simplified single-stage build for Railway
 # =============================================
 
-# Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
@@ -20,7 +19,7 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
+# Install all dependencies (need devDependencies for build)
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
@@ -31,55 +30,23 @@ COPY packages/shared ./packages/shared
 WORKDIR /app/apps/api
 RUN npx prisma generate
 
-# Build shared package (ensure dist directory exists even if build fails)
+# Build shared package (optional, may not exist)
 WORKDIR /app/packages/shared
-RUN pnpm build 2>/dev/null || true && mkdir -p /app/packages/shared/dist
+RUN pnpm build 2>/dev/null || true
 
 # Build API
 WORKDIR /app/apps/api
 RUN pnpm build
 
-# =============================================
-# Stage 2: Production
-FROM node:20-alpine AS production
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
-
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nestjs
-
-WORKDIR /app
-
-# Copy workspace configuration
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/shared/package.json ./packages/shared/
-
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
-
-# Install prisma CLI for database schema sync on startup
-RUN npm install -g prisma@5.8.0
-
-# Copy built files
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules/.prisma ./apps/api/node_modules/.prisma
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-
-# Copy Prisma schema (needed for migrations)
-COPY apps/api/prisma ./apps/api/prisma
-
 # Copy startup script
-COPY docker/start-api.sh ./apps/api/start-api.sh
-RUN chmod +x ./apps/api/start-api.sh
+COPY docker/start-api.sh ./start-api.sh
+RUN chmod +x ./start-api.sh
 
-# Set ownership
-RUN chown -R nestjs:nodejs /app
+# Copy Prisma schema (needed for db push on startup)
+# Already available at /app/apps/api/prisma from the COPY above
 
-# Switch to non-root user
-USER nestjs
+# Install prisma CLI globally for database schema sync on startup
+RUN npm install -g prisma@5.8.0
 
 # Set working directory to API
 WORKDIR /app/apps/api
