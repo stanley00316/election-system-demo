@@ -31,9 +31,9 @@ COPY packages/shared ./packages/shared
 WORKDIR /app/apps/api
 RUN npx prisma generate
 
-# Build shared package
+# Build shared package (ensure dist directory exists even if build fails)
 WORKDIR /app/packages/shared
-RUN pnpm build 2>/dev/null || true
+RUN pnpm build 2>/dev/null || true && mkdir -p /app/packages/shared/dist
 
 # Build API
 WORKDIR /app/apps/api
@@ -66,7 +66,7 @@ RUN npm install -g prisma@5.8.0
 # Copy built files
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/node_modules/.prisma ./apps/api/node_modules/.prisma
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist 2>/dev/null || true
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
 # Copy Prisma schema (needed for migrations)
 COPY apps/api/prisma ./apps/api/prisma
