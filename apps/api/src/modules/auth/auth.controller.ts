@@ -89,4 +89,48 @@ export class AuthController {
       },
     };
   }
+
+  @Public()
+  @Get('debug-check')
+  @ApiOperation({ summary: '除錯檢查（臨時）' })
+  async debugCheck() {
+    const results: Record<string, any> = {};
+
+    // 1. 檢查環境變數
+    results.env = {
+      LINE_CHANNEL_ID: this.configService.get('LINE_CHANNEL_ID') ? 'SET' : 'MISSING',
+      LINE_CHANNEL_SECRET: this.configService.get('LINE_CHANNEL_SECRET') ? 'SET' : 'MISSING',
+      JWT_SECRET: this.configService.get('JWT_SECRET') ? 'SET' : 'MISSING',
+      JWT_EXPIRES_IN: this.configService.get('JWT_EXPIRES_IN') || 'DEFAULT',
+      ADMIN_LINE_USER_ID: this.configService.get('ADMIN_LINE_USER_ID') ? 'SET' : 'MISSING',
+      DATABASE_URL: this.configService.get('DATABASE_URL') ? 'SET' : 'MISSING',
+    };
+
+    // 2. 測試 Prisma 查詢
+    try {
+      const userCount = await this.authService['prisma'].user.count();
+      results.database = { status: 'OK', userCount };
+    } catch (error: any) {
+      results.database = { status: 'ERROR', message: error.message };
+    }
+
+    // 3. 測試 Prisma promoter 查詢
+    try {
+      const promoterCount = await this.authService['prisma'].promoter.count();
+      results.promoter = { status: 'OK', promoterCount };
+    } catch (error: any) {
+      results.promoter = { status: 'ERROR', message: error.message };
+    }
+
+    // 4. 測試 JWT 簽名
+    try {
+      const testPayload = { sub: 'test', lineUserId: 'test', name: 'test' };
+      const token = this.authService['jwtService'].sign(testPayload);
+      results.jwt = { status: 'OK', tokenLength: token.length };
+    } catch (error: any) {
+      results.jwt = { status: 'ERROR', message: error.message };
+    }
+
+    return results;
+  }
 }
