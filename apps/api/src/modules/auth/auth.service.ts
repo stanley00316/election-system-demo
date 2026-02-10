@@ -53,58 +53,92 @@ export class AuthService {
   }
 
   async validateLineToken(code: string, redirectUri: string, promoterCode?: string): Promise<TokenResponse> {
+    console.log('[AUTH] validateLineToken called with redirectUri:', redirectUri);
+
     // 使用 LINE 授權碼換取 access token
-    const lineTokens = await this.lineService.getAccessToken(code, redirectUri);
+    let lineTokens;
+    try {
+      lineTokens = await this.lineService.getAccessToken(code, redirectUri);
+      console.log('[AUTH] LINE tokens obtained successfully');
+    } catch (error) {
+      console.error('[AUTH] LINE token exchange failed:', error);
+      throw error;
+    }
     
     // 取得使用者資料
-    const lineProfile = await this.lineService.getProfile(lineTokens.access_token);
+    let lineProfile;
+    try {
+      lineProfile = await this.lineService.getProfile(lineTokens.access_token);
+      console.log('[AUTH] LINE profile obtained:', lineProfile.userId, lineProfile.displayName);
+    } catch (error) {
+      console.error('[AUTH] LINE profile fetch failed:', error);
+      throw error;
+    }
 
     // 檢查是否為初始管理員
     const shouldBeAdmin = this.isInitialAdmin(lineProfile.userId);
+    console.log('[AUTH] shouldBeAdmin:', shouldBeAdmin, 'adminLineUserId:', this.adminLineUserId);
 
     // 查詢或建立使用者
-    let user = await this.prisma.user.findUnique({
-      where: { lineUserId: lineProfile.userId },
-    });
-
+    let user;
     let isNewUser = false;
 
-    if (!user) {
-      // 建立新使用者，若為初始管理員則設為 isAdmin + isSuperAdmin = true
-      user = await this.prisma.user.create({
-        data: {
-          lineUserId: lineProfile.userId,
-          name: lineProfile.displayName,
-          avatarUrl: lineProfile.pictureUrl,
-          isAdmin: shouldBeAdmin,
-          isSuperAdmin: shouldBeAdmin,
-        },
+    try {
+      user = await this.prisma.user.findUnique({
+        where: { lineUserId: lineProfile.userId },
       });
+      console.log('[AUTH] User lookup result:', user ? `found (id: ${user.id})` : 'not found');
+    } catch (error) {
+      console.error('[AUTH] User findUnique failed:', error);
+      throw error;
+    }
 
-      isNewUser = true;
+    if (!user) {
+      try {
+        // 建立新使用者，若為初始管理員則設為 isAdmin + isSuperAdmin = true
+        user = await this.prisma.user.create({
+          data: {
+            lineUserId: lineProfile.userId,
+            name: lineProfile.displayName,
+            avatarUrl: lineProfile.pictureUrl,
+            isAdmin: shouldBeAdmin,
+            isSuperAdmin: shouldBeAdmin,
+          },
+        });
+        isNewUser = true;
+        console.log('[AUTH] New user created:', user.id);
 
-      if (shouldBeAdmin) {
-        console.log(`初始超級管理員已建立: LINE User ID = ${lineProfile.userId}`);
+        if (shouldBeAdmin) {
+          console.log(`初始超級管理員已建立: LINE User ID = ${lineProfile.userId}`);
+        }
+      } catch (error) {
+        console.error('[AUTH] User create failed:', error);
+        throw error;
       }
     } else {
-      // 更新使用者資料
-      // 若已經是管理員則保持，若是初始管理員則升級為管理員
-      const updateData: any = {
-        name: lineProfile.displayName,
-        avatarUrl: lineProfile.pictureUrl,
-      };
+      try {
+        // 更新使用者資料
+        const updateData: any = {
+          name: lineProfile.displayName,
+          avatarUrl: lineProfile.pictureUrl,
+        };
 
-      // 若為初始管理員且尚未設為超級管理員，則升級
-      if (shouldBeAdmin && (!user.isAdmin || !user.isSuperAdmin)) {
-        updateData.isAdmin = true;
-        updateData.isSuperAdmin = true;
-        console.log(`使用者已升級為超級管理員: LINE User ID = ${lineProfile.userId}`);
+        // 若為初始管理員且尚未設為超級管理員，則升級
+        if (shouldBeAdmin && (!user.isAdmin || !user.isSuperAdmin)) {
+          updateData.isAdmin = true;
+          updateData.isSuperAdmin = true;
+          console.log(`使用者已升級為超級管理員: LINE User ID = ${lineProfile.userId}`);
+        }
+
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: updateData,
+        });
+        console.log('[AUTH] User updated:', user.id);
+      } catch (error) {
+        console.error('[AUTH] User update failed:', error);
+        throw error;
       }
-
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: updateData,
-      });
     }
 
     // 若是新使用者且有推廣碼，建立推廣者推薦記錄
@@ -118,39 +152,52 @@ export class AuthService {
     }
 
     // 查詢使用者的推廣者紀錄
-    const promoter = await this.prisma.promoter.findUnique({
-      where: { userId: user.id },
-      select: { id: true, status: true, isActive: true },
-    });
+    let promoter = null;
+    try {
+      promoter = await this.prisma.promoter.findUnique({
+        where: { userId: user.id },
+        select: { id: true, status: true, isActive: true },
+      });
+      console.log('[AUTH] Promoter lookup:', promoter ? `found (id: ${promoter.id})` : 'not found');
+    } catch (error) {
+      console.error('[AUTH] Promoter findUnique failed:', error);
+      throw error;
+    }
 
     const isPromoter = !!promoter && promoter.isActive && promoter.status === 'APPROVED';
 
     // 產生 JWT（包含 isAdmin / isSuperAdmin / isPromoter 資訊）
-    const payload: JwtPayload = {
-      sub: user.id,
-      lineUserId: user.lineUserId,
-      name: user.name,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin,
-      isPromoter,
-      promoterId: promoter?.id,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    return {
-      accessToken,
-      user: {
-        id: user.id,
+    try {
+      const payload: JwtPayload = {
+        sub: user.id,
         lineUserId: user.lineUserId,
         name: user.name,
-        email: user.email ?? undefined,
-        avatarUrl: user.avatarUrl ?? undefined,
         isAdmin: user.isAdmin,
         isSuperAdmin: user.isSuperAdmin,
-        promoter: promoter ?? null,
-      },
-    };
+        isPromoter,
+        promoterId: promoter?.id,
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+      console.log('[AUTH] JWT signed successfully for user:', user.id);
+
+      return {
+        accessToken,
+        user: {
+          id: user.id,
+          lineUserId: user.lineUserId,
+          name: user.name,
+          email: user.email ?? undefined,
+          avatarUrl: user.avatarUrl ?? undefined,
+          isAdmin: user.isAdmin,
+          isSuperAdmin: user.isSuperAdmin,
+          promoter: promoter ?? null,
+        },
+      };
+    } catch (error) {
+      console.error('[AUTH] JWT sign or response construction failed:', error);
+      throw error;
+    }
   }
 
   /**
