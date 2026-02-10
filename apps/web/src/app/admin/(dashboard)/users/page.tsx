@@ -12,6 +12,7 @@ import {
   UserX,
   UserCheck,
   Eye,
+  Download,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,6 +139,21 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">使用者管理</h1>
           <p className="text-gray-500">管理系統使用者帳號</p>
         </div>
+        <Button variant="outline" onClick={() => {
+          const isDemoMode = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
+          if (isDemoMode) {
+            toast({ title: '示範模式不支援匯出', description: '請連接後端後使用匯出功能' });
+            return;
+          }
+          const params = new URLSearchParams();
+          if (search) params.set('search', search);
+          if (statusFilter === 'suspended') params.set('isSuspended', 'true');
+          if (statusFilter === 'active') params.set('isSuspended', 'false');
+          window.open(`/api/v1/admin/users/export?${params.toString()}`, '_blank');
+        }}>
+          <Download className="h-4 w-4 mr-2" />
+          匯出報表
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -230,6 +246,7 @@ export default function AdminUsersPage() {
                   <tr>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">使用者</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">聯絡資訊</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">選情指標</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">訂閱</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">狀態</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">註冊日期</th>
@@ -263,6 +280,36 @@ export default function AdminUsersPage() {
                       <td className="py-3 px-4">
                         <p className="text-sm">{user.email || '-'}</p>
                         <p className="text-xs text-gray-500">{user.phone || '-'}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        {user.campaignStats?.totalVoters > 0 ? (
+                          <div className="space-y-1">
+                            <p className="text-xs text-gray-500">{user.campaignStats.totalVoters} 選民</p>
+                            <div className="flex items-center gap-1">
+                              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${Math.min(user.campaignStats.supportRate, 100)}%`,
+                                    backgroundColor: user.campaignStats.supportRate >= 40 ? '#22c55e' : user.campaignStats.supportRate >= 25 ? '#eab308' : '#ef4444',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs font-medium">{user.campaignStats.supportRate}%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-blue-500 rounded-full"
+                                  style={{ width: `${Math.min(user.campaignStats.contactRate, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-500">{user.campaignStats.contactRate}%</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">無活動</span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         {user.currentSubscription ? (

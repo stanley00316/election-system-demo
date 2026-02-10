@@ -3,7 +3,9 @@ import {
   Get,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AdminAnalyticsService } from './admin-analytics.service';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 
@@ -84,6 +86,45 @@ export class AdminAnalyticsController {
   @Get('geographic')
   async getGeographicDistribution() {
     return this.adminAnalyticsService.getGeographicDistribution();
+  }
+
+  /**
+   * 地區總覽：每個地區所有使用者的完整選情數據
+   */
+  @Get('regional-overview')
+  async getRegionalOverview(
+    @Query('city') city?: string,
+    @Query('electionType') electionType?: string,
+  ) {
+    return this.adminAnalyticsService.getRegionalOverview(city, electionType);
+  }
+
+  /**
+   * 匯出地區總覽（CSV）
+   */
+  @Get('regional-overview/export')
+  async exportRegionalOverview(
+    @Query('city') city: string | undefined,
+    @Query('electionType') electionType: string | undefined,
+    @Res() res: Response,
+  ) {
+    const data = await this.adminAnalyticsService.exportRegionalOverview(city, electionType);
+
+    const csvRows = [
+      data.headers.join(','),
+      ...data.rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+      ),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="regional_overview_${new Date().toISOString().split('T')[0]}.csv"`,
+    );
+    res.send(csvContent);
   }
 
   /**

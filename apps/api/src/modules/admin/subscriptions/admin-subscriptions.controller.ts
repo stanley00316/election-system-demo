@@ -7,8 +7,9 @@ import {
   Body,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AdminSubscriptionsService } from './admin-subscriptions.service';
 import {
   AdminSubscriptionFilterDto,
@@ -42,6 +43,33 @@ export class AdminSubscriptionsController {
   @Get('stats')
   async getSubscriptionStats() {
     return this.adminSubscriptionsService.getSubscriptionStats();
+  }
+
+  /**
+   * 匯出訂閱列表（CSV）
+   */
+  @Get('export')
+  async exportSubscriptions(
+    @Query() filter: AdminSubscriptionFilterDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.adminSubscriptionsService.exportSubscriptions(filter);
+
+    const csvRows = [
+      data.headers.join(','),
+      ...data.rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+      ),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="subscriptions_${new Date().toISOString().split('T')[0]}.csv"`,
+    );
+    res.send(csvContent);
   }
 
   /**

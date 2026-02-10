@@ -88,7 +88,7 @@ export const demoUser = {
   avatarUrl: undefined as string | undefined,
   isActive: true,
   isAdmin: true,
-  isSuperAdmin: true,
+  isSuperAdmin: false,
   promoter: {
     id: 'demo-promoter-id',
     status: 'APPROVED',

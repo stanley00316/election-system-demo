@@ -7,8 +7,9 @@ import {
   Body,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AdminUsersService } from './admin-users.service';
 import { AdminUserFilterDto, SuspendUserDto } from './dto/user-filter.dto';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
@@ -40,6 +41,33 @@ export class AdminUsersController {
   }
 
   /**
+   * 匯出使用者列表（CSV）
+   */
+  @Get('export')
+  async exportUsers(
+    @Query() filter: AdminUserFilterDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.adminUsersService.exportUsers(filter);
+
+    const csvRows = [
+      data.headers.join(','),
+      ...data.rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+      ),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="users_${new Date().toISOString().split('T')[0]}.csv"`,
+    );
+    res.send(csvContent);
+  }
+
+  /**
    * 取得單一使用者詳情
    */
   @Get(':id')
@@ -60,6 +88,89 @@ export class AdminUsersController {
   }
 
   /**
+   * 匯出個人完整資料（CSV）
+   */
+  @Get(':id/export')
+  async exportUserDetail(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const data = await this.adminUsersService.exportUserDetail(id);
+
+    const csvRows: string[] = [];
+    data.sections.forEach((section) => {
+      csvRows.push('');
+      csvRows.push(`=== ${section.title} ===`);
+      csvRows.push(section.headers.join(','));
+      section.rows.forEach((row) => {
+        csvRows.push(row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+      });
+    });
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="user_${data.userName}_${new Date().toISOString().split('T')[0]}.csv"`,
+    );
+    res.send(csvContent);
+  }
+
+  /**
+   * 取得使用者付款歷史
+   */
+  @Get(':id/payments')
+  async getUserPayments(
+    @Param('id') id: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.adminUsersService.getUserPayments(id, page || 1, limit || 20);
+  }
+
+  /**
+   * 取得使用者推薦關係
+   */
+  @Get(':id/referrals')
+  async getUserReferrals(@Param('id') id: string) {
+    return this.adminUsersService.getUserReferrals(id);
+  }
+
+  /**
+   * 取得使用者選民名單
+   */
+  @Get(':id/voters')
+  async getUserVoters(
+    @Param('id') id: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+  ) {
+    return this.adminUsersService.getUserVoters(id, page || 1, limit || 20, search);
+  }
+
+  /**
+   * 取得使用者接觸紀錄
+   */
+  @Get(':id/contacts')
+  async getUserContacts(
+    @Param('id') id: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.adminUsersService.getUserContacts(id, page || 1, limit || 20);
+  }
+
+  /**
+   * 取得使用者選情統計
+   */
+  @Get(':id/campaign-stats')
+  async getUserCampaignStats(@Param('id') id: string) {
+    return this.adminUsersService.getUserCampaignStats(id);
+  }
+
+  /**
    * 停用使用者帳號
    */
   @Put(':id/suspend')
@@ -71,7 +182,6 @@ export class AdminUsersController {
   ) {
     const result = await this.adminUsersService.suspendUser(id, dto.reason);
 
-    // 記錄操作
     await this.adminAuthService.logAction(
       admin.id,
       'USER_SUSPEND',
@@ -96,7 +206,6 @@ export class AdminUsersController {
   ) {
     const result = await this.adminUsersService.activateUser(id);
 
-    // 記錄操作
     await this.adminAuthService.logAction(
       admin.id,
       'USER_ACTIVATE',

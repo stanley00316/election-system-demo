@@ -6,7 +6,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AdminReferralsService } from './admin-referrals.service';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 import { ReferralFilterDto } from './dto/referral-filter.dto';
@@ -36,6 +38,33 @@ export class AdminReferralsController {
   @Get('stats')
   async getReferralStats() {
     return this.adminReferralsService.getReferralStats();
+  }
+
+  /**
+   * 匯出推薦紀錄（CSV）
+   */
+  @Get('export')
+  async exportReferrals(
+    @Query('status') status: string | undefined,
+    @Res() res: Response,
+  ) {
+    const data = await this.adminReferralsService.exportReferrals(status as any);
+
+    const csvRows = [
+      data.headers.join(','),
+      ...data.rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+      ),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="referrals_${new Date().toISOString().split('T')[0]}.csv"`,
+    );
+    res.send(csvContent);
   }
 
   /**

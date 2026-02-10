@@ -21,6 +21,9 @@ import {
   Loader2,
   CalendarPlus,
   X,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -43,6 +46,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const STANCE_OPTIONS = [
   { value: 'STRONG_SUPPORT', label: '強力支持' },
@@ -89,15 +98,19 @@ export default function VotersPage() {
     setPage(1);
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'excel' | 'csv') => {
     if (!campaignId) return;
     
     setIsExporting(true);
     try {
-      await votersApi.exportExcel(campaignId);
+      if (format === 'excel') {
+        await votersApi.exportExcel(campaignId);
+      } else {
+        await votersApi.exportCsv(campaignId);
+      }
       toast({
         title: '匯出成功',
-        description: '選民資料已下載',
+        description: `選民資料已下載（${format === 'excel' ? 'Excel' : 'CSV'} 格式）`,
       });
     } catch (error: any) {
       toast({
@@ -156,14 +169,29 @@ export default function VotersPage() {
         </div>
         <div className="flex gap-2">
           {canEdit && <VoterImportDialog campaignId={campaignId || ''} />}
-          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            {isExporting ? '匯出中...' : '匯出'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={isExporting}>
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {isExporting ? '匯出中...' : '匯出'}
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                匯出 Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                <FileText className="h-4 w-4 mr-2" />
+                匯出 CSV (.csv)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canCreateVoter && (
             <Link href="/dashboard/voters/new">
               <Button>

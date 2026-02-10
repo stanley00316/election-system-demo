@@ -16,7 +16,15 @@ import {
   Shield,
   ShieldOff,
   Megaphone,
+  Download,
+  BarChart3,
+  Users,
+  Contact,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { getStanceLabel, getContactOutcomeLabel, getContactTypeLabel } from '@/lib/utils';
 import { BackButton } from '@/components/common/BackButton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,8 +54,20 @@ export default function AdminUserDetailPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [user, setUser] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
+  const [campaignStats, setCampaignStats] = useState<any>(null);
+  const [payments, setPayments] = useState<any>(null);
+  const [referrals, setReferrals] = useState<any>(null);
+  const [voters, setVoters] = useState<any>(null);
+  const [contacts, setContacts] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
+  const [activeTab, setActiveTab] = useState('campaign-stats');
+
+  const STANCE_COLORS: Record<string, string> = {
+    STRONG_SUPPORT: '#15803d', SUPPORT: '#22c55e', LEAN_SUPPORT: '#86efac',
+    NEUTRAL: '#9ca3af', UNDECIDED: '#d1d5db',
+    LEAN_OPPOSE: '#fca5a5', OPPOSE: '#ef4444', STRONG_OPPOSE: '#991b1b',
+  };
 
   // 目前登入者是否為超級管理員
   const isMeSuperAdmin = !!currentUser?.isSuperAdmin;
@@ -58,18 +78,50 @@ export default function AdminUserDetailPage() {
 
   const loadData = async () => {
     try {
-      const [userData, activityData] = await Promise.all([
+      const [userData, activityData, statsData] = await Promise.all([
         adminUsersApi.getUser(userId),
         adminUsersApi.getUserActivity(userId, { limit: 50 }),
+        adminUsersApi.getUserCampaignStats(userId),
       ]);
       setUser(userData);
       setActivity(activityData.data || []);
+      setCampaignStats(statsData);
     } catch (error) {
       console.error('載入使用者失敗:', error);
       toast({ title: '載入失敗', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 延遲載入分頁資料
+  const loadTabData = async (tab: string) => {
+    try {
+      if (tab === 'payments' && !payments) {
+        const data = await adminUsersApi.getUserPayments(userId, { page: 1, limit: 50 });
+        setPayments(data);
+      } else if (tab === 'referrals' && !referrals) {
+        const data = await adminUsersApi.getUserReferrals(userId);
+        setReferrals(data);
+      } else if (tab === 'voters' && !voters) {
+        const data = await adminUsersApi.getUserVoters(userId, { page: 1, limit: 50 });
+        setVoters(data);
+      } else if (tab === 'contacts' && !contacts) {
+        const data = await adminUsersApi.getUserContacts(userId, { page: 1, limit: 50 });
+        setContacts(data);
+      }
+    } catch (error) {
+      console.error('載入分頁資料失敗:', error);
+    }
+  };
+
+  const handleExport = () => {
+    const isDemoMode = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
+    if (isDemoMode) {
+      toast({ title: '示範模式不支援匯出', description: '請連接後端後使用匯出功能' });
+      return;
+    }
+    window.open(`/api/v1/admin/users/${userId}/export`, '_blank');
   };
 
   const handleToggleSuspend = async () => {
@@ -151,6 +203,10 @@ export default function AdminUserDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">使用者詳情</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            匯出完整資料
+          </Button>
           <Button
             variant={user.isSuspended ? 'default' : 'destructive'}
             onClick={handleToggleSuspend}
@@ -348,12 +404,148 @@ export default function AdminUserDetailPage() {
         </Card>
       )}
 
-      <Tabs defaultValue="subscription">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); loadTabData(v); }}>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="campaign-stats">選情概覽</TabsTrigger>
           <TabsTrigger value="subscription">訂閱資訊</TabsTrigger>
           <TabsTrigger value="campaigns">選舉活動</TabsTrigger>
+          <TabsTrigger value="payments">付款歷史</TabsTrigger>
+          <TabsTrigger value="referrals">推薦關係</TabsTrigger>
+          <TabsTrigger value="voters">選民名單</TabsTrigger>
+          <TabsTrigger value="contacts">接觸紀錄</TabsTrigger>
           <TabsTrigger value="activity">活動記錄</TabsTrigger>
         </TabsList>
+
+        {/* 選情概覽 Tab */}
+        <TabsContent value="campaign-stats" className="space-y-4">
+          {campaignStats?.summary?.totalCampaigns > 0 ? (
+            <>
+              {/* 統計卡片 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card><CardContent className="pt-6 text-center">
+                  <p className="text-3xl font-bold">{campaignStats.summary.totalVoters}</p>
+                  <p className="text-sm text-gray-500">選民總數</p>
+                </CardContent></Card>
+                <Card><CardContent className="pt-6 text-center">
+                  <p className="text-3xl font-bold text-green-600">{campaignStats.summary.overallSupportRate}%</p>
+                  <p className="text-sm text-gray-500">支持率</p>
+                </CardContent></Card>
+                <Card><CardContent className="pt-6 text-center">
+                  <p className="text-3xl font-bold text-blue-600">{campaignStats.summary.overallContactRate}%</p>
+                  <p className="text-sm text-gray-500">接觸率</p>
+                </CardContent></Card>
+                <Card><CardContent className="pt-6 text-center">
+                  <p className="text-3xl font-bold">{campaignStats.summary.totalCampaigns}</p>
+                  <p className="text-sm text-gray-500">活動數量</p>
+                </CardContent></Card>
+              </div>
+
+              {/* 圖表區 */}
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* 支持度分佈 */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">支持度分佈</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(campaignStats.stanceDistribution || {}).filter(([, v]) => (v as number) > 0).map(([key, value]) => ({
+                            name: getStanceLabel(key),
+                            value: value as number,
+                            fill: STANCE_COLORS[key] || '#9ca3af',
+                          }))}
+                          cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {Object.entries(campaignStats.stanceDistribution || {}).filter(([, v]) => (v as number) > 0).map(([key]) => (
+                            <Cell key={key} fill={STANCE_COLORS[key] || '#9ca3af'} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* 接觸結果分佈 */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">接觸結果分佈</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={Object.entries(campaignStats.contactOutcomeDistribution || {}).map(([key, value]) => ({
+                        name: getContactOutcomeLabel(key),
+                        數量: value,
+                      }))} layout="vertical">
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={60} tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Bar dataKey="數量" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 接觸類型統計 */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">接觸類型統計</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={Object.entries(campaignStats.contactTypeDistribution || {}).map(([key, value]) => ({
+                      name: getContactTypeLabel(key),
+                      數量: value,
+                    }))} layout="vertical">
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="數量" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* 各活動選情摘要 */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">各活動選情摘要</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">活動名稱</th>
+                          <th className="text-left p-2">城市</th>
+                          <th className="text-right p-2">選民數</th>
+                          <th className="text-right p-2">接觸數</th>
+                          <th className="text-right p-2">支持率</th>
+                          <th className="text-right p-2">接觸率</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {campaignStats.campaignBreakdown?.map((c: any) => (
+                          <tr key={c.campaignId} className="border-b hover:bg-gray-50">
+                            <td className="p-2 font-medium">{c.campaignName}</td>
+                            <td className="p-2 text-gray-500">{c.city}</td>
+                            <td className="p-2 text-right">{c.voterCount}</td>
+                            <td className="p-2 text-right">{c.contactCount}</td>
+                            <td className="p-2 text-right">
+                              <span className={`font-medium ${c.supportRate >= 40 ? 'text-green-600' : c.supportRate >= 25 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                {c.supportRate}%
+                              </span>
+                            </td>
+                            <td className="p-2 text-right">
+                              <span className="text-blue-600 font-medium">{c.contactRate}%</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card><CardContent className="py-8 text-center text-gray-500">此使用者尚無選舉活動數據</CardContent></Card>
+          )}
+        </TabsContent>
 
         {/* Subscription Tab */}
         <TabsContent value="subscription" className="space-y-4">
@@ -400,35 +592,20 @@ export default function AdminUserDetailPage() {
             </Card>
           )}
 
-          {/* Subscription History */}
           {user.subscriptions?.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>訂閱歷史</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>訂閱歷史</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {user.subscriptions.map((sub: any) => (
-                    <div
-                      key={sub.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
+                    <div key={sub.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">{sub.plan.name}</p>
                         <p className="text-sm text-gray-500">
-                          {formatDate(sub.currentPeriodStart)} -{' '}
-                          {formatDate(sub.currentPeriodEnd)}
+                          {formatDate(sub.currentPeriodStart)} - {formatDate(sub.currentPeriodEnd)}
                         </p>
                       </div>
-                      <Badge
-                        variant={
-                          sub.status === 'ACTIVE'
-                            ? 'default'
-                            : sub.status === 'TRIAL'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                      >
+                      <Badge variant={sub.status === 'ACTIVE' ? 'default' : sub.status === 'TRIAL' ? 'secondary' : 'outline'}>
                         {sub.status}
                       </Badge>
                     </div>
@@ -445,23 +622,18 @@ export default function AdminUserDetailPage() {
             <CardHeader>
               <CardTitle>參與的選舉活動</CardTitle>
               <CardDescription>
-                擁有 {user.campaigns?.length || 0} 個活動，參與{' '}
-                {user.teamMembers?.length || 0} 個團隊
+                擁有 {user.campaigns?.length || 0} 個活動
               </CardDescription>
             </CardHeader>
             <CardContent>
               {user.campaigns?.length > 0 ? (
                 <div className="space-y-4">
                   {user.campaigns.map((campaign: any) => (
-                    <div
-                      key={campaign.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
+                    <div key={campaign.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">{campaign.name}</p>
                         <p className="text-sm text-gray-500">
-                          {campaign.city} · {campaign._count?.voters || 0} 選民 ·{' '}
-                          {campaign._count?.teamMembers || 0} 團隊成員
+                          {campaign.city}{campaign.district ? ` · ${campaign.district}` : ''} · {campaign._count?.voters || 0} 選民 · {campaign._count?.contacts || 0} 接觸 · {campaign._count?.teamMembers || 0} 團隊成員
                         </p>
                       </div>
                       <Badge variant={campaign.isActive ? 'default' : 'secondary'}>
@@ -472,6 +644,186 @@ export default function AdminUserDetailPage() {
                 </div>
               ) : (
                 <p className="text-center py-8 text-gray-500">尚無選舉活動</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 付款歷史 Tab */}
+        <TabsContent value="payments">
+          <Card>
+            <CardHeader><CardTitle>付款歷史</CardTitle></CardHeader>
+            <CardContent>
+              {payments?.data?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">方案</th>
+                        <th className="text-right p-2">金額</th>
+                        <th className="text-left p-2">狀態</th>
+                        <th className="text-left p-2">支付方式</th>
+                        <th className="text-left p-2">付款時間</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.data.map((p: any) => (
+                        <tr key={p.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2">{p.subscription?.plan?.name || '-'}</td>
+                          <td className="p-2 text-right font-medium">NT$ {p.amount?.toLocaleString()}</td>
+                          <td className="p-2"><Badge variant="outline">{p.status}</Badge></td>
+                          <td className="p-2 text-gray-500">{p.provider || '-'}</td>
+                          <td className="p-2 text-gray-500">{p.paidAt ? formatDate(p.paidAt) : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-center py-8 text-gray-500">{payments ? '尚無付款記錄' : '載入中...'}</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 推薦關係 Tab */}
+        <TabsContent value="referrals" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>作為推薦人</CardTitle></CardHeader>
+            <CardContent>
+              {referrals?.asReferrer?.length > 0 ? (
+                <div className="space-y-3">
+                  {referrals.asReferrer.map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{r.referred?.name || '未知'}</p>
+                        <p className="text-sm text-gray-500">{r.referred?.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={r.status === 'COMPLETED' ? 'default' : 'outline'}>{r.status}</Badge>
+                        {r.rewardMonths > 0 && <span className="text-sm text-green-600">+{r.rewardMonths} 個月</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-4 text-gray-500">{referrals ? '無推薦記錄' : '載入中...'}</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>作為被推薦人</CardTitle></CardHeader>
+            <CardContent>
+              {referrals?.asReferred?.length > 0 ? (
+                <div className="space-y-3">
+                  {referrals.asReferred.map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">推薦人：{r.referrer?.name || '未知'}</p>
+                        <p className="text-sm text-gray-500">{r.referrer?.email} · 推薦碼：{r.referralCode}</p>
+                      </div>
+                      <Badge variant={r.status === 'COMPLETED' ? 'default' : 'outline'}>{r.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-4 text-gray-500">{referrals ? '未被推薦' : '載入中...'}</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 選民名單 Tab */}
+        <TabsContent value="voters">
+          <Card>
+            <CardHeader>
+              <CardTitle>選民名單</CardTitle>
+              <CardDescription>此使用者所有活動的選民（顯示前 50 筆）</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {voters?.data?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">姓名</th>
+                        <th className="text-left p-2">電話</th>
+                        <th className="text-left p-2">所屬活動</th>
+                        <th className="text-left p-2">政治傾向</th>
+                        <th className="text-right p-2">接觸次數</th>
+                        <th className="text-left p-2">最後接觸</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {voters.data.map((v: any) => (
+                        <tr key={v.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium">{v.name}</td>
+                          <td className="p-2 text-gray-500">{v.phone || '-'}</td>
+                          <td className="p-2 text-gray-500">{v.campaignName}</td>
+                          <td className="p-2">
+                            <Badge variant="outline" style={{ borderColor: STANCE_COLORS[v.stance] || '#9ca3af', color: STANCE_COLORS[v.stance] || '#9ca3af' }}>
+                              {getStanceLabel(v.stance)}
+                            </Badge>
+                          </td>
+                          <td className="p-2 text-right">{v.contactCount || 0}</td>
+                          <td className="p-2 text-gray-500">{v.lastContactAt ? new Date(v.lastContactAt).toLocaleDateString('zh-TW') : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {voters.pagination?.total > 50 && (
+                    <p className="text-center py-2 text-sm text-gray-400">共 {voters.pagination.total} 筆，僅顯示前 50 筆</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center py-8 text-gray-500">{voters ? '尚無選民資料' : '載入中...'}</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 接觸紀錄 Tab */}
+        <TabsContent value="contacts">
+          <Card>
+            <CardHeader>
+              <CardTitle>接觸紀錄</CardTitle>
+              <CardDescription>此使用者所有活動的接觸紀錄（顯示前 50 筆）</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {contacts?.data?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">選民</th>
+                        <th className="text-left p-2">接觸類型</th>
+                        <th className="text-left p-2">結果</th>
+                        <th className="text-left p-2">活動</th>
+                        <th className="text-left p-2">日期</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contacts.data.map((c: any) => (
+                        <tr key={c.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium">{c.voter?.name || '-'}</td>
+                          <td className="p-2">{getContactTypeLabel(c.type)}</td>
+                          <td className="p-2">
+                            <Badge variant={c.outcome === 'POSITIVE' ? 'default' : c.outcome === 'NEGATIVE' ? 'destructive' : 'outline'}>
+                              {getContactOutcomeLabel(c.outcome)}
+                            </Badge>
+                          </td>
+                          <td className="p-2 text-gray-500">{c.campaignName}</td>
+                          <td className="p-2 text-gray-500">{c.contactDate ? new Date(c.contactDate).toLocaleDateString('zh-TW') : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {contacts.pagination?.total > 50 && (
+                    <p className="text-center py-2 text-sm text-gray-400">共 {contacts.pagination.total} 筆，僅顯示前 50 筆</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center py-8 text-gray-500">{contacts ? '尚無接觸紀錄' : '載入中...'}</p>
               )}
             </CardContent>
           </Card>
@@ -490,10 +842,7 @@ export default function AdminUserDetailPage() {
               {activity.length > 0 ? (
                 <div className="space-y-3">
                   {activity.map((log: any) => (
-                    <div
-                      key={log.id}
-                      className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg"
-                    >
+                    <div key={log.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Activity className="h-4 w-4 text-primary" />
                       </div>
@@ -503,14 +852,10 @@ export default function AdminUserDetailPage() {
                           <span className="text-gray-500"> · {log.entity}</span>
                         </p>
                         {log.details && (
-                          <p className="text-xs text-gray-400 truncate">
-                            {JSON.stringify(log.details)}
-                          </p>
+                          <p className="text-xs text-gray-400 truncate">{JSON.stringify(log.details)}</p>
                         )}
                       </div>
-                      <span className="text-xs text-gray-400 flex-shrink-0">
-                        {formatDate(log.createdAt)}
-                      </span>
+                      <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(log.createdAt)}</span>
                     </div>
                   ))}
                 </div>

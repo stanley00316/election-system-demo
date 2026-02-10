@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { ReferralsService } from '../../referrals/referrals.service';
 import { ReferralStatus } from '@prisma/client';
 
 @Injectable()
 export class AdminReferralsService {
-  constructor(private referralsService: ReferralsService) {}
+  constructor(
+    private referralsService: ReferralsService,
+    private prisma: PrismaService,
+  ) {}
 
   /**
    * 取得所有推薦記錄（含分頁與篩選）
@@ -44,5 +48,41 @@ export class AdminReferralsService {
    */
   async expireOldReferrals() {
     return this.referralsService.expireOldReferrals();
+  }
+
+  /**
+   * 匯出推薦紀錄（CSV 資料）
+   */
+  async exportReferrals(status?: ReferralStatus) {
+    const where: any = {};
+    if (status) where.status = status;
+
+    const referrals = await this.prisma.referral.findMany({
+      where,
+      include: {
+        referrer: { select: { id: true, name: true, email: true, phone: true } },
+        referred: { select: { id: true, name: true, email: true, phone: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const headers = [
+      '推薦ID', '推薦人', '推薦人Email', '被推薦人', '被推薦人Email',
+      '推薦碼', '狀態', '獎勵月數', '建立時間',
+    ];
+
+    const rows = referrals.map((r) => [
+      r.id,
+      r.referrer?.name || '',
+      r.referrer?.email || '',
+      r.referred?.name || '',
+      r.referred?.email || '',
+      r.referralCode,
+      r.status,
+      r.rewardMonths,
+      r.createdAt.toISOString().split('T')[0],
+    ]);
+
+    return { headers, rows, total: referrals.length };
   }
 }

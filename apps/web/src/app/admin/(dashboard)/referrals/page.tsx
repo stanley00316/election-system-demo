@@ -191,18 +191,30 @@ export default function AdminReferralsPage() {
           <h1 className="text-2xl font-bold text-gray-900">推薦管理</h1>
           <p className="text-gray-500">追蹤所有推薦紀錄與獎勵發放</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleExpireOld}
-          disabled={isExpiringOld}
-        >
-          {isExpiringOld ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Clock className="h-4 w-4 mr-2" />
-          )}
-          過期舊推薦
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => {
+            const isDemoMode = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
+            if (isDemoMode) { return; }
+            const params = new URLSearchParams();
+            if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+            window.open(`/api/v1/admin/referrals/export?${params.toString()}`, '_blank');
+          }}>
+            <Download className="h-4 w-4 mr-2" />
+            匯出報表
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExpireOld}
+            disabled={isExpiringOld}
+          >
+            {isExpiringOld ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Clock className="h-4 w-4 mr-2" />
+            )}
+            過期舊推薦
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

@@ -17,11 +17,19 @@ import {
   Upload,
   Download,
   FileSpreadsheet,
+  FileText,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Loader2,
+  ChevronDown,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface VoterImportDialogProps {
   campaignId: string;
@@ -72,8 +80,7 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
     }
   };
 
-  const handleDownloadTemplate = () => {
-    // 建立 500+ 筆範例資料
+  const generateSampleData = () => {
     const headers = ['姓名', '電話', 'Email', '地址', '縣市', '區', '里', '政黨', '政治傾向', '年齡', '性別', '職業', '標籤', '備註'];
     
     // 姓氏庫
@@ -149,12 +156,16 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
       sampleRows.push([name, phone, email, address, location.city, location.district, village, party, stance, age, gender, occupation, tagStr, notes]);
     }
 
+    return { headers, sampleRows };
+  };
+
+  const handleDownloadTemplateCsv = () => {
+    const { headers, sampleRows } = generateSampleData();
     const csvContent = [
       headers.join(','),
       ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n');
 
-    // 添加 BOM 以支援 Excel 正確顯示中文
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -165,6 +176,23 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadTemplateExcel = async () => {
+    const XLSX = await import('xlsx');
+    const { headers, sampleRows } = generateSampleData();
+    
+    const data = sampleRows.map(row => {
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = row[i]; });
+      return obj;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = headers.map(h => ({ wch: h === '地址' ? 30 : h === 'Email' ? 22 : h === '標籤' ? 20 : 10 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '選民匯入範例');
+    XLSX.writeFile(wb, '選民匯入範例.xlsx');
   };
 
   const handleClose = () => {
@@ -202,10 +230,25 @@ export function VoterImportDialog({ campaignId, trigger }: VoterImportDialogProp
                 <FileSpreadsheet className="h-4 w-4" />
                 範例資料格式（預覽）
               </h4>
-              <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                下載 500 筆範例
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    下載範例
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadTemplateExcel}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Excel 格式 (.xlsx)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadTemplateCsv}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    CSV 格式 (.csv)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="overflow-x-auto max-h-52 -mx-4 px-4">
               <table className="min-w-max text-xs border-collapse whitespace-nowrap">

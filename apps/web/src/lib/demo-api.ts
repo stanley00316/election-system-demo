@@ -303,7 +303,73 @@ export const demoVotersApi = {
   
   exportExcel: async (_campaignId: string) => {
     await delay(300);
-    alert('示範模式不支援匯出功能');
+    const XLSX = await import('xlsx');
+    
+    const stanceLabels: Record<string, string> = {
+      STRONG_SUPPORT: '強力支持', SUPPORT: '支持', LEAN_SUPPORT: '傾向支持',
+      NEUTRAL: '中立', UNDECIDED: '未表態', LEAN_OPPOSE: '傾向反對',
+      OPPOSE: '反對', STRONG_OPPOSE: '強力反對',
+    };
+    const genderLabels: Record<string, string> = { M: '男', F: '女' };
+
+    const data = demoVoters.map(v => ({
+      '姓名': v.name,
+      '電話': v.phone || '',
+      '地址': v.address,
+      '區域': v.districtName,
+      '里': v.village,
+      '政治傾向': stanceLabels[v.stance] || v.stance,
+      '影響力分數': v.influenceScore,
+      '年齡': v.age,
+      '性別': genderLabels[v.gender] || v.gender,
+      '職業': v.occupation,
+      '標籤': (v.tags || []).join('、'),
+      '備註': v.notes || '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    // 設定欄寬
+    ws['!cols'] = [
+      { wch: 8 }, { wch: 14 }, { wch: 30 }, { wch: 8 }, { wch: 8 },
+      { wch: 10 }, { wch: 10 }, { wch: 6 }, { wch: 6 }, { wch: 10 },
+      { wch: 20 }, { wch: 15 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '選民資料');
+    XLSX.writeFile(wb, `選民資料_${new Date().toISOString().split('T')[0]}.xlsx`);
+  },
+
+  exportCsv: async (_campaignId: string) => {
+    await delay(300);
+    
+    const headers = ['姓名', '電話', '地址', '區域', '里', '政治傾向', '影響力分數', '年齡', '性別', '職業', '標籤', '備註'];
+    const stanceLabels: Record<string, string> = {
+      STRONG_SUPPORT: '強力支持', SUPPORT: '支持', LEAN_SUPPORT: '傾向支持',
+      NEUTRAL: '中立', UNDECIDED: '未表態', LEAN_OPPOSE: '傾向反對',
+      OPPOSE: '反對', STRONG_OPPOSE: '強力反對',
+    };
+    const genderLabels: Record<string, string> = { M: '男', F: '女' };
+
+    const rows = demoVoters.map(v => [
+      v.name, v.phone || '', v.address, v.districtName, v.village,
+      stanceLabels[v.stance] || v.stance, v.influenceScore, v.age,
+      genderLabels[v.gender] || v.gender, v.occupation,
+      (v.tags || []).join('、'), v.notes || '',
+    ]);
+
+    const csvContent = '\uFEFF' + [headers, ...rows].map(row =>
+      row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `選民資料_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   },
   
   getRelationships: async (id: string) => {
@@ -1185,7 +1251,7 @@ export const demoReferralsApi = {
 export const demoAdminAuthApi = {
   getMe: async () => {
     await delay(100);
-    return { id: 'demo-user-id', name: '示範使用者', isAdmin: true, isSuperAdmin: true };
+    return { id: 'demo-user-id', name: '示範使用者', isAdmin: true, isSuperAdmin: false };
   },
   getAdmins: async () => {
     await delay(100);
@@ -1302,7 +1368,47 @@ const demoUsers = [
     teamMembers: [],
     _count: { contacts: 0, createdVoters: 500, campaigns: 1 },
   },
-];;
+];
+
+// 管理後台用的活動資料（含選情統計）
+const demoCampaignsForAdmin = [
+  {
+    id: 'campaign-1', ownerId: 'demo-user-id', name: '2026市議員選舉', city: '台北市',
+    district: '大安區', village: null, electionType: 'CITY_COUNCILOR',
+    voterCount: 320, contactCount: 198, supportCount: 131,
+    createdAt: new Date(Date.now() - 90 * 86400000).toISOString(),
+  },
+  {
+    id: 'campaign-2', ownerId: 'demo-user-1', name: '2026里長選舉', city: '台北市',
+    district: '信義區', village: '永春里', electionType: 'VILLAGE_CHIEF',
+    voterCount: 180, contactCount: 125, supportCount: 76,
+    createdAt: new Date(Date.now() - 60 * 86400000).toISOString(),
+  },
+  {
+    id: 'campaign-3', ownerId: 'demo-user-2', name: '2026鄉鎮代表', city: '新北市',
+    district: '板橋區', village: null, electionType: 'TOWNSHIP_REP',
+    voterCount: 250, contactCount: 160, supportCount: 100,
+    createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
+  },
+  {
+    id: 'campaign-4', ownerId: 'demo-user-3', name: '2026市議員第二選區', city: '桃園市',
+    district: null, village: null, electionType: 'CITY_COUNCILOR',
+    voterCount: 420, contactCount: 280, supportCount: 185,
+    createdAt: new Date(Date.now() - 120 * 86400000).toISOString(),
+  },
+  {
+    id: 'campaign-5', ownerId: 'demo-user-4', name: '2026里長選舉', city: '台中市',
+    district: '西屯區', village: '福星里', electionType: 'VILLAGE_CHIEF',
+    voterCount: 150, contactCount: 98, supportCount: 68,
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+  },
+  {
+    id: 'campaign-6', ownerId: 'demo-user-1', name: '2026鄉民代表', city: '台北市',
+    district: '松山區', village: null, electionType: 'TOWNSHIP_REP',
+    voterCount: 200, contactCount: 140, supportCount: 88,
+    createdAt: new Date(Date.now() - 80 * 86400000).toISOString(),
+  },
+];
 
 export const demoAdminUsersApi = {
   getUsers: async (params?: any) => {
@@ -1339,13 +1445,26 @@ export const demoAdminUsersApi = {
       );
     }
 
-
-
-    return {
-      data: filtered.map((u) => ({
+    // 為每個使用者附加選情指標
+    const usersWithStats = filtered.map((u) => {
+      const userCampaigns = demoCampaignsForAdmin.filter((c) => c.ownerId === u.id);
+      const totalVoters = userCampaigns.reduce((sum, c) => sum + c.voterCount, 0);
+      const totalContacts = userCampaigns.reduce((sum, c) => sum + c.contactCount, 0);
+      const supportCount = userCampaigns.reduce((sum, c) => sum + c.supportCount, 0);
+      return {
         ...u,
         currentSubscription: u.subscriptions?.[0] || null,
-      })),
+        campaignStats: {
+          totalVoters,
+          totalContacts,
+          supportRate: totalVoters > 0 ? Math.round((supportCount / totalVoters) * 1000) / 10 : 0,
+          contactRate: totalVoters > 0 ? Math.round((totalContacts / totalVoters) * 1000) / 10 : 0,
+        },
+      };
+    });
+
+    return {
+      data: usersWithStats,
       pagination: { page: 1, limit: 20, total: filtered.length, totalPages: 1 },
     };
   },
@@ -1360,11 +1479,187 @@ export const demoAdminUsersApi = {
   },
   getUser: async (id: string) => {
     await delay(100);
-    return demoUsers.find((u) => u.id === id) || null;
+    const user = demoUsers.find((u) => u.id === id);
+    if (!user) return null;
+    // 增加 campaigns 資料
+    const userCampaigns = demoCampaignsForAdmin.filter((c) => c.ownerId === id);
+    return {
+      ...user,
+      campaigns: userCampaigns.map((c) => ({
+        id: c.id,
+        name: c.name,
+        electionType: c.electionType,
+        city: c.city,
+        district: c.district || null,
+        village: c.village || null,
+        isActive: true,
+        createdAt: c.createdAt,
+        _count: { voters: c.voterCount, contacts: c.contactCount, teamMembers: 3 },
+      })),
+    };
   },
   getUserActivity: async (_id: string) => {
     await delay(100);
     return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  },
+  getUserPayments: async (id: string, params?: any) => {
+    await delay(100);
+    const userPayments = demoPayments.filter((p: any) => p.user?.id === id || p.subscription?.user?.id === id);
+    return {
+      data: userPayments.map((p: any) => ({
+        ...p,
+        subscription: { plan: { id: 'plan-pro', name: '專業版', code: 'pro' } },
+      })),
+      pagination: { page: 1, limit: 20, total: userPayments.length, totalPages: 1 },
+    };
+  },
+  getUserReferrals: async (id: string) => {
+    await delay(100);
+    const asReferrer = demoReferrals.filter((r: any) => r.referrer?.id === id).map((r: any) => ({
+      ...r, referred: r.referred,
+    }));
+    const asReferred = demoReferrals.filter((r: any) => r.referred?.id === id).map((r: any) => ({
+      ...r, referrer: r.referrer,
+    }));
+    return { asReferrer, asReferred };
+  },
+  getUserVoters: async (id: string, params?: any) => {
+    await delay(100);
+    const userCampaigns = demoCampaignsForAdmin.filter((c) => c.ownerId === id);
+    // 根據使用者的活動生成選民
+    const voters = userCampaigns.flatMap((c) => {
+      const stances = ['STRONG_SUPPORT', 'SUPPORT', 'LEAN_SUPPORT', 'NEUTRAL', 'UNDECIDED', 'LEAN_OPPOSE', 'OPPOSE'];
+      return Array.from({ length: Math.min(c.voterCount, 20) }, (_, i) => ({
+        id: `voter-${c.id}-${i}`,
+        name: `選民${i + 1}`,
+        phone: `09${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
+        email: null,
+        city: c.city,
+        districtName: c.district || '',
+        village: c.village || '',
+        stance: stances[i % stances.length],
+        contactCount: Math.floor(Math.random() * 5),
+        lastContactAt: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString(),
+        campaignId: c.id,
+        campaignName: c.name,
+        createdAt: new Date(Date.now() - Math.random() * 60 * 86400000).toISOString(),
+      }));
+    });
+    const page = params?.page || 1;
+    const limit = params?.limit || 20;
+    const start = (page - 1) * limit;
+    return {
+      data: voters.slice(start, start + limit),
+      pagination: { page, limit, total: voters.length, totalPages: Math.ceil(voters.length / limit) },
+    };
+  },
+  getUserContacts: async (id: string, params?: any) => {
+    await delay(100);
+    const userCampaigns = demoCampaignsForAdmin.filter((c) => c.ownerId === id);
+    const types = ['HOME_VISIT', 'STREET_VISIT', 'PHONE_CALL', 'LINE_CALL', 'MARKETPLACE', 'TEMPLE'];
+    const outcomes = ['POSITIVE', 'NEUTRAL', 'NEGATIVE', 'NOT_HOME', 'NO_RESPONSE'];
+    const contacts = userCampaigns.flatMap((c) =>
+      Array.from({ length: Math.min(c.contactCount, 15) }, (_, i) => ({
+        id: `contact-${c.id}-${i}`,
+        voter: { id: `voter-${c.id}-${i}`, name: `選民${i + 1}`, phone: '0912345678' },
+        type: types[i % types.length],
+        outcome: outcomes[i % outcomes.length],
+        contactDate: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString(),
+        notes: '',
+        campaignId: c.id,
+        campaignName: c.name,
+      }))
+    );
+    const page = params?.page || 1;
+    const limit = params?.limit || 20;
+    const start = (page - 1) * limit;
+    return {
+      data: contacts.slice(start, start + limit),
+      pagination: { page, limit, total: contacts.length, totalPages: Math.ceil(contacts.length / limit) },
+    };
+  },
+  getUserCampaignStats: async (id: string) => {
+    await delay(150);
+    const userCampaigns = demoCampaignsForAdmin.filter((c) => c.ownerId === id);
+    if (userCampaigns.length === 0) {
+      return {
+        summary: { totalCampaigns: 0, totalVoters: 0, totalContacts: 0, overallSupportRate: 0, overallContactRate: 0 },
+        stanceDistribution: {}, contactOutcomeDistribution: {}, contactTypeDistribution: {},
+        campaignBreakdown: [],
+      };
+    }
+
+    const totalVoters = userCampaigns.reduce((s, c) => s + c.voterCount, 0);
+    const totalContacts = userCampaigns.reduce((s, c) => s + c.contactCount, 0);
+    const totalSupport = userCampaigns.reduce((s, c) => s + c.supportCount, 0);
+
+    // 整體支持度分佈
+    const stanceDistribution: Record<string, number> = {
+      STRONG_SUPPORT: Math.round(totalVoters * 0.08),
+      SUPPORT: Math.round(totalVoters * 0.18),
+      LEAN_SUPPORT: Math.round(totalVoters * 0.15),
+      NEUTRAL: Math.round(totalVoters * 0.20),
+      UNDECIDED: Math.round(totalVoters * 0.18),
+      LEAN_OPPOSE: Math.round(totalVoters * 0.08),
+      OPPOSE: Math.round(totalVoters * 0.08),
+      STRONG_OPPOSE: Math.round(totalVoters * 0.05),
+    };
+
+    const contactOutcomeDistribution: Record<string, number> = {
+      POSITIVE: Math.round(totalContacts * 0.35),
+      NEUTRAL: Math.round(totalContacts * 0.30),
+      NEGATIVE: Math.round(totalContacts * 0.10),
+      NO_RESPONSE: Math.round(totalContacts * 0.15),
+      NOT_HOME: Math.round(totalContacts * 0.10),
+    };
+
+    const contactTypeDistribution: Record<string, number> = {
+      HOME_VISIT: Math.round(totalContacts * 0.30),
+      STREET_VISIT: Math.round(totalContacts * 0.20),
+      PHONE_CALL: Math.round(totalContacts * 0.15),
+      LINE_CALL: Math.round(totalContacts * 0.10),
+      MARKETPLACE: Math.round(totalContacts * 0.10),
+      TEMPLE: Math.round(totalContacts * 0.08),
+      EVENT: Math.round(totalContacts * 0.07),
+    };
+
+    const campaignBreakdown = userCampaigns.map((c) => ({
+      campaignId: c.id,
+      campaignName: c.name,
+      city: c.city,
+      district: c.district || null,
+      village: c.village || null,
+      electionType: c.electionType,
+      isActive: true,
+      voterCount: c.voterCount,
+      contactCount: c.contactCount,
+      contactRate: c.voterCount > 0 ? Math.round((c.contactCount / c.voterCount) * 1000) / 10 : 0,
+      supportRate: c.voterCount > 0 ? Math.round((c.supportCount / c.voterCount) * 1000) / 10 : 0,
+      stanceDistribution: {
+        STRONG_SUPPORT: Math.round(c.voterCount * 0.08),
+        SUPPORT: Math.round(c.voterCount * 0.18),
+        LEAN_SUPPORT: Math.round(c.voterCount * 0.15),
+        NEUTRAL: Math.round(c.voterCount * 0.20),
+        UNDECIDED: Math.round(c.voterCount * 0.18),
+        LEAN_OPPOSE: Math.round(c.voterCount * 0.08),
+        OPPOSE: Math.round(c.voterCount * 0.08),
+        STRONG_OPPOSE: Math.round(c.voterCount * 0.05),
+      },
+    }));
+
+    return {
+      summary: {
+        totalCampaigns: userCampaigns.length,
+        totalVoters,
+        totalContacts,
+        overallSupportRate: totalVoters > 0 ? Math.round((totalSupport / totalVoters) * 1000) / 10 : 0,
+        overallContactRate: totalVoters > 0 ? Math.round((totalContacts / totalVoters) * 1000) / 10 : 0,
+      },
+      stanceDistribution,
+      contactOutcomeDistribution,
+      contactTypeDistribution,
+      campaignBreakdown,
+    };
   },
   suspendUser: async (id: string, _reason: string) => {
     await delay(200);
@@ -1422,7 +1717,7 @@ const demoSubscriptions = [
     currentPeriodEnd: new Date(Date.now() + 14 * 86400000).toISOString(),
     createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
   },
-];;
+];
 
 export const demoAdminSubscriptionsApi = {
   getSubscriptions: async (params?: any) => {
@@ -1608,7 +1903,6 @@ export const demoAdminAnalyticsApi = {
         .map((p) => ({ id: p.id, subscription: { user: { name: p.subscription.user.name } }, paidAt: p.paidAt, amount: p.amount })),
     };
   },
-  // 用戶深度分析
   getRetentionAnalysis: async () => {
     return Array.from({ length: 6 }, (_, i) => ({
       cohort: `2025-${String(7 + i).padStart(2, '0')}`,
@@ -1673,7 +1967,100 @@ export const demoAdminAnalyticsApi = {
     avgLtv: 5600,
     totalPaidUsers: 2,
   }),
-};;
+  // 地區總覽
+  getRegionalOverview: async (city?: string, _electionType?: string) => {
+    await delay(200);
+    const cityMap: Record<string, typeof demoCampaignsForAdmin> = {};
+    demoCampaignsForAdmin.forEach((c) => {
+      if (city && c.city !== city) return;
+      if (!cityMap[c.city]) cityMap[c.city] = [];
+      cityMap[c.city].push(c);
+    });
+
+    const regions = Object.entries(cityMap).map(([cityName, campaigns]) => {
+      const userSet = new Set(campaigns.map((c) => c.ownerId));
+      const totalVoters = campaigns.reduce((s, c) => s + c.voterCount, 0);
+      const totalContacts = campaigns.reduce((s, c) => s + c.contactCount, 0);
+      const totalSupport = campaigns.reduce((s, c) => s + c.supportCount, 0);
+
+      const userMap: Record<string, any> = {};
+      campaigns.forEach((c) => {
+        if (!userMap[c.ownerId]) {
+          const user = demoUsers.find((u) => u.id === c.ownerId);
+          userMap[c.ownerId] = {
+            userId: c.ownerId,
+            userName: user?.name || '',
+            email: user?.email || '',
+            phone: user?.phone || '',
+            campaigns: [],
+            totalVoters: 0,
+            totalContacts: 0,
+            supportRate: 0,
+            contactRate: 0,
+            subscriptionStatus: user?.subscriptions?.[0]?.status || '無訂閱',
+          };
+        }
+        const u = userMap[c.ownerId];
+        u.totalVoters += c.voterCount;
+        u.totalContacts += c.contactCount;
+        u.campaigns.push({
+          campaignId: c.id,
+          campaignName: c.name,
+          electionType: c.electionType,
+          district: c.district,
+          village: c.village,
+          isActive: true,
+          voterCount: c.voterCount,
+          contactCount: c.contactCount,
+          contactRate: c.voterCount > 0 ? Math.round((c.contactCount / c.voterCount) * 1000) / 10 : 0,
+          supportRate: c.voterCount > 0 ? Math.round((c.supportCount / c.voterCount) * 1000) / 10 : 0,
+          stanceDistribution: {
+            STRONG_SUPPORT: Math.round(c.voterCount * 0.08),
+            SUPPORT: Math.round(c.voterCount * 0.18),
+            LEAN_SUPPORT: Math.round(c.voterCount * 0.15),
+            NEUTRAL: Math.round(c.voterCount * 0.20),
+            UNDECIDED: Math.round(c.voterCount * 0.18),
+            LEAN_OPPOSE: Math.round(c.voterCount * 0.08),
+            OPPOSE: Math.round(c.voterCount * 0.08),
+            STRONG_OPPOSE: Math.round(c.voterCount * 0.05),
+          },
+          contactOutcomeDistribution: {
+            POSITIVE: Math.round(c.contactCount * 0.35),
+            NEUTRAL: Math.round(c.contactCount * 0.30),
+            NEGATIVE: Math.round(c.contactCount * 0.10),
+            NO_RESPONSE: Math.round(c.contactCount * 0.15),
+            NOT_HOME: Math.round(c.contactCount * 0.10),
+          },
+        });
+      });
+
+      Object.values(userMap).forEach((u: any) => {
+        const userSupport = u.campaigns.reduce((s: number, c: any) => {
+          const sd = c.stanceDistribution;
+          return s + (sd.STRONG_SUPPORT || 0) + (sd.SUPPORT || 0) + (sd.LEAN_SUPPORT || 0);
+        }, 0);
+        u.supportRate = u.totalVoters > 0 ? Math.round((userSupport / u.totalVoters) * 1000) / 10 : 0;
+        u.contactRate = u.totalVoters > 0 ? Math.round((u.totalContacts / u.totalVoters) * 1000) / 10 : 0;
+      });
+
+      return {
+        city: cityName,
+        summary: {
+          totalCampaigns: campaigns.length,
+          totalUsers: userSet.size,
+          totalVoters,
+          totalContacts,
+          overallSupportRate: totalVoters > 0 ? Math.round((totalSupport / totalVoters) * 1000) / 10 : 0,
+          overallContactRate: totalVoters > 0 ? Math.round((totalContacts / totalVoters) * 1000) / 10 : 0,
+        },
+        users: Object.values(userMap),
+      };
+    });
+
+    regions.sort((a, b) => b.summary.totalUsers - a.summary.totalUsers);
+    return { regions };
+  },
+};
 
 export const demoAdminPlansApi = {
   getPlans: async () => demoPlans,

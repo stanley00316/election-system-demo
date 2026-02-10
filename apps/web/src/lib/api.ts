@@ -232,6 +232,8 @@ const realVotersApi = {
     api.uploadFile<any>('/voters/import', file, { campaignId }),
   exportExcel: (campaignId: string) =>
     api.downloadFile('/voters/export', { campaignId }, `選民資料_${new Date().toISOString().split('T')[0]}.xlsx`),
+  exportCsv: (campaignId: string) =>
+    api.downloadFile('/voters/export', { campaignId, format: 'csv' }, `選民資料_${new Date().toISOString().split('T')[0]}.csv`),
   getRelationships: (id: string) => api.get<any[]>(`/voters/${id}/relationships`),
   createRelationship: (data: any) => api.post('/voters/relationships', data),
   // 見面紀錄相關 API
@@ -470,6 +472,11 @@ const realAdminUsersApi = {
   getStats: () => api.get<any>('/admin/users/stats'),
   getUser: (id: string) => api.get<any>(`/admin/users/${id}`),
   getUserActivity: (id: string, params?: any) => api.get<any>(`/admin/users/${id}/activity`, params),
+  getUserPayments: (id: string, params?: any) => api.get<any>(`/admin/users/${id}/payments`, params),
+  getUserReferrals: (id: string) => api.get<any>(`/admin/users/${id}/referrals`),
+  getUserVoters: (id: string, params?: any) => api.get<any>(`/admin/users/${id}/voters`, params),
+  getUserContacts: (id: string, params?: any) => api.get<any>(`/admin/users/${id}/contacts`, params),
+  getUserCampaignStats: (id: string) => api.get<any>(`/admin/users/${id}/campaign-stats`),
   suspendUser: (id: string, reason: string) => api.put<any>(`/admin/users/${id}/suspend`, { reason }),
   activateUser: (id: string) => api.put<any>(`/admin/users/${id}/activate`),
 };
@@ -508,6 +515,9 @@ const realAdminAnalyticsApi = {
   getGeographicDistribution: () => api.get<any[]>('/admin/analytics/geographic'),
   getUserBehaviorAnalysis: () => api.get<any>('/admin/analytics/behavior'),
   getUserValueAnalysis: () => api.get<any>('/admin/analytics/user-value'),
+  // 地區總覽
+  getRegionalOverview: (city?: string, electionType?: string) =>
+    api.get<any>('/admin/analytics/regional-overview', { city, electionType }),
 };
 export const adminAnalyticsApi = isDemoMode ? demoApi.demoAdminAnalyticsApi : realAdminAnalyticsApi;
 

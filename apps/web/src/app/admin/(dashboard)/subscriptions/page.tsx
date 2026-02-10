@@ -12,6 +12,7 @@ import {
   Clock,
   XCircle,
   Pencil,
+  Download,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -163,9 +164,21 @@ export default function AdminSubscriptionsPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">訂閱管理</h1>
-        <p className="text-gray-500">管理使用者訂閱與方案</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">訂閱管理</h1>
+          <p className="text-gray-500">管理使用者訂閱與方案</p>
+        </div>
+        <Button variant="outline" onClick={() => {
+          const isDemoMode = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
+          if (isDemoMode) { return; }
+          const params = new URLSearchParams();
+          if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+          window.open(`/api/v1/admin/subscriptions/export?${params.toString()}`, '_blank');
+        }}>
+          <Download className="h-4 w-4 mr-2" />
+          匯出報表
+        </Button>
       </div>
 
       {/* Stats Cards */}

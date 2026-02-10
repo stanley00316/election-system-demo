@@ -817,4 +817,235 @@ export class AdminAnalyticsService {
       totalPaidUsers,
     };
   }
+
+  /**
+   * 地區總覽：每個地區所有使用者的完整選情數據
+   */
+  async getRegionalOverview(city?: string, electionType?: string) {
+    const campaignWhere: Prisma.CampaignWhereInput = {};
+    if (city) campaignWhere.city = city;
+    if (electionType) campaignWhere.electionType = electionType as any;
+
+    const campaigns = await this.prisma.campaign.findMany({
+      where: campaignWhere,
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        district: true,
+        village: true,
+        electionType: true,
+        isActive: true,
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            subscriptions: {
+              where: { status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+              select: { status: true },
+              take: 1,
+            },
+          },
+        },
+        _count: { select: { voters: true, contacts: true } },
+      },
+    });
+
+    if (campaigns.length === 0) {
+      return { regions: [] };
+    }
+
+    const campaignIds = campaigns.map((c) => c.id);
+
+    // 取得所有 campaign 的支持度分佈
+    const stanceData = await this.prisma.voter.groupBy({
+      by: ['campaignId', 'stance'],
+      where: { campaignId: { in: campaignIds } },
+      _count: { id: true },
+    });
+
+    const campaignStanceMap: Record<string, Record<string, number>> = {};
+    const allStances = ['STRONG_SUPPORT', 'SUPPORT', 'LEAN_SUPPORT', 'NEUTRAL', 'UNDECIDED', 'LEAN_OPPOSE', 'OPPOSE', 'STRONG_OPPOSE'];
+    stanceData.forEach((g) => {
+      if (!campaignStanceMap[g.campaignId]) {
+        campaignStanceMap[g.campaignId] = {};
+        allStances.forEach((s) => { campaignStanceMap[g.campaignId][s] = 0; });
+      }
+      campaignStanceMap[g.campaignId][g.stance] = g._count.id;
+    });
+
+    // 取得所有 campaign 的接觸結果分佈
+    const outcomeData = await this.prisma.contact.groupBy({
+      by: ['campaignId', 'outcome'],
+      where: { campaignId: { in: campaignIds } },
+      _count: { id: true },
+    });
+
+    const campaignOutcomeMap: Record<string, Record<string, number>> = {};
+    outcomeData.forEach((g) => {
+      if (!campaignOutcomeMap[g.campaignId]) campaignOutcomeMap[g.campaignId] = {};
+      campaignOutcomeMap[g.campaignId][g.outcome] = g._count.id;
+    });
+
+    // 按城市分組
+    const cityMap: Record<string, typeof campaigns> = {};
+    campaigns.forEach((c) => {
+      if (!cityMap[c.city]) cityMap[c.city] = [];
+      cityMap[c.city].push(c);
+    });
+
+    const regions = Object.entries(cityMap).map(([cityName, cityCampaigns]) => {
+      // 計算地區彙總
+      let totalVoters = 0;
+      let totalContacts = 0;
+      const userSet = new Set<string>();
+
+      const userCampaignMap: Record<string, any[]> = {};
+
+      cityCampaigns.forEach((c) => {
+        totalVoters += c._count.voters;
+        totalContacts += c._count.contacts;
+        userSet.add(c.ownerId);
+
+        if (!userCampaignMap[c.ownerId]) userCampaignMap[c.ownerId] = [];
+
+        const stances = campaignStanceMap[c.id] || {};
+        const support = (stances['STRONG_SUPPORT'] || 0) + (stances['SUPPORT'] || 0) + (stances['LEAN_SUPPORT'] || 0);
+        const voterCount = c._count.voters;
+
+        userCampaignMap[c.ownerId].push({
+          campaignId: c.id,
+          campaignName: c.name,
+          electionType: c.electionType,
+          district: c.district,
+          village: c.village,
+          isActive: c.isActive,
+          voterCount,
+          contactCount: c._count.contacts,
+          contactRate: voterCount > 0 ? Math.round((c._count.contacts / voterCount) * 1000) / 10 : 0,
+          supportRate: voterCount > 0 ? Math.round((support / voterCount) * 1000) / 10 : 0,
+          stanceDistribution: stances,
+          contactOutcomeDistribution: campaignOutcomeMap[c.id] || {},
+        });
+      });
+
+      // 組裝使用者資料
+      const usersInCity: any[] = [];
+      const processedUsers = new Set<string>();
+
+      cityCampaigns.forEach((c) => {
+        if (processedUsers.has(c.ownerId)) return;
+        processedUsers.add(c.ownerId);
+
+        const userCampaigns = userCampaignMap[c.ownerId] || [];
+        const userVoters = userCampaigns.reduce((sum: number, uc: any) => sum + uc.voterCount, 0);
+        const userContacts = userCampaigns.reduce((sum: number, uc: any) => sum + uc.contactCount, 0);
+
+        // 使用者在此地區的支持率（加總計算）
+        let userSupportCount = 0;
+        userCampaigns.forEach((uc: any) => {
+          const stances = uc.stanceDistribution || {};
+          userSupportCount += (stances['STRONG_SUPPORT'] || 0) + (stances['SUPPORT'] || 0) + (stances['LEAN_SUPPORT'] || 0);
+        });
+
+        usersInCity.push({
+          userId: c.owner.id,
+          userName: c.owner.name || '',
+          email: c.owner.email || '',
+          phone: c.owner.phone || '',
+          campaigns: userCampaigns,
+          totalVoters: userVoters,
+          totalContacts: userContacts,
+          supportRate: userVoters > 0 ? Math.round((userSupportCount / userVoters) * 1000) / 10 : 0,
+          contactRate: userVoters > 0 ? Math.round((userContacts / userVoters) * 1000) / 10 : 0,
+          subscriptionStatus: c.owner.subscriptions[0]?.status || '無訂閱',
+        });
+      });
+
+      // 地區整體支持率
+      let regionSupportCount = 0;
+      cityCampaigns.forEach((c) => {
+        const stances = campaignStanceMap[c.id] || {};
+        regionSupportCount += (stances['STRONG_SUPPORT'] || 0) + (stances['SUPPORT'] || 0) + (stances['LEAN_SUPPORT'] || 0);
+      });
+
+      return {
+        city: cityName,
+        summary: {
+          totalCampaigns: cityCampaigns.length,
+          totalUsers: userSet.size,
+          totalVoters,
+          totalContacts,
+          overallSupportRate: totalVoters > 0 ? Math.round((regionSupportCount / totalVoters) * 1000) / 10 : 0,
+          overallContactRate: totalVoters > 0 ? Math.round((totalContacts / totalVoters) * 1000) / 10 : 0,
+        },
+        users: usersInCity,
+      };
+    });
+
+    // 按使用者數降序排序
+    regions.sort((a, b) => b.summary.totalUsers - a.summary.totalUsers);
+
+    return { regions };
+  }
+
+  /**
+   * 匯出地區總覽（CSV 資料）
+   */
+  async exportRegionalOverview(city?: string, electionType?: string) {
+    const data = await this.getRegionalOverview(city, electionType);
+
+    const headers = [
+      '縣市', '區/鄉鎮', '里/村', '使用者姓名', 'Email',
+      '活動名稱', '選舉類型', '選民數', '接觸數',
+      '支持率(%)', '接觸率(%)',
+      '強力支持', '支持', '傾向支持', '中立', '未表態',
+      '傾向反對', '反對', '強烈反對',
+      '正面接觸', '中立接觸', '負面接觸', '無回應', '不在家',
+      '訂閱狀態',
+    ];
+
+    const rows: any[][] = [];
+
+    data.regions.forEach((region) => {
+      region.users.forEach((user: any) => {
+        user.campaigns.forEach((campaign: any) => {
+          const stances = campaign.stanceDistribution || {};
+          const outcomes = campaign.contactOutcomeDistribution || {};
+          rows.push([
+            region.city,
+            campaign.district || '',
+            campaign.village || '',
+            user.userName,
+            user.email,
+            campaign.campaignName,
+            campaign.electionType,
+            campaign.voterCount,
+            campaign.contactCount,
+            campaign.supportRate,
+            campaign.contactRate,
+            stances['STRONG_SUPPORT'] || 0,
+            stances['SUPPORT'] || 0,
+            stances['LEAN_SUPPORT'] || 0,
+            stances['NEUTRAL'] || 0,
+            stances['UNDECIDED'] || 0,
+            stances['LEAN_OPPOSE'] || 0,
+            stances['OPPOSE'] || 0,
+            stances['STRONG_OPPOSE'] || 0,
+            outcomes['POSITIVE'] || 0,
+            outcomes['NEUTRAL'] || 0,
+            outcomes['NEGATIVE'] || 0,
+            outcomes['NO_RESPONSE'] || 0,
+            outcomes['NOT_HOME'] || 0,
+            user.subscriptionStatus,
+          ]);
+        });
+      });
+    });
+
+    return { headers, rows, total: rows.length };
+  }
 }

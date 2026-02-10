@@ -276,4 +276,45 @@ export class AdminSubscriptionsService {
       orderBy: { sortOrder: 'asc' },
     });
   }
+
+  /**
+   * 匯出訂閱列表（CSV 資料）
+   */
+  async exportSubscriptions(filter: AdminSubscriptionFilterDto) {
+    const { status, planCode } = filter;
+    const where: Prisma.SubscriptionWhereInput = {};
+
+    if (status) where.status = status as SubscriptionStatus;
+    if (planCode) where.plan = { code: planCode };
+
+    const subscriptions = await this.prisma.subscription.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true, phone: true } },
+        plan: { select: { name: true, code: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const headers = [
+      '訂閱ID', '使用者', 'Email', '電話', '方案', '狀態',
+      '開始日期', '到期日期', '試用結束日', '取消日期', '取消原因',
+    ];
+
+    const rows = subscriptions.map((s) => [
+      s.id,
+      s.user.name || '',
+      s.user.email || '',
+      s.user.phone || '',
+      s.plan.name,
+      s.status,
+      s.currentPeriodStart ? s.currentPeriodStart.toISOString().split('T')[0] : '',
+      s.currentPeriodEnd ? s.currentPeriodEnd.toISOString().split('T')[0] : '',
+      s.trialEndsAt ? s.trialEndsAt.toISOString().split('T')[0] : '',
+      s.cancelledAt ? s.cancelledAt.toISOString().split('T')[0] : '',
+      s.cancelReason || '',
+    ]);
+
+    return { headers, rows, total: subscriptions.length };
+  }
 }

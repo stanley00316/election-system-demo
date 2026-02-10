@@ -20,6 +20,7 @@ import {
   Megaphone,
   ArrowLeftRight,
   QrCode,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ const navigation = [
   { name: '付款管理', href: '/admin/payments', icon: Receipt },
   { name: '推薦管理', href: '/admin/referrals', icon: Gift },
   { name: '數據分析', href: '/admin/analytics', icon: BarChart3 },
+  { name: '地區總覽', href: '/admin/regions', icon: MapPin },
 ];
 
 // 超級管理者專用選單
@@ -51,6 +53,7 @@ const bottomNavItems: SimpleNavItem[] = [
   { name: '使用者', href: '/admin/users', icon: Users },
   { name: '訂閱', href: '/admin/subscriptions', icon: CreditCard },
   { name: '分析', href: '/admin/analytics', icon: BarChart3 },
+  { name: '地區', href: '/admin/regions', icon: MapPin },
   { name: '推薦', href: '/admin/referrals', icon: Gift },
   { name: '付款', href: '/admin/payments', icon: Receipt },
   { name: '推廣', href: '/admin/promoters', icon: Megaphone },
