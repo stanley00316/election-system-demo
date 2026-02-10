@@ -1,13 +1,12 @@
 # =============================================
 # 選情系統 API Dockerfile
-# Simplified single-stage build for Railway
+# Single-stage build for Railway
 # =============================================
 
 FROM node:20-alpine
 
-# Install pnpm and nest CLI globally
+# Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
-RUN npm install -g @nestjs/cli@10.3.0 prisma@5.8.0 typescript@5.3.3
 
 # Set working directory
 WORKDIR /app
@@ -35,33 +34,19 @@ RUN npx prisma generate
 WORKDIR /app/packages/shared
 RUN pnpm run build 2>/dev/null || true
 
-# Build API - try multiple approaches with debugging
+# Build API
 WORKDIR /app/apps/api
-RUN echo "=== Listing source files ===" && \
-    ls -la src/ && \
-    echo "=== Attempting nest build ===" && \
-    nest build 2>&1 || true && \
-    echo "=== Checking dist after nest build ===" && \
-    ls -la dist/ 2>/dev/null || echo "No dist/ directory after nest build" && \
-    echo "=== Attempting tsc build ===" && \
-    tsc -p tsconfig.build.json 2>&1 || tsc -p tsconfig.json 2>&1 || true && \
-    echo "=== Checking dist after tsc ===" && \
-    ls -la dist/ 2>/dev/null || echo "No dist/ directory after tsc" && \
-    echo "=== Final check ===" && \
-    if [ -f dist/main.js ]; then echo "SUCCESS: dist/main.js exists"; \
-    else echo "FAILED: dist/main.js not found, listing all dist contents:" && \
-         find dist/ -type f 2>/dev/null || echo "dist/ directory does not exist" && \
-         echo "=== Checking node_modules/.bin ===" && \
-         ls node_modules/.bin/ 2>/dev/null | head -20 || echo "No .bin directory" && \
-         echo "=== Trying direct tsc from node_modules ===" && \
-         ./node_modules/.bin/tsc -p tsconfig.build.json 2>&1 || true && \
-         ls -la dist/ 2>/dev/null || true && \
-         if [ ! -f dist/main.js ]; then exit 1; fi; \
-    fi
+RUN pnpm run build
+
+# Verify build output (main.js is in dist/src/ due to tsconfig include paths)
+RUN test -f dist/src/main.js && echo "Build successful" || exit 1
 
 # Copy startup script
 COPY docker/start-api.sh ./start-api.sh
 RUN chmod +x ./start-api.sh
+
+# Install prisma CLI globally for database schema sync on startup
+RUN npm install -g prisma@5.8.0
 
 # Set working directory to API
 WORKDIR /app/apps/api
@@ -73,7 +58,7 @@ ENV PORT=3001
 # Expose port
 EXPOSE 3001
 
-# Health check - increased start period for db push
+# Health check - generous start period for db push on first startup
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
     CMD node -e "require('http').get('http://localhost:3001/api/v1/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 

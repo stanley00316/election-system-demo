@@ -24,4 +24,4 @@ npx prisma db push --skip-generate --accept-data-loss 2>&1 || {
 }
 
 echo "🚀 啟動 API 伺服器..."
-exec node dist/main
+exec node dist/src/main
