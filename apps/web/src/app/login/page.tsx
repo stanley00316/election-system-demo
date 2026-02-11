@@ -5,10 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth';
 import { authApi, roleInvitesApi, isDemoMode } from '@/lib/api';
 import { demoUser, demoCampaign } from '@/lib/demo-data';
-import { Loader2, AlertCircle, Play } from 'lucide-react';
+import {
+  Loader2, AlertCircle, Play, Users, Phone, MapPin, BarChart3,
+  CalendarDays, UsersRound, Megaphone, Shield, ChevronRight,
+  Vote, CheckCircle2, Globe, TrendingUp, ArrowRight,
+} from 'lucide-react';
 
 /**
  * 根據使用者角色決定導向路徑
@@ -197,23 +202,33 @@ function LoginContent() {
     window.location.href = lineAuthUrl;
   };
 
-  // 示範模式快速登入（使用者登入頁 → 直接進入使用者儀表板）
-  const handleDemoLogin = async () => {
+  // 示範模式快速登入（支援不同角色入口）
+  const handleDemoLogin = async (role: 'user' | 'promoter' | 'admin' = 'user') => {
     setIsLoading(true);
     setError(null);
     try {
-      // 直接使用示範資料設定認證狀態
       const demoToken = 'demo-token-' + Date.now();
       
-      // 儲存示範活動 ID 到 localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('currentCampaignId', demoCampaign.id);
-        // 設定意圖角色，使 isAuthenticated useEffect 直接導向使用者儀表板
-        sessionStorage.setItem('intendedRole', 'user');
+        sessionStorage.setItem('intendedRole', role);
       }
       
       setAuth(demoUser, demoToken);
-      router.push('/dashboard');
+
+      // 根據選擇的角色導向不同儀表板
+      switch (role) {
+        case 'promoter':
+          router.push('/promoter/dashboard');
+          break;
+        case 'admin':
+          router.push('/admin');
+          break;
+        case 'user':
+        default:
+          router.push('/dashboard');
+          break;
+      }
     } catch (err: any) {
       console.error('Demo login failed:', err);
       setError('示範登入失敗');
@@ -245,87 +260,233 @@ function LoginContent() {
     }
   };
 
-  // 示範模式：顯示不同的 UI
+  // ========== 示範模式：產品著陸頁 ==========
   if (isDemoMode) {
+    const features = [
+      { icon: Users,        title: '選民管理',   desc: '建立選民資料庫，標記政治傾向與偏好，精準掌握選區動態' },
+      { icon: Phone,        title: '接觸紀錄',   desc: '記錄每次拜訪、電話、LINE 訊息等接觸，追蹤選民互動歷程' },
+      { icon: MapPin,       title: '地圖熱力圖', desc: '視覺化選民分佈，一眼掌握重點村里與空白區域' },
+      { icon: BarChart3,    title: '選情分析',   desc: '支持度統計、接觸趨勢圖表，數據驅動的選戰策略' },
+      { icon: CalendarDays, title: '行程規劃',   desc: '候選人行程管理、活動安排，團隊成員共享日曆' },
+      { icon: UsersRound,   title: '團隊協作',   desc: '多角色團隊管理、權限控制，高效分工不遺漏' },
+      { icon: Megaphone,    title: '推廣系統',   desc: '推廣人員專屬面板，追蹤推薦成效與佣金' },
+      { icon: Shield,       title: '管理後台',   desc: '使用者管理、訂閱管理、營收總覽，系統一手掌控' },
+    ];
+
+    const roleEntries = [
+      {
+        role: 'user' as const,
+        icon: Vote,
+        title: '候選人團隊',
+        desc: '選民管理、接觸紀錄、選情分析、行程規劃',
+        gradient: 'from-blue-500 to-indigo-600',
+        hoverGradient: 'hover:from-blue-600 hover:to-indigo-700',
+        bgLight: 'bg-blue-50 dark:bg-blue-950/40',
+        borderColor: 'border-blue-200 dark:border-blue-800',
+        iconBg: 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400',
+      },
+      {
+        role: 'promoter' as const,
+        icon: Megaphone,
+        title: '推廣人員',
+        desc: '推廣成效追蹤、分享連結、佣金報表',
+        gradient: 'from-emerald-500 to-teal-600',
+        hoverGradient: 'hover:from-emerald-600 hover:to-teal-700',
+        bgLight: 'bg-emerald-50 dark:bg-emerald-950/40',
+        borderColor: 'border-emerald-200 dark:border-emerald-800',
+        iconBg: 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400',
+      },
+      {
+        role: 'admin' as const,
+        icon: Shield,
+        title: '系統管理員',
+        desc: '使用者管理、訂閱方案、營收數據',
+        gradient: 'from-violet-500 to-purple-600',
+        hoverGradient: 'hover:from-violet-600 hover:to-purple-700',
+        bgLight: 'bg-violet-50 dark:bg-violet-950/40',
+        borderColor: 'border-violet-200 dark:border-violet-800',
+        iconBg: 'bg-violet-100 dark:bg-violet-900/60 text-violet-600 dark:text-violet-400',
+      },
+    ];
+
+    const stats = [
+      { value: '500+', label: '選民資料' },
+      { value: '800+', label: '接觸紀錄' },
+      { value: '12',   label: '行政區域' },
+      { value: '120',  label: '村里' },
+      { value: '25',   label: '活動場次' },
+      { value: '5',    label: '選舉類型' },
+    ];
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-2xl">選</span>
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+        {/* ── 導航列 ── */}
+        <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow">
+                <span className="text-white font-bold text-lg">選</span>
+              </div>
+              <span className="text-lg font-bold tracking-tight">選情管理系統</span>
             </div>
-            <CardTitle className="text-2xl">選情管理系統</CardTitle>
-            <CardDescription className="text-base">
-              專為台灣選舉打造的數位化管理工具
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* 示範模式提示 */}
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-                示範模式
-              </h3>
-              <p className="text-sm text-blue-600 dark:text-blue-300">
-                點擊下方按鈕即可體驗完整系統功能，包含 500 位選民資料、800 筆接觸紀錄等示範內容。
-              </p>
+            <Badge variant="secondary" className="text-xs">
+              展示模式
+            </Badge>
+          </div>
+        </header>
+
+        {/* ── Hero 區塊 ── */}
+        <section className="relative overflow-hidden">
+          {/* 背景裝飾 */}
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[600px] w-[900px] rounded-full bg-gradient-to-br from-blue-400/20 to-indigo-500/20 blur-3xl dark:from-blue-600/10 dark:to-indigo-700/10" />
+          </div>
+
+          <div className="mx-auto max-w-4xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16 text-center">
+            <Badge variant="outline" className="mb-6 px-4 py-1.5 text-sm font-medium">
+              <Globe className="mr-1.5 h-3.5 w-3.5" />
+              專為台灣選舉打造
+            </Badge>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+              數位選戰的
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                致勝利器
+              </span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
+              從選民管理到選情分析，一站式整合所有選戰資源。
+              <br className="hidden sm:block" />
+              讓數據驅動決策，讓每一步都精準有效。
+            </p>
+
+            {/* 主要 CTA */}
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 px-8 text-base"
+                onClick={() => handleDemoLogin('user')}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-5 w-5" />
+                )}
+                立即體驗
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="px-8 text-base"
+                onClick={() => {
+                  document.getElementById('roles')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                選擇體驗角色
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
             </div>
 
             {/* 錯誤訊息 */}
             {error && (
-              <div className="flex items-start gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <div className="mx-auto mt-6 max-w-md flex items-start gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
+          </div>
+        </section>
 
-            {/* 立即體驗按鈕 */}
-            <Button
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md"
-              size="lg"
-              onClick={handleDemoLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Play className="mr-2 h-5 w-5" />
-              )}
-              {isLoading ? '載入中...' : '立即體驗'}
-            </Button>
-
-            {/* 功能列表 */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                選民管理
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                接觸紀錄
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                行程規劃
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                地圖檢視
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                選情分析
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                團隊協作
-              </div>
-            </div>
-            
-            <p className="text-xs text-center text-muted-foreground">
-              示範資料會在重新整理頁面後重置
+        {/* ── 功能亮點 ── */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl">核心功能</h2>
+            <p className="mt-3 text-muted-foreground">
+              涵蓋選戰管理的每個環節
             </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
+            {features.map((f) => (
+              <Card key={f.title} className="group relative overflow-hidden border bg-card transition-shadow hover:shadow-md">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
+                    <f.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <h3 className="font-semibold mb-1">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* ── 三角色入口 ── */}
+        <section id="roles" className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20 scroll-mt-20">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl">選擇體驗角色</h2>
+            <p className="mt-3 text-muted-foreground">
+              從不同視角了解系統功能
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {roleEntries.map((entry) => (
+              <Card
+                key={entry.role}
+                className={`group cursor-pointer border-2 ${entry.borderColor} ${entry.bgLight} transition-all hover:shadow-lg hover:scale-[1.02]`}
+                onClick={() => !isLoading && handleDemoLogin(entry.role)}
+              >
+                <CardContent className="p-6 sm:p-8 text-center">
+                  <div className={`mx-auto mb-4 h-14 w-14 rounded-xl ${entry.iconBg} flex items-center justify-center`}>
+                    <entry.icon className="h-7 w-7" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">{entry.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{entry.desc}</p>
+                  <Button
+                    className={`w-full bg-gradient-to-r ${entry.gradient} ${entry.hoverGradient} text-white shadow`}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                    )}
+                    進入體驗
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* ── 數據信任區 ── */}
+        <section className="border-t bg-muted/40">
+          <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
+            <div className="text-center mb-10">
+              <h2 className="text-xl font-bold sm:text-2xl">豐富的展示資料</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                內建完整模擬資料，無需註冊即可體驗全部功能
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-4 sm:grid-cols-6 sm:gap-6">
+              {stats.map((s) => (
+                <div key={s.label} className="text-center">
+                  <div className="text-2xl font-extrabold sm:text-3xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    {s.value}
+                  </div>
+                  <div className="mt-1 text-xs sm:text-sm text-muted-foreground">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 頁腳 ── */}
+        <footer className="border-t">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+            <p>© {new Date().getFullYear()} 選情管理系統 — 展示模式</p>
+            <p className="text-xs">示範資料會在重新整理頁面後重置</p>
+          </div>
+        </footer>
       </div>
     );
   }
