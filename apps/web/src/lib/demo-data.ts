@@ -87,7 +87,7 @@ export const demoUser = {
   phone: '0912345678',
   avatarUrl: undefined as string | undefined,
   isActive: true,
-  isAdmin: true,
+  isAdmin: false,
   isSuperAdmin: false,
   promoter: {
     id: 'demo-promoter-id',

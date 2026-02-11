@@ -79,6 +79,12 @@ export default function AdminDashboardLayout({
 
   const checkAuth = async () => {
     try {
+      // Demo 模式下禁止進入管理後台
+      if (isDemoMode) {
+        router.replace('/login');
+        return;
+      }
+
       // 使用一般 token 檢查
       const token = localStorage.getItem('token');
       if (!token) {

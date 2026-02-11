@@ -68,8 +68,8 @@ export default function RoleSelectPage() {
         });
       }
 
-      // 超級管理員
-      if (userData?.isAdmin || userData?.isSuperAdmin) {
+      // 超級管理員（Demo 模式下不顯示，僅正式環境管理員可見）
+      if (!isDemoMode && (userData?.isAdmin || userData?.isSuperAdmin)) {
         availableRoles.push({
           id: 'admin',
           title: '管理後台',
