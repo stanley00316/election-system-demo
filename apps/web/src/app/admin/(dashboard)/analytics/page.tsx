@@ -648,8 +648,8 @@ export default function AdminAnalyticsPage() {
                       <div key={p.id} className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-3">
                           <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                            index === 1 ? 'bg-gray-100 text-gray-600' :
+                            index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200' :
+                            index === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' :
                             index === 2 ? 'bg-orange-100 text-orange-700' :
                             'bg-muted text-muted-foreground'
                           }`}>
@@ -685,7 +685,7 @@ export default function AdminAnalyticsPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 {[
-                  { label: '總發放', value: promoterTrialStats?.total ?? 0, color: 'text-gray-900' },
+                  { label: '總發放', value: promoterTrialStats?.total ?? 0, color: 'text-foreground' },
                   { label: '已啟用', value: promoterTrialStats?.activated ?? 0, color: 'text-blue-600' },
                   { label: '使用中', value: promoterTrialStats?.active ?? 0, color: 'text-green-600' },
                   { label: '已轉換', value: promoterTrialStats?.converted ?? 0, color: 'text-orange-600' },

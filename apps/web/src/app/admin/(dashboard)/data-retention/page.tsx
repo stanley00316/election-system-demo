@@ -232,7 +232,7 @@ function AdminDataRetentionContent() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">資料保留管理</h1>
+        <h1 className="text-2xl font-bold text-foreground">資料保留管理</h1>
         <p className="text-gray-500">
           管理未付款的競選活動資料庫，由超級管理者決定是否刪除或恢復
         </p>

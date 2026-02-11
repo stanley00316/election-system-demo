@@ -85,8 +85,8 @@ export default function AdminDashboardPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">總覽儀表板</h1>
-        <p className="text-gray-500">系統營運數據一覽</p>
+        <h1 className="text-2xl font-bold text-foreground">總覽儀表板</h1>
+        <p className="text-muted-foreground">系統營運數據一覽</p>
       </div>
 
       {/* KPI Cards */}
@@ -96,7 +96,7 @@ export default function AdminDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">總使用者數</p>
+                <p className="text-sm font-medium text-muted-foreground">總使用者數</p>
                 <p className="text-3xl font-bold mt-1">
                   {(overview?.totalUsers ?? 0).toLocaleString()}
                 </p>
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
                   <span className="text-gray-400 ml-1">較上月</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
             </div>
@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">活躍訂閱數</p>
+                <p className="text-sm font-medium text-muted-foreground">活躍訂閱數</p>
                 <p className="text-3xl font-bold mt-1">
                   {(overview?.activeSubscriptions ?? 0).toLocaleString()}
                 </p>
@@ -134,7 +134,7 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <CreditCard className="h-6 w-6 text-green-600" />
               </div>
             </div>
@@ -146,7 +146,7 @@ export default function AdminDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">本月營收</p>
+                <p className="text-sm font-medium text-muted-foreground">本月營收</p>
                 <p className="text-3xl font-bold mt-1">
                   {formatCurrency(overview?.monthlyRevenue || 0)}
                 </p>
@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
                   <span className="text-gray-400 ml-1">較上月</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-yellow-600" />
               </div>
             </div>
@@ -174,7 +174,7 @@ export default function AdminDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">平均客單價</p>
+                <p className="text-sm font-medium text-muted-foreground">平均客單價</p>
                 <p className="text-3xl font-bold mt-1">
                   {formatCurrency(overview?.arpu || 0)}
                 </p>
@@ -184,7 +184,7 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                 <TrendingUp className="h-6 w-6 text-purple-600" />
               </div>
             </div>

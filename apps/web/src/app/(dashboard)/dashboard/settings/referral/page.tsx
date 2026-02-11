@@ -45,9 +45,9 @@ interface Referral {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  PENDING: { label: '等待付款', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  EXPIRED: { label: '已過期', color: 'bg-gray-100 text-gray-800', icon: XCircle },
+  PENDING: { label: '等待付款', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200', icon: Clock },
+  COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200', icon: CheckCircle },
+  EXPIRED: { label: '已過期', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: XCircle },
 };
 
 export default function ReferralPage() {
@@ -139,7 +139,7 @@ export default function ReferralPage() {
         <BackButton href="/dashboard/settings" />
         <div>
           <h1 className="text-2xl font-bold">推薦好友</h1>
-          <p className="text-gray-500">分享推薦碼給好友，每成功推薦一人，您可獲得一個月免費使用</p>
+          <p className="text-muted-foreground">分享推薦碼給好友，每成功推薦一人，您可獲得一個月免費使用</p>
         </div>
       </div>
 
@@ -161,7 +161,7 @@ export default function ReferralPage() {
               <Input
                 value={referralCode}
                 readOnly
-                className="text-center text-2xl font-mono font-bold tracking-wider bg-gray-50"
+                className="text-center text-2xl font-mono font-bold tracking-wider bg-muted/50"
               />
             </div>
             <Button variant="outline" size="icon" onClick={() => copyToClipboard(referralCode, 'code')}>
@@ -175,7 +175,7 @@ export default function ReferralPage() {
               <Input
                 value={shareUrl}
                 readOnly
-                className="text-sm bg-gray-50"
+                className="text-sm bg-muted/50"
               />
             </div>
             <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareUrl, 'url')}>
@@ -190,7 +190,7 @@ export default function ReferralPage() {
           {/* 推薦獎勵說明 */}
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
             <h4 className="font-medium text-primary mb-2">推薦獎勵規則</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
+            <ul className="text-sm text-muted-foreground space-y-1">
               <li>• 每成功推薦一位好友，您將獲得 1 個月免費訂閱</li>
               <li>• 好友需使用您的推薦碼註冊並完成首次付款</li>
               <li>• 獎勵將自動加到您的訂閱期限中</li>
@@ -207,7 +207,7 @@ export default function ReferralPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">總推薦人數</p>
+                  <p className="text-sm text-muted-foreground">總推薦人數</p>
                   <p className="text-2xl font-bold">{stats.totalReferrals}</p>
                 </div>
                 <Users className="h-8 w-8 text-gray-400" />
@@ -218,7 +218,7 @@ export default function ReferralPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">已完成</p>
+                  <p className="text-sm text-muted-foreground">已完成</p>
                   <p className="text-2xl font-bold text-green-600">{stats.completedReferrals}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-400" />
@@ -229,7 +229,7 @@ export default function ReferralPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">等待中</p>
+                  <p className="text-sm text-muted-foreground">等待中</p>
                   <p className="text-2xl font-bold text-yellow-600">{stats.pendingReferrals}</p>
                 </div>
                 <Clock className="h-8 w-8 text-yellow-400" />
@@ -240,7 +240,7 @@ export default function ReferralPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">累計獎勵</p>
+                  <p className="text-sm text-muted-foreground">累計獎勵</p>
                   <p className="text-2xl font-bold text-primary">{stats.totalRewardMonths} 個月</p>
                 </div>
                 <Award className="h-8 w-8 text-primary/60" />
@@ -267,7 +267,7 @@ export default function ReferralPage() {
                 return (
                   <div
                     key={referral.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -278,7 +278,7 @@ export default function ReferralPage() {
                       </Avatar>
                       <div>
                         <p className="font-medium">{referral.referredUser.name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           加入於 {formatDate(referral.referredUser.joinedAt)}
                         </p>
                       </div>
@@ -300,9 +300,9 @@ export default function ReferralPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Gift className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">尚未推薦任何人</h3>
-              <p className="text-gray-500 mb-4">
+              <Gift className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">尚未推薦任何人</h3>
+              <p className="text-muted-foreground mb-4">
                 分享您的推薦碼給朋友，開始累積免費使用時間
               </p>
               <Button onClick={shareReferral}>

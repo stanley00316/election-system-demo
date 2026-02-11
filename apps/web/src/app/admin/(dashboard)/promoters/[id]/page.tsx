@@ -90,18 +90,18 @@ function PromoterDetailContent() {
 
   const getStatusBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
-      ACTIVE: 'bg-green-100 text-green-800',
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      SUSPENDED: 'bg-red-100 text-red-800',
-      APPROVED: 'bg-blue-100 text-blue-800',
-      CLICKED: 'bg-gray-100 text-gray-800',
-      REGISTERED: 'bg-blue-100 text-blue-800',
-      TRIAL: 'bg-purple-100 text-purple-800',
-      SUBSCRIBED: 'bg-green-100 text-green-800',
-      RENEWED: 'bg-emerald-100 text-emerald-800',
-      EXPIRED: 'bg-red-100 text-red-800',
-      CONVERTED: 'bg-green-100 text-green-800',
-      CANCELLED: 'bg-gray-100 text-gray-800',
+      ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+      SUSPENDED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      APPROVED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      CLICKED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      REGISTERED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      TRIAL: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+      SUBSCRIBED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      RENEWED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
+      EXPIRED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      CONVERTED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      CANCELLED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -349,7 +349,7 @@ function PromoterDetailContent() {
                       <TableCell className="text-right">{l._count?.referrals || 0}</TableCell>
                       <TableCell className="text-sm">{format(new Date(l.createdAt), 'yyyy/MM/dd')}</TableCell>
                       <TableCell>
-                        <Badge className={l.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        <Badge className={l.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}>
                           {l.isActive ? '啟用' : '停用'}
                         </Badge>
                       </TableCell>

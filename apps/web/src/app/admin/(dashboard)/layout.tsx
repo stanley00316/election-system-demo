@@ -143,7 +143,7 @@ export default function AdminDashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-muted">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -325,7 +325,7 @@ export default function AdminDashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 pb-20 lg:pb-0">
+        <main className="flex-1 overflow-y-auto bg-muted/30 pb-20 lg:pb-0">
           {children}
         </main>
       </div>

@@ -68,19 +68,19 @@ interface Payment {
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   TRIAL: { label: '試用中', color: 'bg-blue-100 text-blue-800', icon: Clock },
-  ACTIVE: { label: '訂閱中', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  PAST_DUE: { label: '逾期未付', color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle },
-  CANCELLED: { label: '已取消', color: 'bg-gray-100 text-gray-800', icon: XCircle },
-  EXPIRED: { label: '已過期', color: 'bg-red-100 text-red-800', icon: XCircle },
+  ACTIVE: { label: '訂閱中', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200', icon: CheckCircle },
+  PAST_DUE: { label: '逾期未付', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200', icon: AlertTriangle },
+  CANCELLED: { label: '已取消', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: XCircle },
+  EXPIRED: { label: '已過期', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200', icon: XCircle },
 };
 
 const paymentStatusConfig: Record<string, { label: string; color: string }> = {
-  PENDING: { label: '待付款', color: 'bg-yellow-100 text-yellow-800' },
+  PENDING: { label: '待付款', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' },
   PROCESSING: { label: '處理中', color: 'bg-blue-100 text-blue-800' },
-  COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800' },
-  FAILED: { label: '失敗', color: 'bg-red-100 text-red-800' },
-  REFUNDED: { label: '已退款', color: 'bg-gray-100 text-gray-800' },
-  CANCELLED: { label: '已取消', color: 'bg-gray-100 text-gray-800' },
+  COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' },
+  FAILED: { label: '失敗', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' },
+  REFUNDED: { label: '已退款', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
+  CANCELLED: { label: '已取消', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
 };
 
 export default function BillingPage() {
@@ -160,7 +160,7 @@ export default function BillingPage() {
           <BackButton href="/dashboard/settings" />
           <div>
             <h1 className="text-2xl font-bold">帳單與訂閱</h1>
-            <p className="text-gray-500">管理您的訂閱方案與付款記錄</p>
+            <p className="text-muted-foreground">管理您的訂閱方案與付款記錄</p>
           </div>
         </div>
         <Button onClick={() => router.push('/pricing')}>
@@ -188,7 +188,7 @@ export default function BillingPage() {
               </div>
               {subscription.status === 'TRIAL' && (
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">試用剩餘</p>
+                  <p className="text-sm text-muted-foreground">試用剩餘</p>
                   <p className="text-2xl font-bold text-primary">
                     {getDaysRemaining(subscription.trialEndsAt!)} 天
                   </p>
@@ -198,26 +198,26 @@ export default function BillingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <Calendar className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">計費週期開始</p>
+                  <p className="text-sm text-muted-foreground">計費週期開始</p>
                   <p className="font-medium">{formatDate(subscription.currentPeriodStart)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <Clock className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {subscription.status === 'TRIAL' ? '試用到期日' : '下次扣款日'}
                   </p>
                   <p className="font-medium">{formatDate(subscription.currentPeriodEnd)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <CreditCard className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">方案限制</p>
+                  <p className="text-sm text-muted-foreground">方案限制</p>
                   <p className="font-medium">
                     {subscription.plan.voterLimit
                       ? `${subscription.plan.voterLimit} 選民`
@@ -283,8 +283,8 @@ export default function BillingPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">尚無訂閱</h3>
-            <p className="text-gray-500 mb-6">
+            <h3 className="text-lg font-medium text-foreground mb-2">尚無訂閱</h3>
+            <p className="text-muted-foreground mb-6">
               選擇合適的方案，開始使用選情系統的完整功能
             </p>
             <Button onClick={() => router.push('/pricing')}>
@@ -309,11 +309,11 @@ export default function BillingPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">日期</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">方案</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">金額</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">支付方式</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">狀態</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">日期</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">方案</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">金額</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">支付方式</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">狀態</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -338,7 +338,7 @@ export default function BillingPage() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               尚無付款記錄
             </div>
           )}
@@ -351,7 +351,7 @@ export default function BillingPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-medium">需要協助？</h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 如有帳單或訂閱相關問題，請聯繫我們的客服團隊
               </p>
             </div>

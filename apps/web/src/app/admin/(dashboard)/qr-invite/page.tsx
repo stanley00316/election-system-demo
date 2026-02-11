@@ -167,7 +167,7 @@ export default function AdminQrInvitePage() {
                       >
                         <div className={`
                           p-3 rounded-lg
-                          ${isSelected ? 'bg-white/60' : 'bg-gray-100'}
+                          ${isSelected ? 'bg-card/60' : 'bg-muted'}
                         `}>
                           <Icon className="h-6 w-6" />
                         </div>
@@ -254,7 +254,7 @@ export default function AdminQrInvitePage() {
                   </Badge>
 
                   {/* QR Code */}
-                  <div className="p-4 bg-white rounded-2xl shadow-lg">
+                  <div className="p-4 bg-card rounded-2xl shadow-lg">
                     <QrCodeDisplay value={invite.url} size={280} />
                   </div>
 

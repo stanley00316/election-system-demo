@@ -185,7 +185,7 @@ export default function AdminUserDetailPage() {
   if (!user) {
     return (
       <div className="p-6 text-center">
-        <p className="text-gray-500">使用者不存在</p>
+        <p className="text-muted-foreground">使用者不存在</p>
       </div>
     );
   }
@@ -200,7 +200,7 @@ export default function AdminUserDetailPage() {
       <div className="flex items-center gap-4">
         <BackButton href="/admin/users" />
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">使用者詳情</h1>
+          <h1 className="text-2xl font-bold text-foreground">使用者詳情</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExport}>
@@ -281,13 +281,13 @@ export default function AdminUserDetailPage() {
             </div>
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold">{user._count?.contacts || 0}</p>
-                <p className="text-sm text-gray-500">接觸記錄</p>
+                <p className="text-sm text-muted-foreground">接觸記錄</p>
               </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold">{user._count?.createdVoters || 0}</p>
-                <p className="text-sm text-gray-500">建立選民</p>
+                <p className="text-sm text-muted-foreground">建立選民</p>
               </div>
             </div>
           </div>
@@ -312,13 +312,13 @@ export default function AdminUserDetailPage() {
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                    user.isAdmin ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'
+                    user.isAdmin ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200' : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
                   }`}>
                     <Shield className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">管理員權限</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {user.isAdmin
                         ? '此使用者可存取管理後台（使用者管理、訂閱管理、數據分析等）'
                         : '授予管理員權限後，此使用者可登入管理後台'}
@@ -372,13 +372,13 @@ export default function AdminUserDetailPage() {
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                    user.promoter?.isActive ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-400'
+                    user.promoter?.isActive ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-200' : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
                   }`}>
                     <Megaphone className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">推廣者身份</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {user.promoter?.isActive
                         ? `推廣碼：${user.promoter.referralCode || '---'}・狀態：活躍中`
                         : user.promoter
@@ -424,19 +424,19 @@ export default function AdminUserDetailPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card><CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold">{campaignStats.summary.totalVoters}</p>
-                  <p className="text-sm text-gray-500">選民總數</p>
+                  <p className="text-sm text-muted-foreground">選民總數</p>
                 </CardContent></Card>
                 <Card><CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold text-green-600">{campaignStats.summary.overallSupportRate}%</p>
-                  <p className="text-sm text-gray-500">支持率</p>
+                  <p className="text-sm text-muted-foreground">支持率</p>
                 </CardContent></Card>
                 <Card><CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold text-blue-600">{campaignStats.summary.overallContactRate}%</p>
-                  <p className="text-sm text-gray-500">接觸率</p>
+                  <p className="text-sm text-muted-foreground">接觸率</p>
                 </CardContent></Card>
                 <Card><CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold">{campaignStats.summary.totalCampaigns}</p>
-                  <p className="text-sm text-gray-500">活動數量</p>
+                  <p className="text-sm text-muted-foreground">活動數量</p>
                 </CardContent></Card>
               </div>
 
@@ -521,9 +521,9 @@ export default function AdminUserDetailPage() {
                       </thead>
                       <tbody>
                         {campaignStats.campaignBreakdown?.map((c: any) => (
-                          <tr key={c.campaignId} className="border-b hover:bg-gray-50">
+                          <tr key={c.campaignId} className="border-b hover:bg-muted/50">
                             <td className="p-2 font-medium">{c.campaignName}</td>
-                            <td className="p-2 text-gray-500">{c.city}</td>
+                            <td className="p-2 text-muted-foreground">{c.city}</td>
                             <td className="p-2 text-right">{c.voterCount}</td>
                             <td className="p-2 text-right">{c.contactCount}</td>
                             <td className="p-2 text-right">
@@ -543,7 +543,7 @@ export default function AdminUserDetailPage() {
               </Card>
             </>
           ) : (
-            <Card><CardContent className="py-8 text-center text-gray-500">此使用者尚無選舉活動數據</CardContent></Card>
+            <Card><CardContent className="py-8 text-center text-muted-foreground">此使用者尚無選舉活動數據</CardContent></Card>
           )}
         </TabsContent>
 
@@ -560,23 +560,23 @@ export default function AdminUserDetailPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">方案</p>
+                    <p className="text-sm text-muted-foreground">方案</p>
                     <p className="font-medium">{currentSubscription.plan.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">狀態</p>
+                    <p className="text-sm text-muted-foreground">狀態</p>
                     <Badge>
                       {currentSubscription.status === 'TRIAL' ? '試用中' : '訂閱中'}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">開始日期</p>
+                    <p className="text-sm text-muted-foreground">開始日期</p>
                     <p className="font-medium">
                       {formatDate(currentSubscription.currentPeriodStart)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">到期日期</p>
+                    <p className="text-sm text-muted-foreground">到期日期</p>
                     <p className="font-medium">
                       {formatDate(currentSubscription.currentPeriodEnd)}
                     </p>
@@ -586,7 +586,7 @@ export default function AdminUserDetailPage() {
             </Card>
           ) : (
             <Card>
-              <CardContent className="py-8 text-center text-gray-500">
+              <CardContent className="py-8 text-center text-muted-foreground">
                 此使用者目前沒有有效訂閱
               </CardContent>
             </Card>
@@ -601,7 +601,7 @@ export default function AdminUserDetailPage() {
                     <div key={sub.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">{sub.plan.name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           {formatDate(sub.currentPeriodStart)} - {formatDate(sub.currentPeriodEnd)}
                         </p>
                       </div>
@@ -632,7 +632,7 @@ export default function AdminUserDetailPage() {
                     <div key={campaign.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">{campaign.name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           {campaign.city}{campaign.district ? ` · ${campaign.district}` : ''} · {campaign._count?.voters || 0} 選民 · {campaign._count?.contacts || 0} 接觸 · {campaign._count?.teamMembers || 0} 團隊成員
                         </p>
                       </div>
@@ -643,7 +643,7 @@ export default function AdminUserDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-500">尚無選舉活動</p>
+                <p className="text-center py-8 text-muted-foreground">尚無選舉活動</p>
               )}
             </CardContent>
           </Card>
@@ -668,19 +668,19 @@ export default function AdminUserDetailPage() {
                     </thead>
                     <tbody>
                       {payments.data.map((p: any) => (
-                        <tr key={p.id} className="border-b hover:bg-gray-50">
+                        <tr key={p.id} className="border-b hover:bg-muted/50">
                           <td className="p-2">{p.subscription?.plan?.name || '-'}</td>
                           <td className="p-2 text-right font-medium">NT$ {p.amount?.toLocaleString()}</td>
                           <td className="p-2"><Badge variant="outline">{p.status}</Badge></td>
-                          <td className="p-2 text-gray-500">{p.provider || '-'}</td>
-                          <td className="p-2 text-gray-500">{p.paidAt ? formatDate(p.paidAt) : '-'}</td>
+                          <td className="p-2 text-muted-foreground">{p.provider || '-'}</td>
+                          <td className="p-2 text-muted-foreground">{p.paidAt ? formatDate(p.paidAt) : '-'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-500">{payments ? '尚無付款記錄' : '載入中...'}</p>
+                <p className="text-center py-8 text-muted-foreground">{payments ? '尚無付款記錄' : '載入中...'}</p>
               )}
             </CardContent>
           </Card>
@@ -697,7 +697,7 @@ export default function AdminUserDetailPage() {
                     <div key={r.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{r.referred?.name || '未知'}</p>
-                        <p className="text-sm text-gray-500">{r.referred?.email}</p>
+                        <p className="text-sm text-muted-foreground">{r.referred?.email}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={r.status === 'COMPLETED' ? 'default' : 'outline'}>{r.status}</Badge>
@@ -707,7 +707,7 @@ export default function AdminUserDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-4 text-gray-500">{referrals ? '無推薦記錄' : '載入中...'}</p>
+                <p className="text-center py-4 text-muted-foreground">{referrals ? '無推薦記錄' : '載入中...'}</p>
               )}
             </CardContent>
           </Card>
@@ -720,14 +720,14 @@ export default function AdminUserDetailPage() {
                     <div key={r.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">推薦人：{r.referrer?.name || '未知'}</p>
-                        <p className="text-sm text-gray-500">{r.referrer?.email} · 推薦碼：{r.referralCode}</p>
+                        <p className="text-sm text-muted-foreground">{r.referrer?.email} · 推薦碼：{r.referralCode}</p>
                       </div>
                       <Badge variant={r.status === 'COMPLETED' ? 'default' : 'outline'}>{r.status}</Badge>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-4 text-gray-500">{referrals ? '未被推薦' : '載入中...'}</p>
+                <p className="text-center py-4 text-muted-foreground">{referrals ? '未被推薦' : '載入中...'}</p>
               )}
             </CardContent>
           </Card>
@@ -756,17 +756,17 @@ export default function AdminUserDetailPage() {
                     </thead>
                     <tbody>
                       {voters.data.map((v: any) => (
-                        <tr key={v.id} className="border-b hover:bg-gray-50">
+                        <tr key={v.id} className="border-b hover:bg-muted/50">
                           <td className="p-2 font-medium">{v.name}</td>
-                          <td className="p-2 text-gray-500">{v.phone || '-'}</td>
-                          <td className="p-2 text-gray-500">{v.campaignName}</td>
+                          <td className="p-2 text-muted-foreground">{v.phone || '-'}</td>
+                          <td className="p-2 text-muted-foreground">{v.campaignName}</td>
                           <td className="p-2">
                             <Badge variant="outline" style={{ borderColor: STANCE_COLORS[v.stance] || '#9ca3af', color: STANCE_COLORS[v.stance] || '#9ca3af' }}>
                               {getStanceLabel(v.stance)}
                             </Badge>
                           </td>
                           <td className="p-2 text-right">{v.contactCount || 0}</td>
-                          <td className="p-2 text-gray-500">{v.lastContactAt ? new Date(v.lastContactAt).toLocaleDateString('zh-TW') : '-'}</td>
+                          <td className="p-2 text-muted-foreground">{v.lastContactAt ? new Date(v.lastContactAt).toLocaleDateString('zh-TW') : '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -776,7 +776,7 @@ export default function AdminUserDetailPage() {
                   )}
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-500">{voters ? '尚無選民資料' : '載入中...'}</p>
+                <p className="text-center py-8 text-muted-foreground">{voters ? '尚無選民資料' : '載入中...'}</p>
               )}
             </CardContent>
           </Card>
@@ -804,7 +804,7 @@ export default function AdminUserDetailPage() {
                     </thead>
                     <tbody>
                       {contacts.data.map((c: any) => (
-                        <tr key={c.id} className="border-b hover:bg-gray-50">
+                        <tr key={c.id} className="border-b hover:bg-muted/50">
                           <td className="p-2 font-medium">{c.voter?.name || '-'}</td>
                           <td className="p-2">{getContactTypeLabel(c.type)}</td>
                           <td className="p-2">
@@ -812,8 +812,8 @@ export default function AdminUserDetailPage() {
                               {getContactOutcomeLabel(c.outcome)}
                             </Badge>
                           </td>
-                          <td className="p-2 text-gray-500">{c.campaignName}</td>
-                          <td className="p-2 text-gray-500">{c.contactDate ? new Date(c.contactDate).toLocaleDateString('zh-TW') : '-'}</td>
+                          <td className="p-2 text-muted-foreground">{c.campaignName}</td>
+                          <td className="p-2 text-muted-foreground">{c.contactDate ? new Date(c.contactDate).toLocaleDateString('zh-TW') : '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -823,7 +823,7 @@ export default function AdminUserDetailPage() {
                   )}
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-500">{contacts ? '尚無接觸紀錄' : '載入中...'}</p>
+                <p className="text-center py-8 text-muted-foreground">{contacts ? '尚無接觸紀錄' : '載入中...'}</p>
               )}
             </CardContent>
           </Card>
@@ -842,14 +842,14 @@ export default function AdminUserDetailPage() {
               {activity.length > 0 ? (
                 <div className="space-y-3">
                   {activity.map((log: any) => (
-                    <div key={log.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg">
+                    <div key={log.id} className="flex items-start gap-4 p-3 bg-muted/50 rounded-lg">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Activity className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm">
                           <span className="font-medium">{log.action}</span>
-                          <span className="text-gray-500"> · {log.entity}</span>
+                          <span className="text-muted-foreground"> · {log.entity}</span>
                         </p>
                         {log.details && (
                           <p className="text-xs text-gray-400 truncate">{JSON.stringify(log.details)}</p>
@@ -860,7 +860,7 @@ export default function AdminUserDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-500">尚無活動記錄</p>
+                <p className="text-center py-8 text-muted-foreground">尚無活動記錄</p>
               )}
             </CardContent>
           </Card>

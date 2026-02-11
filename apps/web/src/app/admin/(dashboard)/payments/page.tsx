@@ -51,12 +51,12 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  PROCESSING: 'bg-blue-100 text-blue-800',
-  COMPLETED: 'bg-green-100 text-green-800',
-  FAILED: 'bg-red-100 text-red-800',
-  REFUNDED: 'bg-gray-100 text-gray-800',
-  CANCELLED: 'bg-gray-100 text-gray-800',
+  PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+  PROCESSING: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+  COMPLETED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+  FAILED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+  REFUNDED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  CANCELLED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
 };
 
 export default function AdminPaymentsPage() {
@@ -146,8 +146,8 @@ export default function AdminPaymentsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">付款管理</h1>
-          <p className="text-gray-500">查看與管理付款記錄</p>
+          <h1 className="text-2xl font-bold text-foreground">付款管理</h1>
+          <p className="text-muted-foreground">查看與管理付款記錄</p>
         </div>
         <Button variant="outline" onClick={handleExport}>
           <Download className="h-4 w-4 mr-2" />
@@ -160,7 +160,7 @@ export default function AdminPaymentsPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">總營收</p>
+              <p className="text-sm text-muted-foreground">總營收</p>
               <p className="text-2xl font-bold text-green-600">
                 {formatCurrency(stats.totalRevenue || 0)}
               </p>
@@ -169,7 +169,7 @@ export default function AdminPaymentsPage() {
           {stats.byStatus?.map((s: any) => (
             <Card key={s.status}>
               <CardContent className="pt-4">
-                <p className="text-sm text-gray-500">{statusLabels[s.status] || s.status}</p>
+                <p className="text-sm text-muted-foreground">{statusLabels[s.status] || s.status}</p>
                 <p className="text-2xl font-bold">{s.count}</p>
                 <p className="text-xs text-gray-400">{formatCurrency(s.amount)}</p>
               </CardContent>
@@ -221,20 +221,20 @@ export default function AdminPaymentsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">使用者</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">方案</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">金額</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">支付方式</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">狀態</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">付款時間</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">操作</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">使用者</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">方案</th>
+                    <th className="text-right py-3 px-4 font-medium text-muted-foreground">金額</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">支付方式</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">狀態</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">付款時間</th>
+                    <th className="text-right py-3 px-4 font-medium text-muted-foreground">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50">
+                    <tr key={payment.id} className="hover:bg-muted/50">
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium">{payment.subscription.user.name}</p>

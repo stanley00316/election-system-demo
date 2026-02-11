@@ -86,9 +86,9 @@ interface LeaderboardEntry {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  PENDING: { label: '等待付款', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  EXPIRED: { label: '已過期', color: 'bg-gray-100 text-gray-800', icon: XCircle },
+  PENDING: { label: '等待付款', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200', icon: Clock },
+  COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200', icon: CheckCircle },
+  EXPIRED: { label: '已過期', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: XCircle },
 };
 
 export default function AdminReferralsPage() {
@@ -188,8 +188,8 @@ export default function AdminReferralsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">推薦管理</h1>
-          <p className="text-gray-500">追蹤所有推薦紀錄與獎勵發放</p>
+          <h1 className="text-2xl font-bold text-foreground">推薦管理</h1>
+          <p className="text-muted-foreground">追蹤所有推薦紀錄與獎勵發放</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => {
@@ -224,7 +224,7 @@ export default function AdminReferralsPage() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">總推薦數</p>
+                  <p className="text-sm text-muted-foreground">總推薦數</p>
                   <p className="text-2xl font-bold">{stats.totalReferrals}</p>
                 </div>
                 <Users className="h-8 w-8 text-gray-400" />
@@ -235,7 +235,7 @@ export default function AdminReferralsPage() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">已完成</p>
+                  <p className="text-sm text-muted-foreground">已完成</p>
                   <p className="text-2xl font-bold text-green-600">{stats.completedReferrals}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-400" />
@@ -246,7 +246,7 @@ export default function AdminReferralsPage() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">轉換率</p>
+                  <p className="text-sm text-muted-foreground">轉換率</p>
                   <p className="text-2xl font-bold text-blue-600">{stats.conversionRate}%</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-blue-400" />
@@ -257,7 +257,7 @@ export default function AdminReferralsPage() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">發放獎勵</p>
+                  <p className="text-sm text-muted-foreground">發放獎勵</p>
                   <p className="text-2xl font-bold text-purple-600">{stats.totalRewardMonths} 個月</p>
                 </div>
                 <Award className="h-8 w-8 text-purple-400" />
@@ -270,27 +270,27 @@ export default function AdminReferralsPage() {
       {/* Secondary Stats */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gray-50">
+          <Card className="bg-muted/50">
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">等待中</p>
+              <p className="text-sm text-muted-foreground">等待中</p>
               <p className="text-xl font-semibold text-yellow-600">{stats.pendingReferrals}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gray-50">
+          <Card className="bg-muted/50">
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">已過期</p>
+              <p className="text-sm text-muted-foreground">已過期</p>
               <p className="text-xl font-semibold text-gray-600">{stats.expiredReferrals}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gray-50">
+          <Card className="bg-muted/50">
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">本月推薦</p>
+              <p className="text-sm text-muted-foreground">本月推薦</p>
               <p className="text-xl font-semibold">{stats.thisMonthReferrals}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gray-50">
+          <Card className="bg-muted/50">
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">本月完成</p>
+              <p className="text-sm text-muted-foreground">本月完成</p>
               <p className="text-xl font-semibold text-green-600">{stats.thisMonthCompleted}</p>
             </CardContent>
           </Card>
@@ -313,7 +313,7 @@ export default function AdminReferralsPage() {
                 {leaderboard.map((entry) => (
                   <div
                     key={entry.user.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <span
@@ -337,13 +337,13 @@ export default function AdminReferralsPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-green-600">{entry.completedReferrals} 人</p>
-                      <p className="text-xs text-gray-500">+{entry.totalRewardMonths} 個月</p>
+                      <p className="text-xs text-muted-foreground">+{entry.totalRewardMonths} 個月</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-center text-gray-500 py-4">尚無資料</p>
+              <p className="text-center text-muted-foreground py-4">尚無資料</p>
             )}
           </CardContent>
         </Card>
@@ -419,7 +419,7 @@ export default function AdminReferralsPage() {
                               </Avatar>
                               <div>
                                 <p className="font-medium">{referral.referrer.name}</p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-muted-foreground">
                                   {referral.referrer.email || referral.referrer.phone || '-'}
                                 </p>
                               </div>
@@ -435,14 +435,14 @@ export default function AdminReferralsPage() {
                               </Avatar>
                               <div>
                                 <p className="font-medium">{referral.referred.name}</p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-muted-foreground">
                                   {referral.referred.email || referral.referred.phone || '-'}
                                 </p>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                            <code className="bg-muted px-2 py-1 rounded text-sm">
                               {referral.referralCode}
                             </code>
                           </TableCell>
@@ -461,7 +461,7 @@ export default function AdminReferralsPage() {
                               <span className="text-gray-400">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-gray-500">
+                          <TableCell className="text-muted-foreground">
                             {formatDateTime(referral.createdAt)}
                           </TableCell>
                         </TableRow>
@@ -473,7 +473,7 @@ export default function AdminReferralsPage() {
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       共 {pagination.total} 筆，第 {pagination.page} / {pagination.totalPages} 頁
                     </p>
                     <div className="flex gap-2">
@@ -500,7 +500,7 @@ export default function AdminReferralsPage() {
             ) : (
               <div className="text-center py-8">
                 <Gift className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">尚無推薦紀錄</p>
+                <p className="text-muted-foreground">尚無推薦紀錄</p>
               </div>
             )}
           </CardContent>

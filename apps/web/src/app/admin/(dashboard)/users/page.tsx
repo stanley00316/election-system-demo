@@ -136,8 +136,8 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">使用者管理</h1>
-          <p className="text-gray-500">管理系統使用者帳號</p>
+          <h1 className="text-2xl font-bold text-foreground">使用者管理</h1>
+          <p className="text-muted-foreground">管理系統使用者帳號</p>
         </div>
         <Button variant="outline" onClick={() => {
           const isDemoMode = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
@@ -161,25 +161,25 @@ export default function AdminUsersPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">總使用者</p>
+              <p className="text-sm text-muted-foreground">總使用者</p>
               <p className="text-2xl font-bold">{stats.totalUsers}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">活躍使用者</p>
+              <p className="text-sm text-muted-foreground">活躍使用者</p>
               <p className="text-2xl font-bold text-green-600">{stats.activeUsers}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">試用中</p>
+              <p className="text-sm text-muted-foreground">試用中</p>
               <p className="text-2xl font-bold text-blue-600">{stats.trialUsers}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">付費用戶</p>
+              <p className="text-sm text-muted-foreground">付費用戶</p>
               <p className="text-2xl font-bold text-purple-600">{stats.paidUsers}</p>
             </CardContent>
           </Card>
@@ -242,20 +242,20 @@ export default function AdminUsersPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">使用者</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">聯絡資訊</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">選情指標</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">訂閱</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">狀態</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">註冊日期</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">操作</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">使用者</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">聯絡資訊</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">選情指標</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">訂閱</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">狀態</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">註冊日期</th>
+                    <th className="text-right py-3 px-4 font-medium text-muted-foreground">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
+                    <tr key={user.id} className="hover:bg-muted/50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           {user.avatarUrl ? (

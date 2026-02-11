@@ -51,11 +51,11 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  TRIAL: 'bg-blue-100 text-blue-800',
-  ACTIVE: 'bg-green-100 text-green-800',
-  PAST_DUE: 'bg-yellow-100 text-yellow-800',
-  CANCELLED: 'bg-gray-100 text-gray-800',
-  EXPIRED: 'bg-red-100 text-red-800',
+  TRIAL: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+  ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+  PAST_DUE: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+  CANCELLED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  EXPIRED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
 };
 
 export default function AdminSubscriptionsPage() {
@@ -166,8 +166,8 @@ export default function AdminSubscriptionsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">訂閱管理</h1>
-          <p className="text-gray-500">管理使用者訂閱與方案</p>
+          <h1 className="text-2xl font-bold text-foreground">訂閱管理</h1>
+          <p className="text-muted-foreground">管理使用者訂閱與方案</p>
         </div>
         <Button variant="outline" onClick={() => {
           const isDemoMode = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
@@ -186,31 +186,31 @@ export default function AdminSubscriptionsPage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">試用中</p>
+              <p className="text-sm text-muted-foreground">試用中</p>
               <p className="text-2xl font-bold text-blue-600">{stats.byStatus?.trial || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">訂閱中</p>
+              <p className="text-sm text-muted-foreground">訂閱中</p>
               <p className="text-2xl font-bold text-green-600">{stats.byStatus?.active || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">已取消</p>
+              <p className="text-sm text-muted-foreground">已取消</p>
               <p className="text-2xl font-bold text-gray-600">{stats.byStatus?.cancelled || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">已過期</p>
+              <p className="text-sm text-muted-foreground">已過期</p>
               <p className="text-2xl font-bold text-red-600">{stats.byStatus?.expired || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-500">即將到期</p>
+              <p className="text-sm text-muted-foreground">即將到期</p>
               <p className="text-2xl font-bold text-yellow-600">{stats.expiringIn7Days || 0}</p>
             </CardContent>
           </Card>
@@ -261,19 +261,19 @@ export default function AdminSubscriptionsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">使用者</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">方案</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">狀態</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">到期日</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">剩餘天數</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">操作</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">使用者</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">方案</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">狀態</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">到期日</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">剩餘天數</th>
+                    <th className="text-right py-3 px-4 font-medium text-muted-foreground">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {subscriptions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-gray-50">
+                    <tr key={sub.id} className="hover:bg-muted/50">
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium">{sub.user.name}</p>

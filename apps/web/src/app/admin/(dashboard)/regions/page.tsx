@@ -142,7 +142,7 @@ export default function AdminRegionsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">地區總覽</h1>
+          <h1 className="text-2xl font-bold text-foreground">地區總覽</h1>
           <p className="text-gray-500">各地區所有使用者的選情數據一覽</p>
         </div>
         <Button variant="outline" onClick={handleExport}>
@@ -288,7 +288,7 @@ export default function AdminRegionsPage() {
                               const userCampaignKey = `${user.userId}-${campaign.campaignId}`;
                               return (
                                 <React.Fragment key={userCampaignKey}>
-                                  <tr className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => toggleUser(userCampaignKey)}>
+                                  <tr className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => toggleUser(userCampaignKey)}>
                                     <td className="p-2">
                                       {expandedUsers.has(userCampaignKey) ? (
                                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -355,7 +355,7 @@ export default function AdminRegionsPage() {
                                   {/* 展開：支持度分佈迷你圓餅圖 */}
                                   {expandedUsers.has(userCampaignKey) && campaign.stanceDistribution && (
                                     <tr>
-                                      <td colSpan={9} className="p-4 bg-gray-50">
+                                      <td colSpan={9} className="p-4 bg-muted/50">
                                         <div className="flex items-center gap-8">
                                           <div className="w-48 h-48">
                                             <ResponsiveContainer width="100%" height="100%">
