@@ -102,6 +102,40 @@ export class HealthController {
     return results;
   }
 
+  @Get('fix-promoter')
+  @ApiOperation({ summary: '為超級管理員建立推廣人員記錄（臨時）' })
+  async fixPromoter() {
+    try {
+      // 找到超級管理員
+      const superAdmin = await this.prisma.user.findFirst({
+        where: { isSuperAdmin: true },
+      });
+      if (!superAdmin) return { error: '找不到超級管理員' };
+
+      // 檢查是否已有推廣人員記錄
+      const existing = await this.prisma.promoter.findUnique({
+        where: { userId: superAdmin.id },
+      });
+      if (existing) return { message: '推廣人員記錄已存在', promoter: existing };
+
+      // 建立推廣人員記錄
+      const promoter = await this.prisma.promoter.create({
+        data: {
+          userId: superAdmin.id,
+          name: superAdmin.name,
+          status: 'APPROVED',
+          isActive: true,
+          type: 'INTERNAL',
+          referralCode: `ADMIN_${superAdmin.id.substring(0, 8).toUpperCase()}`,
+          approvedAt: new Date(),
+        },
+      });
+      return { message: '推廣人員記錄已建立', promoter };
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }
+
   private async checkDatabase(): Promise<boolean> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
