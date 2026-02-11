@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth';
 import { promoterSelfApi, isDemoMode } from '@/lib/api';
+import { DemoTip } from '@/components/DemoTip';
 import {
   LayoutDashboard,
   Users,
@@ -225,6 +226,9 @@ export default function PromoterDashboardLayout({
             </Button>
           )}
         </header>
+
+        {/* Demo mode tip */}
+        <DemoTip />
 
         {/* Page content */}
         <main className="p-4 md:p-6 pb-24 lg:pb-6">{children}</main>

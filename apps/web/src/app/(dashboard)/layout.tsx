@@ -43,6 +43,7 @@ import { useTheme } from 'next-themes';
 import { BottomNavBar } from '@/components/navigation';
 import { SubscriptionBanner } from '@/components/subscription';
 import { BackButton, getParentPath } from '@/components/common/BackButton';
+import { DemoTip } from '@/components/DemoTip';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: '管理員',
@@ -378,6 +379,9 @@ export default function DashboardLayout({
             </Button>
           )}
         </header>
+
+        {/* Demo mode tip */}
+        <DemoTip />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">

@@ -28,6 +28,7 @@ import { authApi, isDemoMode } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { SimpleBottomNavBar, type SimpleNavItem } from '@/components/navigation';
 import { BackButton, getParentPath } from '@/components/common/BackButton';
+import { DemoTip } from '@/components/DemoTip';
 
 const navigation = [
   { name: '總覽', href: '/admin', icon: LayoutDashboard },
@@ -323,6 +324,9 @@ export default function AdminDashboardLayout({
             </Button>
           )}
         </header>
+
+        {/* Demo mode tip */}
+        <DemoTip />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-muted/30 pb-20 lg:pb-0">
