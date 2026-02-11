@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { authApi } from '@/lib/api';
+import { authApi, isDemoMode } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { SimpleBottomNavBar, type SimpleNavItem } from '@/components/navigation';
 import { BackButton, getParentPath } from '@/components/common/BackButton';
@@ -87,7 +87,11 @@ export default function AdminDashboardLayout({
 
       // 取得使用者資料並檢查是否為管理員
       const userData = await authApi.getMe();
-      
+
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:checkAuth',message:'getMe result',data:{isAdmin:userData.isAdmin,isSuperAdmin:userData.isSuperAdmin,userId:userData.id,name:userData.name,hasPromoter:!!userData.promoter},timestamp:Date.now(),hypothesisId:'H1-H2-H4'})}).catch(()=>{});
+      // #endregion
+
       if (!userData.isAdmin) {
         // 不是管理員，導向登入頁
         router.push('/admin/login?error=not_admin');
@@ -95,6 +99,10 @@ export default function AdminDashboardLayout({
       }
 
       setAdmin(userData);
+
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:afterSetAdmin',message:'admin state set',data:{isDemoMode,isSuperAdmin:userData.isSuperAdmin,allKeys:Object.keys(userData)},timestamp:Date.now(),hypothesisId:'H4-H5'})}).catch(()=>{});
+      // #endregion
 
       // 將 isSuperAdmin 和 promoter 同步存入 Auth Store
       const currentUser = useAuthStore.getState().user;
@@ -197,6 +205,7 @@ export default function AdminDashboardLayout({
             </ul>
 
             {/* 超級管理者專用選單 */}
+            {(() => { fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:render',message:'superAdmin check',data:{adminExists:!!admin,isSuperAdmin:admin?.isSuperAdmin,showSection:!!admin?.isSuperAdmin},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{}); return null; })()}
             {admin?.isSuperAdmin && (
               <div className="mt-4 pt-4 border-t border-gray-800">
                 <p className="px-3 mb-2 text-xs text-gray-500 uppercase tracking-wider">

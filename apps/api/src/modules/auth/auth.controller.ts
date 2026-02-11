@@ -106,10 +106,13 @@ export class AuthController {
       DATABASE_URL: this.configService.get('DATABASE_URL') ? 'SET' : 'MISSING',
     };
 
-    // 2. 測試 Prisma 查詢
+    // 2. 測試 Prisma 查詢 + 列出使用者
     try {
-      const userCount = await this.authService['prisma'].user.count();
-      results.database = { status: 'OK', userCount };
+      const users = await this.authService['prisma'].user.findMany({
+        select: { id: true, name: true, isAdmin: true, isSuperAdmin: true, lineUserId: true },
+        take: 10,
+      });
+      results.database = { status: 'OK', userCount: users.length, users };
     } catch (error: any) {
       results.database = { status: 'ERROR', message: error.message };
     }
