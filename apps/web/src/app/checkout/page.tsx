@@ -83,7 +83,7 @@ function CheckoutContent() {
 
   const planId = searchParams.get('planId');
   const sessionId = searchParams.get('session_id');
-  const paymentId = searchParams.get('payment');
+  const paymentId = searchParams.get('payment_id');
   const cityParam = searchParams.get('city');
   const electionTypeParam = searchParams.get('electionType');
 
@@ -179,7 +179,7 @@ function CheckoutContent() {
       const result = await paymentsApi.createPayment({
         subscriptionId: subscription.id,
         provider: selectedProvider,
-        returnUrl: `${window.location.origin}/checkout?payment=PAYMENT_ID`,
+        returnUrl: `${window.location.origin}/checkout`,
         clientBackUrl: `${window.location.origin}/pricing`,
       });
 
