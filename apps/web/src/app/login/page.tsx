@@ -296,17 +296,6 @@ function LoginContent() {
         borderColor: 'border-emerald-200 dark:border-emerald-800',
         iconBg: 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400',
       },
-      {
-        role: 'admin' as const,
-        icon: Shield,
-        title: '系統管理員',
-        desc: '使用者管理、訂閱方案、營收數據',
-        gradient: 'from-violet-500 to-purple-600',
-        hoverGradient: 'hover:from-violet-600 hover:to-purple-700',
-        bgLight: 'bg-violet-50 dark:bg-violet-950/40',
-        borderColor: 'border-violet-200 dark:border-violet-800',
-        iconBg: 'bg-violet-100 dark:bg-violet-900/60 text-violet-600 dark:text-violet-400',
-      },
     ];
 
     const stats = [
@@ -428,7 +417,7 @@ function LoginContent() {
               從不同視角了解系統功能
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             {roleEntries.map((entry) => (
               <Card
                 key={entry.role}
