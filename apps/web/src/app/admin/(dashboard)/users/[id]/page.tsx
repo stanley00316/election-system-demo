@@ -264,7 +264,7 @@ export default function AdminUserDetailPage() {
                   </Badge>
                 )}
               </div>
-              <div className="mt-2 space-y-1 text-gray-600">
+              <div className="mt-2 space-y-1 text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   <span>{user.email || '未設定'}</span>

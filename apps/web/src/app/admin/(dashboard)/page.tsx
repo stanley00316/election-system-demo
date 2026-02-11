@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
                   {(overview?.activeSubscriptions ?? 0).toLocaleString()}
                 </p>
                 <div className="flex items-center mt-2 text-sm">
-                  <span className="text-gray-500">
+                  <span className="text-muted-foreground">
                     轉換率 {overview?.conversionRate?.toFixed(1) || 0}%
                   </span>
                 </div>
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
                   {formatCurrency(overview?.arpu || 0)}
                 </p>
                 <div className="flex items-center mt-2 text-sm">
-                  <span className="text-gray-500">
+                  <span className="text-muted-foreground">
                     流失率 {overview?.churnRate?.toFixed(1) || 0}%
                   </span>
                 </div>
@@ -208,14 +208,14 @@ export default function AdminDashboardPage() {
               {recentActivity?.newUsers?.slice(0, 5).map((user) => (
                 <div key={user.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                       <span className="text-sm font-medium">
                         {user.name?.charAt(0) || '?'}
                       </span>
                     </div>
                     <div>
                       <p className="text-sm font-medium">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.email || '-'}</p>
+                      <p className="text-xs text-muted-foreground">{user.email || '-'}</p>
                     </div>
                   </div>
                   <span className="text-xs text-gray-400">
@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
                 </div>
               ))}
               {(!recentActivity?.newUsers || recentActivity.newUsers.length === 0) && (
-                <p className="text-sm text-gray-500 text-center py-4">暫無資料</p>
+                <p className="text-sm text-muted-foreground text-center py-4">暫無資料</p>
               )}
             </div>
             <Button variant="ghost" className="w-full mt-4" asChild>
@@ -250,7 +250,7 @@ export default function AdminDashboardPage() {
                 <div key={sub.id} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">{sub.user.name}</p>
-                    <p className="text-xs text-gray-500">{sub.plan.name}</p>
+                    <p className="text-xs text-muted-foreground">{sub.plan.name}</p>
                   </div>
                   <Badge
                     variant={sub.status === 'ACTIVE' ? 'default' : 'secondary'}
@@ -260,7 +260,7 @@ export default function AdminDashboardPage() {
                 </div>
               ))}
               {(!recentActivity?.newSubscriptions || recentActivity.newSubscriptions.length === 0) && (
-                <p className="text-sm text-gray-500 text-center py-4">暫無資料</p>
+                <p className="text-sm text-muted-foreground text-center py-4">暫無資料</p>
               )}
             </div>
             <Button variant="ghost" className="w-full mt-4" asChild>
@@ -288,7 +288,7 @@ export default function AdminDashboardPage() {
                     <p className="text-sm font-medium">
                       {payment.subscription.user.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {formatDate(payment.paidAt)}
                     </p>
                   </div>
@@ -298,7 +298,7 @@ export default function AdminDashboardPage() {
                 </div>
               ))}
               {(!recentActivity?.recentPayments || recentActivity.recentPayments.length === 0) && (
-                <p className="text-sm text-gray-500 text-center py-4">暫無資料</p>
+                <p className="text-sm text-muted-foreground text-center py-4">暫無資料</p>
               )}
             </div>
             <Button variant="ghost" className="w-full mt-4" asChild>

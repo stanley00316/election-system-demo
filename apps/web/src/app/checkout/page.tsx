@@ -224,7 +224,7 @@ function CheckoutContent() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {sessionId ? '驗證付款中...' : '載入中...'}
           </p>
         </div>
@@ -237,7 +237,7 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* 返回按鈕 */}
         <BackButton href="/pricing" label="返回方案選擇" className="mb-6" />
@@ -251,18 +251,18 @@ function CheckoutContent() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">方案</span>
+                  <span className="text-muted-foreground">方案</span>
                   <span className="font-medium">{plan.name}</span>
                 </div>
                 {(plan.city || cityParam) && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">選區</span>
+                    <span className="text-muted-foreground">選區</span>
                     <span className="font-medium">{plan.city || cityParam}</span>
                   </div>
                 )}
                 {(plan.category || electionTypeParam) && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">選舉類型</span>
+                    <span className="text-muted-foreground">選舉類型</span>
                     <span className="font-medium">
                       {plan.category 
                         ? categoryLabels[plan.category] || plan.category
@@ -275,14 +275,14 @@ function CheckoutContent() {
                 )}
                 {plan.regionLevel && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">戰區</span>
+                    <span className="text-muted-foreground">戰區</span>
                     <span className="font-medium text-primary">
                       {regionLevelLabels[plan.regionLevel] || `${plan.regionLevel}級`}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-600">計費週期</span>
+                  <span className="text-muted-foreground">計費週期</span>
                   <span className="font-medium">
                     {plan.interval === 'YEAR' ? '年繳' : '月繳'}
                   </span>
@@ -299,16 +299,16 @@ function CheckoutContent() {
                 <div className="mt-6 pt-6 border-t">
                   <h4 className="font-medium mb-3">包含功能：</h4>
                   <ul className="space-y-2">
-                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="h-4 w-4 text-green-500" />
                       {plan.voterLimit ? `${plan.voterLimit} 位選民` : '無限選民'}
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="h-4 w-4 text-green-500" />
                       {plan.teamLimit ? `${plan.teamLimit} 位團隊成員` : '無限團隊成員'}
                     </li>
                     {(plan.features as string[]).map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                      <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Check className="h-4 w-4 text-green-500" />
                         {feature}
                       </li>
@@ -341,23 +341,23 @@ function CheckoutContent() {
                         className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-colors ${
                           selectedProvider === provider.id
                             ? 'border-primary bg-primary/5'
-                            : 'border-gray-200 hover:border-gray-300'
+                            : 'border-border hover:border-border/80'
                         }`}
                       >
                         <RadioGroupItem value={provider.id} id={provider.id} />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <provider.icon className="h-5 w-5 text-gray-600" />
+                            <provider.icon className="h-5 w-5 text-muted-foreground" />
                             <span className="font-medium">{provider.name}</span>
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             {provider.description}
                           </p>
                           <div className="flex gap-2 mt-2">
                             {provider.methods.map((method) => (
                               <span
                                 key={method}
-                                className="text-xs px-2 py-1 bg-gray-100 rounded"
+                                className="text-xs px-2 py-1 bg-muted rounded"
                               >
                                 {method}
                               </span>
@@ -370,9 +370,9 @@ function CheckoutContent() {
                 </RadioGroup>
 
                 {/* 安全提示 */}
-                <div className="flex items-center gap-2 mt-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mt-6 p-4 bg-muted/50 rounded-lg">
                   <Shield className="h-5 w-5 text-green-600" />
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     所有交易均採用 SSL 加密傳輸，確保您的付款資訊安全
                   </p>
                 </div>
@@ -394,7 +394,7 @@ function CheckoutContent() {
                   )}
                 </Button>
 
-                <p className="text-xs text-gray-500 text-center mt-4">
+                <p className="text-xs text-muted-foreground text-center mt-4">
                   點擊付款即表示您同意我們的服務條款與隱私政策
                 </p>
               </CardContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Gift,
   Copy,
@@ -52,6 +52,15 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 
 export default function ReferralPage() {
   const { toast } = useToast();
+  // #region agent log
+  useEffect(() => {
+    const htmlEl = document.documentElement;
+    const theme = htmlEl.classList.contains('dark') ? 'dark' : 'light';
+    const style = htmlEl.getAttribute('style') || 'none';
+    const dataTheme = htmlEl.getAttribute('data-theme') || 'none';
+    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'referral/page.tsx:mount',message:'Theme state on referral page',data:{theme,classList:htmlEl.className,style,dataTheme,bodyBg:window.getComputedStyle(document.body).backgroundColor},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  }, []);
+  // #endregion
   const [referralCode, setReferralCode] = useState<string>('');
   const [shareUrl, setShareUrl] = useState<string>('');
   const [stats, setStats] = useState<ReferralStats | null>(null);
@@ -210,7 +219,7 @@ export default function ReferralPage() {
                   <p className="text-sm text-muted-foreground">總推薦人數</p>
                   <p className="text-2xl font-bold">{stats.totalReferrals}</p>
                 </div>
-                <Users className="h-8 w-8 text-gray-400" />
+                <Users className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>

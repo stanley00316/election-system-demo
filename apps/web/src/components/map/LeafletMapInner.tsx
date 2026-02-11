@@ -78,7 +78,7 @@ function VoterPopup({ voter }: { voter: Voter }) {
 
       <div className="mt-2 flex gap-1">
         <Link href={`/dashboard/voters/${voter.id}`}>
-          <button className="text-xs px-2 py-1 border rounded hover:bg-gray-100">
+          <button className="text-xs px-2 py-1 border rounded hover:bg-muted">
             查看詳情
           </button>
         </Link>

@@ -232,10 +232,10 @@ function PricingPageContent() {
 
         {/* 標題區 */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
             選擇適合您的方案
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             全台戰區分級定價，依據「戰區強度 × 人口比例」量身訂製
           </p>
         </div>
@@ -303,11 +303,11 @@ function PricingPageContent() {
         {/* 方案顯示區 */}
         {!selectedCity || !selectedElectionType ? (
           <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <ChevronDown className="h-8 w-8 text-gray-400" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+              <ChevronDown className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">請選擇您的選區</h3>
-            <p className="text-gray-500">
+            <h3 className="text-lg font-medium text-foreground mb-2">請選擇您的選區</h3>
+            <p className="text-muted-foreground">
               選擇縣市和選舉類型後，將顯示專屬定價方案
             </p>
           </div>
@@ -319,7 +319,7 @@ function PricingPageContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* 免費試用卡片 */}
             {trialPlan && (
-              <Card className="border-gray-200">
+              <Card className="border-border">
                 <CardHeader className="text-center pb-2">
                   <div className="flex justify-center mb-2">
                     <Zap className="h-8 w-8 text-primary" />
@@ -329,12 +329,12 @@ function PricingPageContent() {
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="text-center mb-6">
-                    <span className="text-4xl font-bold text-gray-900">免費</span>
-                    <p className="text-sm text-gray-500 mt-1">7 天試用期</p>
+                    <span className="text-4xl font-bold text-foreground">免費</span>
+                    <p className="text-sm text-muted-foreground mt-1">7 天試用期</p>
                   </div>
                   <ul className="space-y-3">
                     {(trialPlan.features as string[]).map((feature, index) => (
-                      <li key={index} className="flex items-center gap-2 text-gray-700">
+                      <li key={index} className="flex items-center gap-2 text-muted-foreground">
                         <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
@@ -382,20 +382,20 @@ function PricingPageContent() {
               </CardHeader>
               <CardContent className="pt-4">
                 <div className="text-center mb-6">
-                  <span className="text-4xl font-bold text-gray-900">
+                  <span className="text-4xl font-bold text-foreground">
                     {formatPrice(currentPlan.price)}
                   </span>
-                  <span className="text-gray-500">/月</span>
+                  <span className="text-muted-foreground">/月</span>
                   <p className="text-sm text-green-600 mt-1">
                     年繳 {formatPrice(currentPlan.price * 10)} 享 83 折
                   </p>
                 </div>
                 <ul className="space-y-3">
-                  <li className="flex items-center gap-2 text-gray-700">
+                  <li className="flex items-center gap-2 text-muted-foreground">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                     <span>無限選民數量</span>
                   </li>
-                  <li className="flex items-center gap-2 text-gray-700">
+                  <li className="flex items-center gap-2 text-muted-foreground">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                     <span>
                       {currentPlan.teamLimit
@@ -404,7 +404,7 @@ function PricingPageContent() {
                     </span>
                   </li>
                   {(currentPlan.features as string[]).map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2 text-gray-700">
+                    <li key={index} className="flex items-center gap-2 text-muted-foreground">
                       <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
@@ -424,7 +424,7 @@ function PricingPageContent() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               找不到符合條件的方案，請嘗試其他選擇
             </p>
           </div>

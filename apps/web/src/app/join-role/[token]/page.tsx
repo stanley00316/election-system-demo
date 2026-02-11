@@ -180,7 +180,7 @@ export default function JoinRolePage() {
   // 載入中
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -189,11 +189,11 @@ export default function JoinRolePage() {
   // 無效 token
   if (status === 'invalid' || !config) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="p-4 rounded-full bg-red-100">
+              <div className="p-4 rounded-full bg-red-100 dark:bg-red-900/30">
                 <AlertTriangle className="h-12 w-12 text-red-600" />
               </div>
               <h1 className="text-xl font-bold">無效的邀請連結</h1>
@@ -213,11 +213,11 @@ export default function JoinRolePage() {
   // 已過期
   if (status === 'expired') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="p-4 rounded-full bg-yellow-100">
+              <div className="p-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
                 <Clock className="h-12 w-12 text-yellow-600" />
               </div>
               <h1 className="text-xl font-bold">邀請已過期</h1>
@@ -237,7 +237,7 @@ export default function JoinRolePage() {
   // 領取中
   if (status === 'claiming') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
@@ -255,11 +255,11 @@ export default function JoinRolePage() {
   if (status === 'claimed' && claimResult) {
     const Icon = config.icon;
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-6">
-              <div className="p-4 rounded-full bg-green-100">
+              <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/30">
                 <CheckCircle className="h-12 w-12 text-green-600" />
               </div>
               <div>

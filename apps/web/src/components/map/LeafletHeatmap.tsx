@@ -17,7 +17,7 @@ const LeafletHeatmapInner = dynamic<LeafletHeatmapInnerProps>(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <div className="w-full h-full flex items-center justify-center bg-muted">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     ),
@@ -56,7 +56,7 @@ export default function LeafletHeatmap({ className = 'w-full h-[500px]' }: Leafl
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <div className="w-full h-full flex items-center justify-center bg-muted">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function LeafletHeatmap({ className = 'w-full h-[500px]' }: Leafl
   if (voters.length === 0) {
     return (
       <div className={className}>
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 text-gray-500">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-muted text-muted-foreground">
           <p className="mb-2">沒有選民有地理座標資料</p>
           <p className="text-sm">請確保選民資料有填寫地址</p>
         </div>

@@ -94,7 +94,7 @@ export default function PromoterDashboardLayout({
   if (!isAuthorized) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-muted/30 dark:bg-background">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -105,7 +105,7 @@ export default function PromoterDashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r transform transition-transform lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -195,7 +195,7 @@ export default function PromoterDashboardLayout({
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b px-4 py-3 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-card border-b px-4 py-3 flex items-center gap-4">
           {(() => {
             const parentPath = getParentPath(pathname, '/promoter/dashboard');
             return parentPath ? (

@@ -162,7 +162,7 @@ export default function PromoterShareLinksPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded truncate">
+                      <code className="text-xs font-mono bg-muted px-2 py-1 rounded truncate">
                         {baseUrl}/s/{link.code}
                       </code>
                       <Button

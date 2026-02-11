@@ -199,14 +199,14 @@ export default function BillingPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <Calendar className="h-5 w-5 text-gray-400" />
+                <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">計費週期開始</p>
                   <p className="font-medium">{formatDate(subscription.currentPeriodStart)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <Clock className="h-5 w-5 text-gray-400" />
+                <Clock className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">
                     {subscription.status === 'TRIAL' ? '試用到期日' : '下次扣款日'}
@@ -215,7 +215,7 @@ export default function BillingPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <CreditCard className="h-5 w-5 text-gray-400" />
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">方案限制</p>
                   <p className="font-medium">

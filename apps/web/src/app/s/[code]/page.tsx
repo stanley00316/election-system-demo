@@ -61,7 +61,7 @@ export default function ShareLinkPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -69,14 +69,14 @@ export default function ShareLinkPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
               <Share2 className="h-8 w-8 text-red-500" />
             </div>
             <h2 className="text-xl font-bold mb-2">連結無效</h2>
-            <p className="text-gray-500 mb-6">{error}</p>
+            <p className="text-muted-foreground mb-6">{error}</p>
             <Button asChild>
               <Link href="/">返回首頁</Link>
             </Button>
@@ -87,16 +87,16 @@ export default function ShareLinkPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-background dark:from-blue-950/20 dark:to-background">
       {/* Hero Section */}
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
         <Badge variant="secondary" className="mb-4">
           由 {shareLinkData?.promoter?.name} 推薦
         </Badge>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-4xl font-bold text-foreground mb-4">
           選情系統 - 選民關係管理平台
         </h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
           全方位的選情管理工具，助您掌握選情動態、有效管理選民關係、提升勝選機率。
         </p>
         <div className="flex justify-center gap-4">
@@ -114,7 +114,7 @@ export default function ShareLinkPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
+              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-2">
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
               <CardTitle>選民管理</CardTitle>
@@ -125,7 +125,7 @@ export default function ShareLinkPage() {
           </Card>
           <Card>
             <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center mb-2">
+              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-2">
                 <BarChart3 className="h-6 w-6 text-green-600" />
               </div>
               <CardTitle>數據分析</CardTitle>
@@ -136,7 +136,7 @@ export default function ShareLinkPage() {
           </Card>
           <Card>
             <CardHeader>
-              <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
+              <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-2">
                 <Shield className="h-6 w-6 text-purple-600" />
               </div>
               <CardTitle>團隊協作</CardTitle>

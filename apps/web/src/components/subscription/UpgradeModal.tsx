@@ -47,7 +47,7 @@ export function UpgradeModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-muted/50 rounded-lg p-4">
             <h4 className="font-medium mb-3">升級後您可以：</h4>
             <ul className="space-y-2">
               <li className="flex items-center gap-2 text-sm">

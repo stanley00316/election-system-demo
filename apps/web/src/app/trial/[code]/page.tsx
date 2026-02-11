@@ -68,7 +68,7 @@ export default function TrialActivationPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -76,17 +76,17 @@ export default function TrialActivationPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
             <h2 className="text-xl font-bold mb-2">試用已啟用！</h2>
-            <p className="text-gray-500 mb-2">
+            <p className="text-muted-foreground mb-2">
               您已獲得 {trialInfo?.trialDays} 天的免費試用。
             </p>
-            <p className="text-sm text-gray-400 mb-6">
+            <p className="text-sm text-muted-foreground/70 mb-6">
               所有功能已開放，請盡情體驗選情系統的完整功能。
             </p>
             <Button asChild className="w-full">
@@ -102,14 +102,14 @@ export default function TrialActivationPage() {
 
   if (error && !trialInfo) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
               <XCircle className="h-8 w-8 text-red-500" />
             </div>
             <h2 className="text-xl font-bold mb-2">邀請碼無效</h2>
-            <p className="text-gray-500 mb-6">{error}</p>
+            <p className="text-muted-foreground mb-6">{error}</p>
             <Button asChild>
               <Link href="/">返回首頁</Link>
             </Button>
@@ -120,26 +120,26 @@ export default function TrialActivationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 dark:to-background flex items-center justify-center px-4">
       <Card className="max-w-lg w-full">
         <CardContent className="pt-8 pb-8">
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
               <Gift className="h-8 w-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">
+            <h1 className="text-2xl font-bold text-foreground mb-1">
               免費試用邀請
             </h1>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               來自 <span className="font-medium">{trialInfo?.promoterName}</span> 的邀請
             </p>
           </div>
 
           {/* Trial Info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
+          <div className="bg-muted/50 rounded-lg p-4 mb-6 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>試用天數</span>
               </div>
@@ -147,12 +147,12 @@ export default function TrialActivationPage() {
             </div>
             {trialInfo?.plan && (
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">方案</span>
+                <span className="text-muted-foreground">方案</span>
                 <Badge variant="secondary">{trialInfo.plan.name}</Badge>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">狀態</span>
+                <span className="text-muted-foreground">狀態</span>
               <Badge variant={trialInfo?.isAvailable ? 'default' : 'destructive'}>
                 {trialInfo?.isAvailable ? '可使用' : '已失效'}
               </Badge>
@@ -161,10 +161,10 @@ export default function TrialActivationPage() {
 
           {/* Features List */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">試用包含</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">試用包含</h3>
             <ul className="space-y-2">
               {['全功能開放使用', '選民資料管理', '數據分析報表', '團隊協作功能', '行事曆與行程管理'].map((feature) => (
-                <li key={feature} className="flex items-center gap-2 text-sm text-gray-600">
+                <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                   {feature}
                 </li>
@@ -208,7 +208,7 @@ export default function TrialActivationPage() {
             </Button>
           )}
 
-          <p className="text-xs text-gray-400 text-center mt-4">
+          <p className="text-xs text-muted-foreground/70 text-center mt-4">
             無需信用卡，試用期結束後可選擇訂閱。
           </p>
         </CardContent>

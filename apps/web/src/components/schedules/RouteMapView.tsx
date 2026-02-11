@@ -162,18 +162,18 @@ function ItemPopup({ item, onRemove }: { item: ScheduleItem; onRemove?: () => vo
       )}
 
       {voter?.influenceScore !== undefined && (
-        <p className="text-xs text-gray-500 mb-1">影響力: {voter.influenceScore}</p>
+        <p className="text-xs text-muted-foreground mb-1">影響力: {voter.influenceScore}</p>
       )}
 
       {/* 顯示與行程內其他選民的關係 */}
       {relations.length > 0 && (
         <div className="mb-2 pt-1 border-t border-gray-200">
-          <p className="text-xs text-gray-500 mb-1">行程內關係：</p>
+          <p className="text-xs text-muted-foreground mb-1">行程內關係：</p>
           <div className="flex flex-wrap gap-1">
             {relations.map((rel) => (
               <span
                 key={rel.id}
-                className="text-xs px-1.5 py-0.5 bg-gray-100 rounded text-gray-700"
+                className="text-xs px-1.5 py-0.5 bg-muted rounded text-muted-foreground"
               >
                 <Link href={`/dashboard/voters/${rel.relatedVoter?.id}`} className="text-primary hover:underline">{rel.relatedVoter?.name}</Link>（{RELATION_TYPE_LABELS[rel.relationType] || rel.relationType}）
               </span>
@@ -249,7 +249,7 @@ function NearbyVoterPopup({ voter, onAdd }: { voter: NearbyVoter; onAdd?: () => 
       )}
 
       {voter.influenceScore !== undefined && (
-        <p className="text-xs text-gray-500 mb-2">影響力: {voter.influenceScore}</p>
+        <p className="text-xs text-muted-foreground mb-2">影響力: {voter.influenceScore}</p>
       )}
 
       {onAdd && (

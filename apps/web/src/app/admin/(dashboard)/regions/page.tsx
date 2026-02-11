@@ -143,7 +143,7 @@ export default function AdminRegionsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">地區總覽</h1>
-          <p className="text-gray-500">各地區所有使用者的選情數據一覽</p>
+          <p className="text-muted-foreground">各地區所有使用者的選情數據一覽</p>
         </div>
         <Button variant="outline" onClick={handleExport}>
           <Download className="h-4 w-4 mr-2" />
@@ -155,25 +155,25 @@ export default function AdminRegionsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-gray-500">地區數</p>
+            <p className="text-sm text-muted-foreground">地區數</p>
             <p className="text-2xl font-bold">{totalStats.regions}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-gray-500">候選人總數</p>
+            <p className="text-sm text-muted-foreground">候選人總數</p>
             <p className="text-2xl font-bold text-blue-600">{totalStats.users}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-gray-500">選民總計</p>
+            <p className="text-sm text-muted-foreground">選民總計</p>
             <p className="text-2xl font-bold text-green-600">{totalStats.voters}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-gray-500">活動總數</p>
+            <p className="text-sm text-muted-foreground">活動總數</p>
             <p className="text-2xl font-bold text-purple-600">{totalStats.campaigns}</p>
           </CardContent>
         </Card>
@@ -242,20 +242,20 @@ export default function AdminRegionsPage() {
                       <MapPin className="h-5 w-5 text-primary" />
                       <div>
                         <span className="font-bold text-lg">{region.city}</span>
-                        <span className="text-sm text-gray-500 ml-3">
+                        <span className="text-sm text-muted-foreground ml-3">
                           {region.summary.totalUsers} 位候選人 · {region.summary.totalVoters} 選民
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <span className="text-sm text-gray-500">支持率</span>
+                        <span className="text-sm text-muted-foreground">支持率</span>
                         <p className={`font-bold ${region.summary.overallSupportRate >= 40 ? 'text-green-600' : region.summary.overallSupportRate >= 25 ? 'text-yellow-600' : 'text-red-600'}`}>
                           {region.summary.overallSupportRate}%
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm text-gray-500">接觸率</span>
+                        <span className="text-sm text-muted-foreground">接觸率</span>
                         <p className="font-bold text-blue-600">{region.summary.overallContactRate}%</p>
                       </div>
                     </div>
@@ -311,7 +311,7 @@ export default function AdminRegionsPage() {
                                         {ELECTION_TYPE_LABELS[campaign.electionType] || campaign.electionType}
                                       </Badge>
                                     </td>
-                                    <td className="p-2 text-gray-500">
+                                    <td className="p-2 text-muted-foreground">
                                       {campaign.district || ''}{campaign.village ? ` · ${campaign.village}` : ''}
                                     </td>
                                     <td className="p-2 text-right font-medium">{campaign.voterCount}</td>
@@ -339,7 +339,7 @@ export default function AdminRegionsPage() {
                                             style={{ width: `${Math.min(campaign.contactRate, 100)}%` }}
                                           />
                                         </div>
-                                        <span className="text-xs w-10 text-right text-gray-500">
+                                        <span className="text-xs w-10 text-right text-muted-foreground">
                                           {campaign.contactRate}%
                                         </span>
                                       </div>
@@ -383,7 +383,7 @@ export default function AdminRegionsPage() {
                                             {Object.entries(campaign.stanceDistribution).map(([key, value]) => (
                                               <div key={key} className="flex items-center gap-2">
                                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: STANCE_COLORS[key] || '#9ca3af' }} />
-                                                <span className="text-gray-600">{getStanceLabel(key)}</span>
+                                                <span className="text-muted-foreground">{getStanceLabel(key)}</span>
                                                 <span className="font-medium">{value as number}</span>
                                               </div>
                                             ))}
@@ -407,7 +407,7 @@ export default function AdminRegionsPage() {
         </div>
       ) : (
         <Card>
-          <CardContent className="py-12 text-center text-gray-500">
+          <CardContent className="py-12 text-center text-muted-foreground">
             {data?.regions?.length === 0 ? '尚無選舉活動資料' : '沒有符合條件的資料'}
           </CardContent>
         </Card>

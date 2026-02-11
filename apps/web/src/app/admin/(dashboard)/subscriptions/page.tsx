@@ -199,7 +199,7 @@ export default function AdminSubscriptionsPage() {
           <Card>
             <CardContent className="pt-4">
               <p className="text-sm text-muted-foreground">已取消</p>
-              <p className="text-2xl font-bold text-gray-600">{stats.byStatus?.cancelled || 0}</p>
+              <p className="text-2xl font-bold text-muted-foreground">{stats.byStatus?.cancelled || 0}</p>
             </CardContent>
           </Card>
           <Card>
@@ -277,7 +277,7 @@ export default function AdminSubscriptionsPage() {
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium">{sub.user.name}</p>
-                          <p className="text-sm text-gray-500">{sub.user.email || '-'}</p>
+                          <p className="text-sm text-muted-foreground">{sub.user.email || '-'}</p>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -359,7 +359,7 @@ export default function AdminSubscriptionsPage() {
               </table>
 
               {subscriptions.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   沒有符合條件的訂閱
                 </div>
               )}
@@ -369,7 +369,7 @@ export default function AdminSubscriptionsPage() {
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 共 {pagination.total} 筆
               </p>
               <div className="flex gap-2">

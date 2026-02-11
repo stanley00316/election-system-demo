@@ -233,7 +233,7 @@ function AdminDataRetentionContent() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">資料保留管理</h1>
-        <p className="text-gray-500">
+        <p className="text-muted-foreground">
           管理未付款的競選活動資料庫，由超級管理者決定是否刪除或恢復
         </p>
       </div>
@@ -244,7 +244,7 @@ function AdminDataRetentionContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">總競選活動</p>
+                <p className="text-sm text-muted-foreground">總競選活動</p>
                 <p className="text-2xl font-bold">{stats?.totalCampaigns || 0}</p>
               </div>
               <Database className="h-8 w-8 text-gray-400" />
@@ -255,7 +255,7 @@ function AdminDataRetentionContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">正常使用中</p>
+                <p className="text-sm text-muted-foreground">正常使用中</p>
                 <p className="text-2xl font-bold text-green-600">{stats?.active || 0}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-400" />
@@ -266,7 +266,7 @@ function AdminDataRetentionContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">緩衝期中</p>
+                <p className="text-sm text-muted-foreground">緩衝期中</p>
                 <p className="text-2xl font-bold text-yellow-600">{stats?.inGracePeriod || 0}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-400" />
@@ -277,7 +277,7 @@ function AdminDataRetentionContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">待刪除</p>
+                <p className="text-sm text-muted-foreground">待刪除</p>
                 <p className="text-2xl font-bold text-orange-600">{stats?.pendingDeletion || 0}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-orange-400" />
@@ -288,7 +288,7 @@ function AdminDataRetentionContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">已刪除</p>
+                <p className="text-sm text-muted-foreground">已刪除</p>
                 <p className="text-2xl font-bold text-red-600">{stats?.deleted || 0}</p>
               </div>
               <XCircle className="h-8 w-8 text-red-400" />
@@ -335,7 +335,7 @@ function AdminDataRetentionContent() {
             </CardHeader>
             <CardContent>
               {pendingCampaigns.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>目前沒有待刪除的競選活動</p>
                 </div>
@@ -368,7 +368,7 @@ function AdminDataRetentionContent() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{campaign.name}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               建立於 {format(new Date(campaign.createdAt), 'yyyy/MM/dd', { locale: zhTW })}
                             </p>
                           </div>
@@ -376,7 +376,7 @@ function AdminDataRetentionContent() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{campaign.owner.name}</p>
-                            <p className="text-xs text-gray-500">{campaign.owner.email}</p>
+                            <p className="text-xs text-muted-foreground">{campaign.owner.email}</p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -447,7 +447,7 @@ function AdminDataRetentionContent() {
             </CardHeader>
             <CardContent>
               {deletedCampaigns.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>目前沒有已刪除的競選活動</p>
                 </div>
@@ -468,7 +468,7 @@ function AdminDataRetentionContent() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{campaign.name}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               建立於 {format(new Date(campaign.createdAt), 'yyyy/MM/dd', { locale: zhTW })}
                             </p>
                           </div>
@@ -476,7 +476,7 @@ function AdminDataRetentionContent() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{campaign.owner.name}</p>
-                            <p className="text-xs text-gray-500">{campaign.owner.email}</p>
+                            <p className="text-xs text-muted-foreground">{campaign.owner.email}</p>
                           </div>
                         </TableCell>
                         <TableCell>

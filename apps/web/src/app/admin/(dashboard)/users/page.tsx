@@ -271,7 +271,7 @@ export default function AdminUsersPage() {
                           )}
                           <div>
                             <p className="font-medium">{user.name}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               {user._count?.campaigns || 0} 選舉活動
                             </p>
                           </div>
@@ -279,12 +279,12 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="py-3 px-4">
                         <p className="text-sm">{user.email || '-'}</p>
-                        <p className="text-xs text-gray-500">{user.phone || '-'}</p>
+                        <p className="text-xs text-muted-foreground">{user.phone || '-'}</p>
                       </td>
                       <td className="py-3 px-4">
                         {user.campaignStats?.totalVoters > 0 ? (
                           <div className="space-y-1">
-                            <p className="text-xs text-gray-500">{user.campaignStats.totalVoters} 選民</p>
+                            <p className="text-xs text-muted-foreground">{user.campaignStats.totalVoters} 選民</p>
                             <div className="flex items-center gap-1">
                               <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                                 <div
@@ -304,7 +304,7 @@ export default function AdminUsersPage() {
                                   style={{ width: `${Math.min(user.campaignStats.contactRate, 100)}%` }}
                                 />
                               </div>
-                              <span className="text-xs text-gray-500">{user.campaignStats.contactRate}%</span>
+                              <span className="text-xs text-muted-foreground">{user.campaignStats.contactRate}%</span>
                             </div>
                           </div>
                         ) : (
@@ -335,7 +335,7 @@ export default function AdminUsersPage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-500">
+                      <td className="py-3 px-4 text-sm text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -377,7 +377,7 @@ export default function AdminUsersPage() {
               </table>
 
               {users.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   沒有符合條件的使用者
                 </div>
               )}
@@ -387,7 +387,7 @@ export default function AdminUsersPage() {
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 共 {pagination.total} 筆，第 {pagination.page} / {pagination.totalPages} 頁
               </p>
               <div className="flex gap-2">

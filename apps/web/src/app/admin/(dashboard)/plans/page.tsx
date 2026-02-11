@@ -406,7 +406,7 @@ function AdminPlansContent() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">方案管理</h1>
-          <p className="text-gray-500">管理訂閱方案與分級定價（僅超級管理者可編輯）</p>
+          <p className="text-muted-foreground">管理訂閱方案與分級定價（僅超級管理者可編輯）</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setBatchAdjustDialog(true)}>
@@ -426,7 +426,7 @@ function AdminPlansContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">總方案數</p>
+                <p className="text-sm text-muted-foreground">總方案數</p>
                 <p className="text-2xl font-bold">{plans.length}</p>
               </div>
               <Package className="h-8 w-8 text-gray-400" />
@@ -437,7 +437,7 @@ function AdminPlansContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">縣市數</p>
+                <p className="text-sm text-muted-foreground">縣市數</p>
                 <p className="text-2xl font-bold">{stats.cityCount}</p>
               </div>
               <MapPin className="h-8 w-8 text-purple-400" />
@@ -448,7 +448,7 @@ function AdminPlansContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">啟用中</p>
+                <p className="text-sm text-muted-foreground">啟用中</p>
                 <p className="text-2xl font-bold text-green-600">{stats.activeCount}</p>
               </div>
               <Check className="h-8 w-8 text-green-400" />
@@ -459,7 +459,7 @@ function AdminPlansContent() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">總訂閱數</p>
+                <p className="text-sm text-muted-foreground">總訂閱數</p>
                 <p className="text-2xl font-bold text-blue-600">{stats.totalSubscriptions}</p>
               </div>
               <Users className="h-8 w-8 text-blue-400" />

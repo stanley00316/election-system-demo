@@ -238,7 +238,7 @@ export default function AdminPaymentsPage() {
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium">{payment.subscription.user.name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {payment.subscription.user.email || '-'}
                           </p>
                         </div>
@@ -255,7 +255,7 @@ export default function AdminPaymentsPage() {
                           {statusLabels[payment.status] || payment.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-500">
+                      <td className="py-3 px-4 text-sm text-muted-foreground">
                         {formatDate(payment.paidAt)}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -276,7 +276,7 @@ export default function AdminPaymentsPage() {
               </table>
 
               {payments.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   沒有付款記錄
                 </div>
               )}
@@ -286,7 +286,7 @@ export default function AdminPaymentsPage() {
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-gray-500">共 {pagination.total} 筆</p>
+              <p className="text-sm text-muted-foreground">共 {pagination.total} 筆</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"

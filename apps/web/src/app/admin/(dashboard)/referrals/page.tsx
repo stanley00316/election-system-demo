@@ -279,7 +279,7 @@ export default function AdminReferralsPage() {
           <Card className="bg-muted/50">
             <CardContent className="pt-4">
               <p className="text-sm text-muted-foreground">已過期</p>
-              <p className="text-xl font-semibold text-gray-600">{stats.expiredReferrals}</p>
+              <p className="text-xl font-semibold text-muted-foreground">{stats.expiredReferrals}</p>
             </CardContent>
           </Card>
           <Card className="bg-muted/50">
