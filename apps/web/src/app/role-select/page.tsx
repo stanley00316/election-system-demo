@@ -55,8 +55,9 @@ export default function RoleSelectPage() {
         features: ['選民管理', '接觸紀錄', '行程規劃', '選情分析'],
       });
 
-      // 推廣者
-      if (userData?.promoter?.isActive && userData?.promoter?.status === 'APPROVED') {
+      // 推廣者（已核准的推廣人員 或 超級管理員）
+      const isApprovedPromoter = userData?.promoter?.isActive && userData?.promoter?.status === 'APPROVED';
+      if (isApprovedPromoter || userData?.isSuperAdmin) {
         availableRoles.push({
           id: 'promoter',
           title: '推廣者',

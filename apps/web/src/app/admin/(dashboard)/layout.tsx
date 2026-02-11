@@ -89,7 +89,7 @@ export default function AdminDashboardLayout({
       const userData = await authApi.getMe();
 
       // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:checkAuth',message:'getMe result',data:{isAdmin:userData.isAdmin,isSuperAdmin:userData.isSuperAdmin,userId:userData.id,name:userData.name,hasPromoter:!!userData.promoter},timestamp:Date.now(),hypothesisId:'H1-H2-H4'})}).catch(()=>{});
+      console.log('[DEBUG] getMe result:', { isAdmin: userData.isAdmin, isSuperAdmin: userData.isSuperAdmin, userId: userData.id, name: userData.name, hasPromoter: !!userData.promoter, isDemoMode });
       // #endregion
 
       if (!userData.isAdmin) {
@@ -101,7 +101,7 @@ export default function AdminDashboardLayout({
       setAdmin(userData);
 
       // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:afterSetAdmin',message:'admin state set',data:{isDemoMode,isSuperAdmin:userData.isSuperAdmin,allKeys:Object.keys(userData)},timestamp:Date.now(),hypothesisId:'H4-H5'})}).catch(()=>{});
+      console.log('[DEBUG] admin state set:', { isDemoMode, isSuperAdmin: userData.isSuperAdmin, allKeys: Object.keys(userData) });
       // #endregion
 
       // 將 isSuperAdmin 和 promoter 同步存入 Auth Store
@@ -205,7 +205,7 @@ export default function AdminDashboardLayout({
             </ul>
 
             {/* 超級管理者專用選單 */}
-            {(() => { fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layout.tsx:render',message:'superAdmin check',data:{adminExists:!!admin,isSuperAdmin:admin?.isSuperAdmin,showSection:!!admin?.isSuperAdmin},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{}); return null; })()}
+            {(() => { console.log('[DEBUG] render superAdmin check:', { adminExists: !!admin, isSuperAdmin: admin?.isSuperAdmin, showSection: !!admin?.isSuperAdmin }); return null; })()}
             {admin?.isSuperAdmin && (
               <div className="mt-4 pt-4 border-t border-gray-800">
                 <p className="px-3 mb-2 text-xs text-gray-500 uppercase tracking-wider">

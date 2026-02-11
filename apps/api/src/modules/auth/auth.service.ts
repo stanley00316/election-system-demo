@@ -164,6 +164,28 @@ export class AuthService {
       throw error;
     }
 
+    // 超級管理員自動建立推廣人員記錄（若尚未存在）
+    if (!promoter && user.isSuperAdmin) {
+      try {
+        promoter = await this.prisma.promoter.create({
+          data: {
+            userId: user.id,
+            name: user.name,
+            status: 'APPROVED',
+            isActive: true,
+            type: 'INTERNAL',
+            referralCode: `ADMIN_${user.id.substring(0, 8).toUpperCase()}`,
+            approvedAt: new Date(),
+          },
+          select: { id: true, status: true, isActive: true },
+        });
+        console.log('[AUTH] Auto-created promoter for super admin:', promoter.id);
+      } catch (error) {
+        console.error('[AUTH] Auto-create promoter for super admin failed:', error);
+        // 不影響登入流程
+      }
+    }
+
     const isPromoter = !!promoter && promoter.isActive && promoter.status === 'APPROVED';
 
     // 產生 JWT（包含 isAdmin / isSuperAdmin / isPromoter 資訊）
