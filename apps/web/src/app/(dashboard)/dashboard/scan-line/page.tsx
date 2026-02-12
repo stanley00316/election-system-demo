@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
@@ -8,9 +8,10 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useCampaignStore } from '@/stores/campaign';
-import { votersApi } from '@/lib/api';
+import { votersApi, contactsApi } from '@/lib/api';
 import {
   QrCode,
   User,
@@ -28,9 +29,12 @@ import {
   AlertTriangle,
   Loader2,
   Navigation,
+  CheckCircle2,
+  Zap,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useHydration } from '@/hooks/use-hydration';
+import { useAutoContact } from '@/hooks/use-auto-contact';
 import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';
 import { getContactTypeLabel } from '@/lib/utils';
 import { VoterAreaCard } from '@/components/voters/VoterAreaCard';
@@ -76,68 +80,27 @@ interface ScanResult {
   lineUrl: string;
 }
 
-interface GpsLocation {
-  lat: number;
-  lng: number;
-}
-
-interface GpsArea {
-  city: string;
-  district: string;
-}
-
 export default function ScanLinePage() {
   const hydrated = useHydration();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { currentCampaign } = useCampaignStore();
   const { toast } = useToast();
+  const { recordContact, gpsData, gpsLoading, getLocationText } = useAutoContact();
   
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<any>(null);
-  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
-  // GPS 定位狀態
-  const [gpsLocation, setGpsLocation] = useState<GpsLocation | null>(null);
-  const [gpsArea, setGpsArea] = useState<GpsArea | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
+  // 快速新增表單狀態
+  const [quickName, setQuickName] = useState('');
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [quickAddSuccess, setQuickAddSuccess] = useState<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // 背景 GPS 定位（非阻塞）
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setGpsLocation(loc);
-        setGpsLoading(false);
-        // 嘗試反向地理編碼取得區域（簡易版：使用 Nominatim）
-        fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&accept-language=zh-TW`
-        )
-          .then((res) => res.json())
-          .then((data) => {
-            if (data?.address) {
-              setGpsArea({
-                city: data.address.city || data.address.county || '',
-                district:
-                  data.address.suburb ||
-                  data.address.district ||
-                  data.address.town ||
-                  '',
-              });
-            }
-          })
-          .catch(() => {});
-      },
-      () => {
-        setGpsLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-    );
-  }, []);
+  // 自動記錄接觸的追蹤（避免重複觸發）
+  const autoContactRecorded = useRef<string | null>(null);
 
   // 搜尋選民
   const { data: searchResult, isLoading: isSearching, refetch: refetchSearch } = useQuery({
@@ -154,6 +117,19 @@ export default function ScanLinePage() {
   const foundVoter = searchResult?.found && searchResult.voters.length > 0
     ? searchResult.voters[0]
     : null;
+
+  // 找到現有選民時自動建立接觸紀錄
+  useEffect(() => {
+    if (foundVoter && autoContactRecorded.current !== foundVoter.id) {
+      autoContactRecorded.current = foundVoter.id;
+      recordContact({
+        voterId: foundVoter.id,
+        type: 'LINE_CALL',
+        notes: 'LINE QR 掃描接觸',
+        silent: false,
+      });
+    }
+  }, [foundVoter, recordContact]);
 
   // 查詢同區域選民（用於 VoterAreaCard 統計 + SameAreaVoters 列表）
   const { data: areaVotersResult, isLoading: isLoadingAreaVoters } = useQuery({
@@ -180,19 +156,21 @@ export default function ScanLinePage() {
   const handleScanResult = (result: ScanResult) => {
     setScanResult(result);
     setQrScannerOpen(false);
+    setQuickAddSuccess(null);
+    autoContactRecorded.current = null;
     toast({
       title: '掃描成功',
       description: '正在搜尋選民資料...',
     });
   };
 
-  // 開啟新增選民頁面 — 帶防重複再查機制
-  const handleAddVoter = useCallback(async () => {
-    if (!scanResult || !currentCampaign) return;
+  // 快速新增選民 + 自動建立接觸紀錄
+  const handleQuickAdd = useCallback(async () => {
+    if (!scanResult || !currentCampaign || !quickName.trim()) return;
 
-    setIsCheckingDuplicate(true);
+    setIsQuickAdding(true);
     try {
-      // 防重複：跳轉前再查一次，防止其他團隊成員在這段時間已新增
+      // 防重複：先再查一次
       const recheck = await votersApi.searchByLine({
         campaignId: currentCampaign.id,
         lineId: scanResult.lineId,
@@ -200,48 +178,87 @@ export default function ScanLinePage() {
       });
 
       if (recheck?.found && recheck.voters.length > 0) {
-        // 已被其他團隊成員新增
         toast({
           title: '選民已存在',
           description: `此選民已由 ${recheck.voters[0].creator?.name || '其他團隊成員'} 建立`,
         });
-        // 重新觸發搜尋以顯示該選民
-        queryClient.invalidateQueries({
-          queryKey: ['voters', 'search-by-line'],
-        });
+        queryClient.invalidateQueries({ queryKey: ['voters', 'search-by-line'] });
         refetchSearch();
-        setIsCheckingDuplicate(false);
+        setIsQuickAdding(false);
         return;
       }
 
-      // 確認無重複，導向新增頁面
-      const params = new URLSearchParams();
-      if (scanResult.lineId) {
-        params.set('lineId', scanResult.lineId);
-      }
-      params.set('lineUrl', scanResult.lineUrl);
+      // 建立選民（最少資料）
+      const voterData: Record<string, unknown> = {
+        name: quickName.trim(),
+        campaignId: currentCampaign.id,
+        lineUrl: scanResult.lineUrl,
+        stance: 'UNDECIDED',
+      };
+      if (scanResult.lineId) voterData.lineId = scanResult.lineId;
+      if (gpsData?.city) voterData.city = gpsData.city;
+      if (gpsData?.district) voterData.districtName = gpsData.district;
+      if (gpsData?.lat) voterData.latitude = gpsData.lat;
+      if (gpsData?.lng) voterData.longitude = gpsData.lng;
 
-      // 帶入 GPS 位置資訊
-      if (gpsLocation) {
-        params.set('lat', String(gpsLocation.lat));
-        params.set('lng', String(gpsLocation.lng));
-      }
-      if (gpsArea) {
-        if (gpsArea.city) params.set('city', gpsArea.city);
-        if (gpsArea.district) params.set('district', gpsArea.district);
+      const newVoter = await votersApi.create(voterData);
+
+      if (newVoter._alreadyExists) {
+        toast({
+          title: '選民已存在',
+          description: `${newVoter.name} 已在系統中`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['voters', 'search-by-line'] });
+        refetchSearch();
+        setIsQuickAdding(false);
+        return;
       }
 
-      router.push(`/dashboard/voters/new?${params.toString()}`);
-    } catch (error) {
-      // 查詢失敗時仍允許新增（不阻塞流程）
-      const params = new URLSearchParams();
-      if (scanResult.lineId) params.set('lineId', scanResult.lineId);
-      params.set('lineUrl', scanResult.lineUrl);
-      router.push(`/dashboard/voters/new?${params.toString()}`);
+      // 自動建立初次接觸紀錄
+      await recordContact({
+        voterId: newVoter.id,
+        type: 'LINE_CALL',
+        notes: '透過 LINE QR 掃描首次接觸',
+        outcome: 'NEUTRAL',
+        silent: true,
+      });
+
+      // 成功提示
+      const savedName = quickName.trim();
+      toast({
+        title: '快速新增成功',
+        description: `已新增 ${savedName}，含接觸紀錄`,
+      });
+
+      // 重置狀態，準備下一次掃描
+      setQuickAddSuccess(savedName);
+      setQuickName('');
+      setScanResult(null);
+      autoContactRecorded.current = null;
+
+      // 無效化查詢快取
+      queryClient.invalidateQueries({ queryKey: ['voters'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+
+      // 2 秒後清除成功訊息
+      setTimeout(() => setQuickAddSuccess(null), 3000);
+    } catch (error: any) {
+      toast({
+        title: '新增失敗',
+        description: error.message || '請稍後再試',
+        variant: 'destructive',
+      });
     } finally {
-      setIsCheckingDuplicate(false);
+      setIsQuickAdding(false);
     }
-  }, [scanResult, currentCampaign, gpsLocation, gpsArea, router, toast, queryClient, refetchSearch]);
+  }, [scanResult, currentCampaign, quickName, gpsData, recordContact, toast, queryClient, refetchSearch]);
+
+  // 名稱欄位聚焦（掃描後未找到時自動聚焦）
+  useEffect(() => {
+    if (scanResult && searchResult && !searchResult.found && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [scanResult, searchResult]);
 
   // 記錄 LINE 通話
   const handleRecordLineCall = (voter: any) => {
@@ -252,6 +269,9 @@ export default function ScanLinePage() {
   // 重新掃描
   const handleRescan = () => {
     setScanResult(null);
+    setQuickName('');
+    setQuickAddSuccess(null);
+    autoContactRecorded.current = null;
     setQrScannerOpen(true);
   };
 
@@ -295,6 +315,21 @@ export default function ScanLinePage() {
         )}
       </div>
 
+      {/* 快速新增成功提示 */}
+      {quickAddSuccess && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 animate-in fade-in">
+          <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-green-800 dark:text-green-200">
+              已成功新增 {quickAddSuccess}
+            </p>
+            <p className="text-xs text-green-600 dark:text-green-400">
+              接觸紀錄與 GPS 位置已自動記錄
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 主要內容 */}
       {!scanResult ? (
         // 初始狀態 - 顯示掃描按鈕
@@ -323,10 +358,10 @@ export default function ScanLinePage() {
                   正在取得您的位置...
                 </div>
               )}
-              {gpsArea && (
+              {gpsData?.city && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Navigation className="h-3 w-3" />
-                  目前位置：{gpsArea.city} {gpsArea.district}
+                  目前位置：{getLocationText()}
                 </div>
               )}
             </div>
@@ -348,6 +383,7 @@ export default function ScanLinePage() {
           <div className="flex items-center gap-2 text-green-600">
             <Search className="h-5 w-5" />
             <span className="font-medium">找到 {searchResult.voters.length} 位選民</span>
+            <Badge variant="secondary" className="text-xs">已自動記錄接觸</Badge>
           </div>
 
           {searchResult.voters.map((voter: any) => {
@@ -411,7 +447,7 @@ export default function ScanLinePage() {
                   </CardHeader>
                 </Card>
 
-                {/* 區域定位卡片（新增） */}
+                {/* 區域定位卡片 */}
                 <VoterAreaCard
                   voter={voter}
                   areaVoters={areaVoters}
@@ -565,65 +601,114 @@ export default function ScanLinePage() {
           })}
         </div>
       ) : (
-        // 未找到選民
+        // 未找到選民 — 快速新增模式
         <Card>
-          <CardContent className="py-12">
-            <div className="flex flex-col items-center justify-center space-y-6">
-              <div className="p-6 rounded-full bg-yellow-100 dark:bg-yellow-900/20">
-                <UserPlus className="h-16 w-16 text-yellow-600" />
+          <CardContent className="py-8">
+            <div className="flex flex-col items-center justify-center space-y-5">
+              <div className="p-4 rounded-full bg-primary/10">
+                <Zap className="h-10 w-10 text-primary" />
               </div>
-              <div className="text-center space-y-2">
-                <h2 className="text-xl font-semibold">未找到選民</h2>
-                <p className="text-muted-foreground max-w-md">
-                  系統中沒有此 LINE 帳號的選民資料。
-                  您可以新增此選民，LINE 資訊將自動填入。
+              <div className="text-center space-y-1">
+                <h2 className="text-lg font-semibold">快速新增選民</h2>
+                <p className="text-sm text-muted-foreground">
+                  輸入姓名即可快速建立，其餘資料行程後再補填
                 </p>
-                {scanResult && scanResult.lineId && (
-                  <p className="text-sm">
-                    LINE ID: <span className="font-medium">{scanResult.lineId}</span>
-                  </p>
-                )}
               </div>
 
-              {/* GPS 位置提示 */}
-              {gpsArea && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-sm">
-                  <Navigation className="h-4 w-4 text-blue-600" />
-                  <span className="text-blue-700 dark:text-blue-300">
-                    您目前的位置：{gpsArea.city} {gpsArea.district}
-                  </span>
-                </div>
-              )}
-              {gpsLoading && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  正在偵測您的位置...
-                </div>
-              )}
+              {/* 掃描到的 LINE 資訊（唯讀） */}
+              <div className="w-full max-w-sm space-y-3">
+                {scanResult?.lineId && (
+                  <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-muted/50">
+                    <MessageCircle className="h-4 w-4 text-green-600 shrink-0" />
+                    <span className="text-muted-foreground">LINE ID:</span>
+                    <span className="font-medium truncate">{scanResult.lineId}</span>
+                  </div>
+                )}
 
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleRescan}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  重新掃描
-                </Button>
-                <Button onClick={handleAddVoter} disabled={isCheckingDuplicate}>
-                  {isCheckingDuplicate ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      確認中...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      新增選民
-                    </>
-                  )}
-                </Button>
+                {/* GPS 位置提示 */}
+                {gpsData?.city && (
+                  <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-blue-50 dark:bg-blue-900/20">
+                    <Navigation className="h-4 w-4 text-blue-600 shrink-0" />
+                    <span className="text-blue-700 dark:text-blue-300">
+                      {getLocationText()}
+                    </span>
+                  </div>
+                )}
+                {gpsLoading && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-3">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    正在偵測位置...
+                  </div>
+                )}
+
+                {/* 姓名輸入欄位 */}
+                <div className="space-y-2">
+                  <Input
+                    ref={nameInputRef}
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    placeholder="輸入選民姓名"
+                    className="text-center text-lg h-12"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && quickName.trim()) {
+                        e.preventDefault();
+                        handleQuickAdd();
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                {/* 操作按鈕 */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleRescan}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    重新掃描
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleQuickAdd}
+                    disabled={!quickName.trim() || isQuickAdding}
+                  >
+                    {isQuickAdding ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        新增中...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        快速新增
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* 完整表單連結 */}
+                <div className="text-center">
+                  <Link
+                    href={`/dashboard/voters/new?${new URLSearchParams({
+                      ...(scanResult?.lineId ? { lineId: scanResult.lineId } : {}),
+                      lineUrl: scanResult?.lineUrl || '',
+                      ...(gpsData?.city ? { city: gpsData.city } : {}),
+                      ...(gpsData?.district ? { district: gpsData.district } : {}),
+                      ...(gpsData?.lat ? { lat: String(gpsData.lat) } : {}),
+                      ...(gpsData?.lng ? { lng: String(gpsData.lng) } : {}),
+                    }).toString()}`}
+                    className="text-xs text-muted-foreground hover:text-primary underline"
+                  >
+                    需要填寫更多資料？使用完整表單
+                  </Link>
+                </div>
               </div>
 
               {/* 防重複提示 */}
               <p className="text-xs text-muted-foreground text-center max-w-sm">
-                點擊「新增選民」時，系統會再次確認是否有其他團隊成員已新增此選民，避免重複建立
+                系統會自動檢查重複、記錄接觸紀錄及 GPS 位置
               </p>
             </div>
           </CardContent>
@@ -646,6 +731,9 @@ export default function ScanLinePage() {
           onOpenChange={setContactDialogOpen}
           voter={selectedVoter}
           campaignId={currentCampaign.id}
+          locationLat={gpsData?.lat}
+          locationLng={gpsData?.lng}
+          location={getLocationText()}
           onSuccess={() => {
             refetchSearch();
             queryClient.invalidateQueries({ queryKey: ['contacts'] });

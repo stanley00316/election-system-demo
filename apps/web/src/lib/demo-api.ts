@@ -262,6 +262,16 @@ export const demoVotersApi = {
         filtered = filtered.filter(v => !v.contactCount || v.contactCount === 0);
       }
     }
+
+    // 建立日期篩選
+    if (params.createdAfter) {
+      const afterDate = new Date(params.createdAfter);
+      filtered = filtered.filter(v => new Date(v.createdAt) >= afterDate);
+    }
+    if (params.createdBefore) {
+      const beforeDate = new Date(params.createdBefore);
+      filtered = filtered.filter(v => new Date(v.createdAt) <= beforeDate);
+    }
     
     return paginate(filtered, params.page || 1, params.limit || 20);
   },
@@ -543,15 +553,33 @@ export const demoContactsApi = {
   create: async (data: any) => {
     await delay(300);
     const voter = tempVoters.find(v => v.id === data.voterId);
+    // 若未提供地理位置，給予預設台北市座標（Demo 模式模擬）
+    const locationLat = data.locationLat || (25.033 + (Math.random() - 0.5) * 0.02);
+    const locationLng = data.locationLng || (121.565 + (Math.random() - 0.5) * 0.02);
+    const location = data.location || '台北市信義區';
     const newContact = {
       id: 'contact-new-' + Date.now(),
       ...data,
+      locationLat,
+      locationLng,
+      location,
       voter: voter ? { id: voter.id, name: voter.name, phone: voter.phone, address: voter.address, stance: voter.stance } : null,
       user: { id: demoUser.id, name: demoUser.name },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     tempContacts.unshift(newContact);
+    // 更新選民的 contactCount 和 lastContactAt
+    if (voter) {
+      const voterIdx = tempVoters.findIndex(v => v.id === voter.id);
+      if (voterIdx !== -1) {
+        tempVoters[voterIdx] = {
+          ...tempVoters[voterIdx],
+          contactCount: (tempVoters[voterIdx].contactCount || 0) + 1,
+          lastContactAt: new Date().toISOString(),
+        };
+      }
+    }
     return newContact;
   },
   

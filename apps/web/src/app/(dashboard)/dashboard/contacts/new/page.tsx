@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { useCampaignStore } from '@/stores/campaign';
 import { contactsApi, votersApi } from '@/lib/api';
-import { ArrowLeft, Save, Search } from 'lucide-react';
+import { ArrowLeft, Save, Search, MapPin, Loader2, Navigation } from 'lucide-react';
 import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
@@ -36,6 +36,8 @@ const contactSchema = z.object({
   outcome: z.enum(CONTACT_OUTCOMES),
   contactDate: z.string().optional(),
   location: z.string().optional(),
+  locationLat: z.number().optional(),
+  locationLng: z.number().optional(),
   notes: z.string().optional(),
   topics: z.string().optional(),
   nextAction: z.string().optional(),
@@ -54,6 +56,7 @@ export default function NewContactPage() {
   const preselectedVoterId = searchParams.get('voterId');
   const [voterSearch, setVoterSearch] = useState('');
   const [selectedVoter, setSelectedVoter] = useState<any>(null);
+  const [gpsDetecting, setGpsDetecting] = useState(false);
 
   const {
     register,
@@ -124,6 +127,45 @@ export default function NewContactPage() {
       });
     },
   });
+
+  const handleDetectGps = () => {
+    if (!navigator.geolocation) {
+      toast({ title: '不支援', description: '您的裝置不支援定位功能', variant: 'destructive' });
+      return;
+    }
+    setGpsDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setValue('locationLat', lat);
+        setValue('locationLng', lng);
+        // 反向地理編碼
+        fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=zh-TW`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.display_name) {
+              const city = data.address?.city || data.address?.county || '';
+              const district = data.address?.suburb || data.address?.district || data.address?.town || '';
+              const locationText = [city, district].filter(Boolean).join('');
+              setValue('location', locationText || data.display_name.split(',')[0]);
+            }
+            setGpsDetecting(false);
+          })
+          .catch(() => {
+            setValue('location', `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            setGpsDetecting(false);
+          });
+      },
+      () => {
+        toast({ title: '定位失敗', description: '無法取得您的位置', variant: 'destructive' });
+        setGpsDetecting(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   const onSubmit = (data: ContactFormData) => {
     createMutation.mutate(data);
@@ -293,11 +335,32 @@ export default function NewContactPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">地點</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="location">地點</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDetectGps}
+                    disabled={gpsDetecting}
+                  >
+                    {gpsDetecting ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        定位中...
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="h-3 w-3 mr-1" />
+                        自動定位
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Input
                   id="location"
                   {...register('location')}
-                  placeholder="接觸地點"
+                  placeholder="接觸地點（可自動定位）"
                 />
               </div>
 

@@ -95,6 +95,16 @@ export class VoterFilterDto {
   @Type(() => Number)
   limit?: number = 20;
 
+  @ApiPropertyOptional({ description: '建立時間起始（ISO 日期字串）' })
+  @IsString()
+  @IsOptional()
+  createdAfter?: string;
+
+  @ApiPropertyOptional({ description: '建立時間結束（ISO 日期字串）' })
+  @IsString()
+  @IsOptional()
+  createdBefore?: string;
+
   @ApiPropertyOptional({
     description: '排序欄位',
     enum: ['name', 'influenceScore', 'lastContactAt', 'createdAt'],

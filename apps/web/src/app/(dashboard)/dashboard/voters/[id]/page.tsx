@@ -68,12 +68,19 @@ import { BackButton } from '@/components/common/BackButton';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
 import { VoterAttachments } from '@/components/voters/VoterAttachments';
 import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';
+import { useAutoContact } from '@/hooks/use-auto-contact';
 import dynamic from 'next/dynamic';
 
 // 動態匯入 LINE 通話記錄對話框
 const LineContactDialog = dynamic(
   () => import('@/components/contacts/LineContactDialog').then(mod => mod.LineContactDialog),
   { ssr: false }
+);
+
+// 動態匯入接觸地圖（避免 SSR）
+const ContactMiniMap = dynamic(
+  () => import('@/components/contacts/ContactMiniMap').then(mod => mod.ContactMiniMap),
+  { ssr: false, loading: () => <div className="h-48 bg-muted rounded-lg animate-pulse" /> }
 );
 
 const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
@@ -104,6 +111,7 @@ export default function VoterDetailPage() {
   const [influenceWeight, setInfluenceWeight] = useState(50);
   const [relationNotes, setRelationNotes] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
+  const { recordContact, gpsData, getLocationText } = useAutoContact();
 
   const { data: voter, isLoading, error } = useQuery({
     queryKey: ['voter', voterId],
@@ -287,6 +295,13 @@ export default function VoterDetailPage() {
               <LineOpenButton
                 lineId={voter.lineId}
                 lineUrl={voter.lineUrl}
+                onBeforeOpen={() => {
+                  recordContact({
+                    voterId: voter.id,
+                    type: 'LINE_CALL',
+                    notes: '開啟 LINE 對話',
+                  });
+                }}
               />
               <Button
                 variant="outline"
@@ -354,7 +369,19 @@ export default function VoterDetailPage() {
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">電話</p>
-                    <p className="font-medium">{voter.phone}</p>
+                    <a
+                      href={`tel:${voter.phone}`}
+                      className="font-medium text-primary hover:underline"
+                      onClick={() => {
+                        recordContact({
+                          voterId: voter.id,
+                          type: 'PHONE_CALL',
+                          notes: '撥打電話',
+                        });
+                      }}
+                    >
+                      {voter.phone}
+                    </a>
                   </div>
                 </div>
               )}
@@ -417,7 +444,12 @@ export default function VoterDetailPage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="contacts" className="mt-4">
+            <TabsContent value="contacts" className="mt-4 space-y-4">
+              {/* 接觸地點迷你地圖 */}
+              {voter.contacts?.some((c: any) => c.locationLat && c.locationLng) && (
+                <ContactMiniMap contacts={voter.contacts} />
+              )}
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">接觸紀錄</CardTitle>
@@ -455,6 +487,12 @@ export default function VoterDetailPage() {
                             </div>
                             {contact.notes && (
                               <p className="text-sm mt-2">{contact.notes}</p>
+                            )}
+                            {contact.location && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <MapPin className="h-3 w-3" />
+                                <span>{contact.location}</span>
+                              </div>
                             )}
                             <p className="text-xs text-muted-foreground mt-2">
                               {contact.user?.name} · {formatRelativeTime(contact.contactDate)}
@@ -976,6 +1014,9 @@ export default function VoterDetailPage() {
             lineUrl: voter.lineUrl,
           }}
           campaignId={currentCampaign.id}
+          locationLat={gpsData?.lat}
+          locationLng={gpsData?.lng}
+          location={getLocationText()}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['voter', voterId] });
             queryClient.invalidateQueries({ queryKey: ['contacts'] });

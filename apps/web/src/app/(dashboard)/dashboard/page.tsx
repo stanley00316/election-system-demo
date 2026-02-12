@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCampaignStore } from '@/stores/campaign';
-import { analysisApi, contactsApi } from '@/lib/api';
+import { analysisApi, contactsApi, votersApi } from '@/lib/api';
 import { formatNumber, formatPercent, getStanceLabel, getStanceColor, getContactTypeLabel, getContactOutcomeLabel } from '@/lib/utils';
 import {
   Users,
@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MapPin,
+  UserPlus,
 } from 'lucide-react';
 import {
   PieChart,
@@ -59,6 +60,31 @@ export default function DashboardPage() {
     queryFn: () => analysisApi.getVisitStats(campaignId!),
     enabled: !!campaignId,
   });
+
+  // 今日新增選民查詢
+  const todayStart = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  })();
+
+  const { data: todayVoters } = useQuery({
+    queryKey: ['voters', 'today', campaignId, todayStart],
+    queryFn: () =>
+      votersApi.getAll({
+        campaignId,
+        createdAfter: todayStart,
+        limit: 100,
+        page: 1,
+      }),
+    enabled: !!campaignId,
+  });
+
+  const todayVoterCount = todayVoters?.pagination?.total || 0;
+  // 計算待完善資料（只有姓名、缺少其他欄位）的數量
+  const incompleteCount = todayVoters?.data?.filter(
+    (v: any) => !v.phone && !v.address && !v.age
+  ).length || 0;
 
   if (!currentCampaign) {
     return (
@@ -110,6 +136,30 @@ export default function DashboardPage() {
           勝選機率: {winProbability ? formatPercent(winProbability.probability) : '-'}
         </Badge>
       </div>
+
+      {/* 今日新增選民卡片 */}
+      {todayVoterCount > 0 && (
+        <Link href="/dashboard/voters?today=true">
+          <Card className="border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">今日新增選民</p>
+                  <p className="text-3xl font-bold text-primary">{todayVoterCount}</p>
+                  {incompleteCount > 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      待完善資料 {incompleteCount} 位
+                    </p>
+                  )}
+                </div>
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <UserPlus className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

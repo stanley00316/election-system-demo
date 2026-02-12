@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { contactsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { MessageCircle, Loader2 } from 'lucide-react';
+import { MessageCircle, Loader2, MapPin } from 'lucide-react';
 import { ContactType, ContactOutcome } from '@/shared/types/contact';
 
 interface LineContactDialogProps {
@@ -29,6 +29,9 @@ interface LineContactDialogProps {
     lineUrl?: string;
   };
   campaignId: string;
+  locationLat?: number;
+  locationLng?: number;
+  location?: string;
   onSuccess?: () => void;
 }
 
@@ -44,6 +47,9 @@ export function LineContactDialog({
   onOpenChange,
   voter,
   campaignId,
+  locationLat,
+  locationLng,
+  location,
   onSuccess,
 }: LineContactDialogProps) {
   const { toast } = useToast();
@@ -79,6 +85,9 @@ export function LineContactDialog({
       outcome,
       notes: notes.trim() || undefined,
       contactDate: new Date().toISOString(),
+      ...(locationLat != null && { locationLat }),
+      ...(locationLng != null && { locationLng }),
+      ...(location && { location }),
     });
   };
 
@@ -96,6 +105,16 @@ export function LineContactDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* GPS 位置提示 */}
+          {location && (
+            <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-blue-50 dark:bg-blue-900/20">
+              <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
+              <span className="text-blue-700 dark:text-blue-300">
+                目前位置：{location}
+              </span>
+            </div>
+          )}
+
           {/* 通話結果 */}
           <div className="space-y-3">
             <Label>通話結果</Label>

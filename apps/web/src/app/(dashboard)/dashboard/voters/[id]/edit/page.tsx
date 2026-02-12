@@ -24,6 +24,7 @@ import { votersApi } from '@/lib/api';
 import { ArrowLeft, Save, QrCode } from 'lucide-react';
 import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoContact } from '@/hooks/use-auto-contact';
 import { useEffect, useState } from 'react';
 
 // 動態匯入 QR 掃描器元件，避免 SSR 錯誤
@@ -68,6 +69,7 @@ export default function EditVoterPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { recordContact } = useAutoContact();
   const voterId = params.id as string;
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
 
@@ -124,9 +126,16 @@ export default function EditVoterPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voter', voterId] });
       queryClient.invalidateQueries({ queryKey: ['voters'] });
+      // 自動記錄接觸紀錄
+      recordContact({
+        voterId,
+        type: 'OTHER',
+        notes: '更新選民資料',
+        silent: true,
+      });
       toast({
         title: '成功',
-        description: '選民資料已更新',
+        description: '選民資料已更新並記錄接觸',
       });
       router.push(`/dashboard/voters/${voterId}`);
     },

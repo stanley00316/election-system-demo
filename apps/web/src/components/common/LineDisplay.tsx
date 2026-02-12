@@ -168,11 +168,13 @@ export function LineOpenButton({
   lineUrl,
   className,
   size = 'default',
+  onBeforeOpen,
 }: {
   lineId?: string | null;
   lineUrl?: string | null;
   className?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  onBeforeOpen?: () => void;
 }) {
   const openUrl = lineUrl || (lineId ? `https://line.me/ti/p/~${lineId}` : null);
 
@@ -181,6 +183,7 @@ export function LineOpenButton({
   }
 
   const handleClick = () => {
+    onBeforeOpen?.();
     window.open(openUrl, '_blank');
   };
 

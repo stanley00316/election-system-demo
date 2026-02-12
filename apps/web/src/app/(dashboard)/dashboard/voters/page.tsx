@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ import {
   FileSpreadsheet,
   FileText,
   ChevronDown,
+  CalendarDays,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -66,6 +68,7 @@ const STANCE_OPTIONS = [
 export default function VotersPage() {
   const hydrated = useHydration();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentCampaign } = useCampaignStore();
   const campaignId = currentCampaign?.id;
   const { toast } = useToast();
@@ -78,6 +81,14 @@ export default function VotersPage() {
   const [selectedVoters, setSelectedVoters] = useState<Map<string, any>>(new Map());
   const [addToScheduleOpen, setAddToScheduleOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [todayFilter, setTodayFilter] = useState(false);
+
+  // 從 URL 參數讀取「今日新增」篩選
+  useEffect(() => {
+    if (searchParams.get('today') === 'true') {
+      setTodayFilter(true);
+    }
+  }, [searchParams]);
 
   // 計算已啟用的篩選數量
   const activeFilterCount = Object.values(filters).filter(v => v !== undefined && v !== '').length;
@@ -123,8 +134,15 @@ export default function VotersPage() {
     }
   };
 
+  // 計算今天 00:00 的 ISO 字串
+  const todayStart = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  })();
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['voters', campaignId, page, search, filters],
+    queryKey: ['voters', campaignId, page, search, filters, todayFilter],
     queryFn: () =>
       votersApi.getAll({
         campaignId,
@@ -132,6 +150,7 @@ export default function VotersPage() {
         limit: 20,
         search: search || undefined,
         ...filters,
+        ...(todayFilter ? { createdAfter: todayStart } : {}),
       }),
     enabled: !!campaignId,
   });
@@ -219,6 +238,17 @@ export default function VotersPage() {
                 }}
               />
             </div>
+            <Button
+              variant={todayFilter ? 'default' : 'outline'}
+              onClick={() => {
+                setTodayFilter(!todayFilter);
+                setPage(1);
+              }}
+              className="shrink-0"
+            >
+              <CalendarDays className="h-4 w-4 mr-2" />
+              今日新增
+            </Button>
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="relative">

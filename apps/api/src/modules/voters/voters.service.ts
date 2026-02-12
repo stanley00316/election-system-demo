@@ -134,6 +134,8 @@ export class VotersService {
       maxInfluenceScore,
       tags,
       hasContact,
+      createdAfter,
+      createdBefore,
       page = 1,
       limit = 20,
       sortBy = 'createdAt',
@@ -184,6 +186,17 @@ export class VotersService {
     // 是否有接觸紀錄
     if (hasContact !== undefined) {
       where.contactCount = hasContact ? { gt: 0 } : { equals: 0 };
+    }
+
+    // 建立日期篩選
+    if (createdAfter || createdBefore) {
+      where.createdAt = {};
+      if (createdAfter) {
+        (where.createdAt as any).gte = new Date(createdAfter);
+      }
+      if (createdBefore) {
+        (where.createdAt as any).lte = new Date(createdBefore);
+      }
     }
 
     const [total, voters] = await Promise.all([
