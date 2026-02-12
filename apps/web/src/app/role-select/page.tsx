@@ -126,7 +126,7 @@ export default function RoleSelectPage() {
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                     {role.icon}
                   </div>
                   <ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-primary transition-colors" />

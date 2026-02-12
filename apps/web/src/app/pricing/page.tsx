@@ -367,7 +367,7 @@ function PricingPageContent() {
             {/* 付費方案卡片 */}
             <Card className="border-primary shadow-lg relative">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-primary text-white text-sm font-medium px-4 py-1 rounded-full">
+                <span className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1 rounded-full">
                   推薦方案
                 </span>
               </div>

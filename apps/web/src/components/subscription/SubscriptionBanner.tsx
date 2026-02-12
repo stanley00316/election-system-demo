@@ -52,7 +52,7 @@ export function SubscriptionBanner() {
   // 沒有訂閱 - 顯示開始試用提示
   if (!subscription.hasSubscription) {
     return (
-      <div className="bg-gradient-to-r from-primary to-primary/80 text-white px-4 py-3">
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-700 dark:to-slate-600 text-white px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Zap className="h-5 w-5" />

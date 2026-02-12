@@ -198,7 +198,7 @@ export default function AdminDashboardLayout({
                       className={cn(
                         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                         isActive
-                          ? 'bg-primary text-white'
+                          ? 'bg-white/15 text-white'
                           : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                       )}
                       onClick={() => setSidebarOpen(false)}
