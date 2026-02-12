@@ -99,12 +99,12 @@ export default function NewAlbumPage() {
 
         <div className="space-y-2">
           <Label>關聯活動（選填）</Label>
-          <Select value={eventId} onValueChange={setEventId}>
+          <Select value={eventId || '__none__'} onValueChange={(v) => setEventId(v === '__none__' ? '' : v)}>
             <SelectTrigger>
               <SelectValue placeholder="選擇活動..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">不關聯活動</SelectItem>
+              <SelectItem value="__none__">不關聯活動</SelectItem>
               {events?.map((event: any) => (
                 <SelectItem key={event.id} value={event.id}>
                   {event.name}
