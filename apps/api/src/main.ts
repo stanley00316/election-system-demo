@@ -13,6 +13,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Security
+  app.set('trust proxy', 1); // OWASP A05: 信任反向代理以正確識別客戶端 IP（Rate Limiting）
   app.use(helmet());
 
   // CORS — OWASP A05: 僅允許環境變數指定的來源，生產環境不包含硬編碼 localhost
