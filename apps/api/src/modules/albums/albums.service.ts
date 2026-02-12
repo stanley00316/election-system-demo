@@ -346,6 +346,18 @@ export class AlbumsService {
       ['ADMIN', 'EDITOR'] as any,
     );
 
+    // OWASP A01: 驗證所有 photoIds 都屬於此相簿
+    const photoCount = await this.prisma.photo.count({
+      where: {
+        id: { in: photoIds },
+        albumId,
+      },
+    });
+
+    if (photoCount !== photoIds.length) {
+      throw new BadRequestException('部分照片不存在或不屬於此相簿');
+    }
+
     // 批次更新 sortOrder
     const updates = photoIds.map((photoId, index) =>
       this.prisma.photo.update({
@@ -380,9 +392,14 @@ export class AlbumsService {
       throw new NotFoundException('相簿不存在或未發表');
     }
 
-    // 公開相簿使用公開 URL
+    // OWASP A01: 公開端點僅回傳安全欄位，不洩露 storageKey 等內部資訊
     const photosWithUrls = album.photos.map((photo) => ({
-      ...photo,
+      id: photo.id,
+      caption: photo.caption,
+      width: photo.width,
+      height: photo.height,
+      sortOrder: photo.sortOrder,
+      createdAt: photo.createdAt,
       url: this.photosService.getPublicUrl(photo.storageKey),
       thumbnailUrl: photo.thumbnailKey
         ? this.photosService.getPublicUrl(photo.thumbnailKey)
@@ -397,6 +414,60 @@ export class AlbumsService {
       campaignName: album.campaign.name,
       photoCount: album._count.photos,
       photos: photosWithUrls,
+    };
+  }
+
+  /**
+   * 取得相簿的社群分享資料
+   */
+  async getShareData(id: string, userId: string, siteUrl: string) {
+    const album = await this.prisma.album.findUnique({
+      where: { id },
+      include: {
+        photos: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+          take: 10, // 社群平台最多 10 張
+        },
+        coverPhoto: true,
+        campaign: { select: { name: true } },
+        _count: { select: { photos: true } },
+      },
+    });
+
+    if (!album) {
+      throw new NotFoundException('相簿不存在');
+    }
+
+    if (!album.isPublished || !album.publishSlug) {
+      throw new BadRequestException('相簿尚未發表，請先發表相簿');
+    }
+
+    // OWASP A01: 驗證權限
+    await this.campaignsService.checkCampaignAccess(
+      album.campaignId,
+      userId,
+      ['ADMIN', 'EDITOR'] as any,
+    );
+
+    const publicUrl = `${siteUrl}/p/${album.publishSlug}`;
+
+    // 照片 URL（使用公開 URL）
+    const photoUrls = album.photos.map((photo) =>
+      this.photosService.getPublicUrl(photo.storageKey),
+    );
+
+    const coverPhotoUrl = album.coverPhoto
+      ? this.photosService.getPublicUrl(album.coverPhoto.storageKey)
+      : undefined;
+
+    return {
+      title: album.title,
+      description: album.description,
+      publicUrl,
+      coverPhotoUrl,
+      photoUrls,
+      photoCount: album._count.photos,
+      campaignName: album.campaign.name,
     };
   }
 

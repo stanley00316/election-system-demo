@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth';
 import { useCampaignStore } from '@/stores/campaign';
-import { Settings, User, Building, Users, Bell, Shield, Database, Loader2, Download, HardDrive, CreditCard, Gift, MessageCircle, ExternalLink } from 'lucide-react';
+import { Settings, User, Building, Users, Bell, Shield, Database, Loader2, Download, HardDrive, CreditCard, Gift, MessageCircle, ExternalLink, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
@@ -320,6 +320,27 @@ export default function SettingsPage() {
         }>
           <GoogleCalendarConnect />
         </Suspense>
+
+        {/* Social Media Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              社群帳號
+            </CardTitle>
+            <CardDescription>連結社群平台，自動發佈相簿</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              設定 Facebook、LINE、X、Instagram 帳號連結，從相簿直接發佈到社群平台
+            </p>
+            <Link href="/dashboard/settings/social">
+              <Button variant="outline" className="w-full">
+                社群帳號設定
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
         {/* Notification Settings */}
         <Card>

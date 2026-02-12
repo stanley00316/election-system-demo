@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { PhotoGrid } from '@/components/albums/PhotoGrid';
 import { PhotoUploader } from '@/components/albums/PhotoUploader';
 import { PublishToggle } from '@/components/albums/PublishToggle';
+import { ShareButtons } from '@/components/albums/ShareButtons';
+import { SocialPublishDialog } from '@/components/albums/SocialPublishDialog';
 import {
   Edit2,
   Trash2,
@@ -133,14 +135,29 @@ export default function AlbumDetailPage() {
         )}
 
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <PublishToggle
-            isPublished={album.isPublished}
-            publishSlug={album.publishSlug}
-            onPublish={handlePublish}
-            onUnpublish={handleUnpublish}
-          />
+          <div className="flex items-center gap-3 flex-wrap">
+            <PublishToggle
+              isPublished={album.isPublished}
+              publishSlug={album.publishSlug}
+              onPublish={handlePublish}
+              onUnpublish={handleUnpublish}
+            />
+            {album.isPublished && album.publishSlug && (
+              <ShareButtons
+                url={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${album.publishSlug}`}
+                title={album.title}
+                description={album.description || undefined}
+                compact
+              />
+            )}
+          </div>
 
           <div className="flex gap-2">
+            <SocialPublishDialog
+              albumId={albumId}
+              albumTitle={album.title}
+              isPublished={album.isPublished}
+            />
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/albums/${albumId}/edit`}>
                 <Edit2 className="h-4 w-4 mr-2" />

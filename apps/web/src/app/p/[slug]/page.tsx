@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import { PublicAlbumView } from './PublicAlbumView';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://election-demo-rouge.vercel.app';
+const FB_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
 
 // 伺服器端取得相簿資料（用於 OG meta tags）
 async function getAlbumData(slug: string) {
@@ -32,14 +34,21 @@ export async function generateMetadata({
 
   const firstPhoto = album.photos?.[0];
   const description = album.description || `${album.campaignName} - ${album.photoCount} 張照片`;
+  const canonicalUrl = `${SITE_URL}/p/${params.slug}`;
 
   return {
     title: `${album.title} | ${album.campaignName}`,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title: album.title,
       description,
       type: 'website',
+      url: canonicalUrl,
+      siteName: '選情系統',
+      locale: 'zh_TW',
       ...(firstPhoto && {
         images: [
           {
@@ -59,6 +68,11 @@ export async function generateMetadata({
         images: [firstPhoto.url],
       }),
     },
+    ...(FB_APP_ID && {
+      other: {
+        'fb:app_id': FB_APP_ID,
+      },
+    }),
   };
 }
 

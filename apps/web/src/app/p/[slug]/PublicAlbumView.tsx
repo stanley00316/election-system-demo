@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ImageIcon } from 'lucide-react';
 import { PhotoLightbox } from '@/components/albums/PhotoLightbox';
+import { ShareButtons } from '@/components/albums/ShareButtons';
 import type { PhotoItem } from '@/components/albums/PhotoGrid';
 
 interface PublicAlbumData {
@@ -17,6 +18,7 @@ interface PublicAlbumData {
 
 export function PublicAlbumView({ album }: { album: PublicAlbumData }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,6 +43,15 @@ export function PublicAlbumView({ album }: { album: PublicAlbumData }) {
                 day: 'numeric',
               })}
             </span>
+          </div>
+
+          {/* 社群分享按鈕 */}
+          <div className="flex justify-center mt-5">
+            <ShareButtons
+              url={currentUrl}
+              title={album.title}
+              description={album.description || undefined}
+            />
           </div>
         </div>
       </header>

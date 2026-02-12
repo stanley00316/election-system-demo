@@ -1,0 +1,57 @@
+---
+description: OWASP Top 10 安全合規規則 — 適用於所有後端程式碼
+globs: apps/api/**/*.ts
+alwaysApply: false
+---
+
+# OWASP Top 10 安全合規
+
+## A01: 存取控制
+
+- 所有資源端點必須注入 `@CurrentUser('id')` 並驗證所有權或 campaign 成員資格
+- 使用 `CampaignsService.checkCampaignAccess()` 驗證 campaign 層級權限
+- DELETE/PUT/PATCH 操作必須驗證資源所有權
+
+```typescript
+// ✅ 正確
+@Get(':id')
+async findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
+  await this.service.checkAccess(id, userId);
+  return this.service.findById(id);
+}
+
+// ❌ 錯誤 — 缺少存取控制
+@Get(':id')
+async findById(@Param('id') id: string) {
+  return this.service.findById(id);
+}
+```
+
+## A03: 注入攻擊
+
+- 禁止使用 `$executeRawUnsafe` 搭配動態輸入
+- `$queryRaw` 必須使用 tagged template literal（自動參數化）
+- 禁止在任何端點使用 `execSync`、`exec`、`spawn` 搭配使用者輸入
+
+## A05: 安全配置
+
+- 新增公開端點必須有充分理由並加上 `@Throttle()` 限制
+- CORS 生產環境不得包含 localhost
+- 所有新 Controller 預設使用 `@UseGuards(JwtAuthGuard)`
+
+## A07: 認證
+
+- JWT token 有效期不超過 30 分鐘
+- 登出必須將 token 加入黑名單（`TokenBlacklistService`）
+- 敏感操作（刪除、權限變更）需要額外驗證
+
+## A09: 日誌
+
+- 使用 NestJS `Logger`，禁止 `console.log`
+- 禁止記錄 token、密碼、API key 等敏感資訊
+- 安全事件（登入、登出、權限變更、存取拒絕）必須記錄
+
+## 檔案上傳
+
+- 必須使用 `FileValidationPipe` 驗證 MIME type、副檔名、檔案大小
+- 檔案名稱必須清理（防止路徑遍歷）

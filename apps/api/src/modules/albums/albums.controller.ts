@@ -18,15 +18,18 @@ import {
   ApiBearerAuth,
   ApiConsumes,
 } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { AlbumsService } from './albums.service';
 import { PhotosService } from '../photos/photos.service';
+import { SocialService } from '../social/social.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 import { AlbumFilterDto } from './dto/album-filter.dto';
+import { ShareSocialDto } from './dto/share-social.dto';
 import { ImageFileValidationPipe } from '../../common/pipes/file-validation.pipe';
 
 @ApiTags('albums')
@@ -37,6 +40,8 @@ export class AlbumsController {
   constructor(
     private readonly albumsService: AlbumsService,
     private readonly photosService: PhotosService,
+    private readonly socialService: SocialService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post()
@@ -55,6 +60,12 @@ export class AlbumsController {
     @CurrentUser('id') userId: string,
   ) {
     return this.albumsService.findAll(filter, userId);
+  }
+
+  @Get('social/status')
+  @ApiOperation({ summary: '取得社群平台設定狀態' })
+  async getSocialStatus() {
+    return this.socialService.getConfiguredPlatforms();
   }
 
   @Get(':id')
@@ -155,6 +166,32 @@ export class AlbumsController {
     @Body('photoIds') photoIds: string[],
   ) {
     return this.albumsService.reorderPhotos(id, photoIds, userId);
+  }
+
+  @Post(':id/share-social')
+  @ApiOperation({ summary: '發佈相簿到社群平台' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 每分鐘最多 5 次
+  async shareSocial(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: ShareSocialDto,
+  ) {
+    // OWASP A05: 使用 ConfigService 取得設定，不硬編碼 URL
+    const siteUrl =
+      this.configService.get<string>('SITE_URL') ||
+      this.configService.get<string>('CORS_ORIGIN', 'https://localhost:3000');
+
+    const shareData = await this.albumsService.getShareData(
+      id,
+      userId,
+      siteUrl,
+    );
+
+    return this.socialService.publishToSocial(
+      dto.platforms,
+      shareData,
+      dto.message,
+    );
   }
 }
 

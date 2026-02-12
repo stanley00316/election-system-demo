@@ -672,6 +672,10 @@ const realAlbumsApi = {
   },
   reorderPhotos: (albumId: string, photoIds: string[]) =>
     api.patch<any>(`/albums/${albumId}/photos/reorder`, { photoIds }),
+  shareSocial: (albumId: string, data: { platforms: string[]; message?: string }) =>
+    api.post<any[]>(`/albums/${albumId}/share-social`, data),
+  getSocialStatus: () =>
+    api.get<Record<string, boolean>>('/albums/social/status'),
 };
 export const albumsApi = isDemoMode
   ? (realAlbumsApi as typeof realAlbumsApi) // 暫無 demo，直接用 real
