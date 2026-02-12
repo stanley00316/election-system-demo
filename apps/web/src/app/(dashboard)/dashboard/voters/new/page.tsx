@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -97,6 +97,14 @@ export default function NewVoterPage() {
       districtName: defaultDistrict,
     },
   });
+
+  // 確保 URL 參數在 hydration 後正確填入（解決 Vercel 靜態頁面 useForm defaultValues 時序問題）
+  useEffect(() => {
+    if (defaultLineId) setValue('lineId', defaultLineId);
+    if (defaultLineUrl) setValue('lineUrl', defaultLineUrl);
+    if (defaultCity) setValue('city', defaultCity);
+    if (defaultDistrict) setValue('districtName', defaultDistrict);
+  }, [defaultLineId, defaultLineUrl, defaultCity, defaultDistrict, setValue]);
 
   const createMutation = useMutation({
     mutationFn: (data: VoterFormData) =>
