@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useCampaignStore } from '@/stores/campaign';
-import { votersApi, contactsApi } from '@/lib/api';
+import { votersApi } from '@/lib/api';
 import {
   QrCode,
   User,
@@ -18,7 +18,6 @@ import {
   Mail,
   MapPin,
   MessageCircle,
-  ExternalLink,
   UserPlus,
   History,
   Search,
@@ -26,12 +25,16 @@ import {
   Tag,
   FileText,
   Clock,
+  AlertTriangle,
+  Loader2,
+  Navigation,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useHydration } from '@/hooks/use-hydration';
-import { ContactType, ContactOutcome } from '@shared/types/contact';
 import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';
 import { getContactTypeLabel } from '@/lib/utils';
+import { VoterAreaCard } from '@/components/voters/VoterAreaCard';
+import { SameAreaVoters } from '@/components/voters/SameAreaVoters';
 
 // 動態匯入 QR 掃描器元件，避免 SSR 錯誤
 const LineQrScanner = dynamic(
@@ -73,6 +76,16 @@ interface ScanResult {
   lineUrl: string;
 }
 
+interface GpsLocation {
+  lat: number;
+  lng: number;
+}
+
+interface GpsArea {
+  city: string;
+  district: string;
+}
+
 export default function ScanLinePage() {
   const hydrated = useHydration();
   const router = useRouter();
@@ -84,6 +97,47 @@ export default function ScanLinePage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<any>(null);
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+
+  // GPS 定位狀態
+  const [gpsLocation, setGpsLocation] = useState<GpsLocation | null>(null);
+  const [gpsArea, setGpsArea] = useState<GpsArea | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  // 背景 GPS 定位（非阻塞）
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setGpsLocation(loc);
+        setGpsLoading(false);
+        // 嘗試反向地理編碼取得區域（簡易版：使用 Nominatim）
+        fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&accept-language=zh-TW`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.address) {
+              setGpsArea({
+                city: data.address.city || data.address.county || '',
+                district:
+                  data.address.suburb ||
+                  data.address.district ||
+                  data.address.town ||
+                  '',
+              });
+            }
+          })
+          .catch(() => {});
+      },
+      () => {
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
 
   // 搜尋選民
   const { data: searchResult, isLoading: isSearching, refetch: refetchSearch } = useQuery({
@@ -96,6 +150,32 @@ export default function ScanLinePage() {
     enabled: !!scanResult && !!currentCampaign,
   });
 
+  // 取得找到選民的第一位（用於區域查詢）
+  const foundVoter = searchResult?.found && searchResult.voters.length > 0
+    ? searchResult.voters[0]
+    : null;
+
+  // 查詢同區域選民（用於 VoterAreaCard 統計 + SameAreaVoters 列表）
+  const { data: areaVotersResult, isLoading: isLoadingAreaVoters } = useQuery({
+    queryKey: [
+      'voters',
+      'same-area',
+      currentCampaign?.id,
+      foundVoter?.districtName,
+      foundVoter?.id,
+    ],
+    queryFn: () =>
+      votersApi.getAll({
+        campaignId: currentCampaign!.id,
+        district: foundVoter!.districtName,
+        limit: 100,
+        page: 1,
+      }),
+    enabled: !!foundVoter?.districtName && !!currentCampaign,
+  });
+
+  const areaVoters = areaVotersResult?.data || [];
+
   // 處理掃描結果
   const handleScanResult = (result: ScanResult) => {
     setScanResult(result);
@@ -106,18 +186,62 @@ export default function ScanLinePage() {
     });
   };
 
-  // 開啟新增選民頁面並帶入 LINE 資訊
-  const handleAddVoter = () => {
-    if (!scanResult) return;
-    
-    const params = new URLSearchParams();
-    if (scanResult.lineId) {
-      params.set('lineId', scanResult.lineId);
+  // 開啟新增選民頁面 — 帶防重複再查機制
+  const handleAddVoter = useCallback(async () => {
+    if (!scanResult || !currentCampaign) return;
+
+    setIsCheckingDuplicate(true);
+    try {
+      // 防重複：跳轉前再查一次，防止其他團隊成員在這段時間已新增
+      const recheck = await votersApi.searchByLine({
+        campaignId: currentCampaign.id,
+        lineId: scanResult.lineId,
+        lineUrl: scanResult.lineUrl,
+      });
+
+      if (recheck?.found && recheck.voters.length > 0) {
+        // 已被其他團隊成員新增
+        toast({
+          title: '選民已存在',
+          description: `此選民已由 ${recheck.voters[0].creator?.name || '其他團隊成員'} 建立`,
+        });
+        // 重新觸發搜尋以顯示該選民
+        queryClient.invalidateQueries({
+          queryKey: ['voters', 'search-by-line'],
+        });
+        refetchSearch();
+        setIsCheckingDuplicate(false);
+        return;
+      }
+
+      // 確認無重複，導向新增頁面
+      const params = new URLSearchParams();
+      if (scanResult.lineId) {
+        params.set('lineId', scanResult.lineId);
+      }
+      params.set('lineUrl', scanResult.lineUrl);
+
+      // 帶入 GPS 位置資訊
+      if (gpsLocation) {
+        params.set('lat', String(gpsLocation.lat));
+        params.set('lng', String(gpsLocation.lng));
+      }
+      if (gpsArea) {
+        if (gpsArea.city) params.set('city', gpsArea.city);
+        if (gpsArea.district) params.set('district', gpsArea.district);
+      }
+
+      router.push(`/dashboard/voters/new?${params.toString()}`);
+    } catch (error) {
+      // 查詢失敗時仍允許新增（不阻塞流程）
+      const params = new URLSearchParams();
+      if (scanResult.lineId) params.set('lineId', scanResult.lineId);
+      params.set('lineUrl', scanResult.lineUrl);
+      router.push(`/dashboard/voters/new?${params.toString()}`);
+    } finally {
+      setIsCheckingDuplicate(false);
     }
-    params.set('lineUrl', scanResult.lineUrl);
-    
-    router.push(`/dashboard/voters/new?${params.toString()}`);
-  };
+  }, [scanResult, currentCampaign, gpsLocation, gpsArea, router, toast, queryClient, refetchSearch]);
 
   // 記錄 LINE 通話
   const handleRecordLineCall = (voter: any) => {
@@ -153,18 +277,18 @@ export default function ScanLinePage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <QrCode className="h-6 w-6" />
+          <h1 className="text-xl lg:text-2xl font-bold flex items-center gap-2">
+            <QrCode className="h-5 w-5 lg:h-6 lg:w-6" />
             掃描 LINE
           </h1>
-          <p className="text-muted-foreground">掃描 LINE QR Code 來搜尋或新增選民</p>
+          <p className="text-sm text-muted-foreground">掃描 LINE QR Code 來搜尋或新增選民</p>
         </div>
         {scanResult && (
-          <Button variant="outline" onClick={handleRescan}>
+          <Button variant="outline" size="sm" onClick={handleRescan}>
             <RefreshCw className="h-4 w-4 mr-2" />
             重新掃描
           </Button>
@@ -191,6 +315,20 @@ export default function ScanLinePage() {
                 <QrCode className="h-5 w-5 mr-2" />
                 開始掃描
               </Button>
+
+              {/* GPS 狀態提示 */}
+              {gpsLoading && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  正在取得您的位置...
+                </div>
+              )}
+              {gpsArea && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Navigation className="h-3 w-3" />
+                  目前位置：{gpsArea.city} {gpsArea.district}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -212,170 +350,219 @@ export default function ScanLinePage() {
             <span className="font-medium">找到 {searchResult.voters.length} 位選民</span>
           </div>
 
-          {searchResult.voters.map((voter: any) => (
-            <Card key={voter.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <User className="h-6 w-6 text-primary" />
-                    </div>
+          {searchResult.voters.map((voter: any) => {
+            // 計算重複接觸警告
+            const latestContact = voter.contacts?.[0];
+            const isRecentlyContacted =
+              latestContact &&
+              Date.now() - new Date(latestContact.contactDate).getTime() <
+                48 * 60 * 60 * 1000;
+
+            return (
+              <div key={voter.id} className="space-y-4">
+                {/* 重複接觸警告橫幅 */}
+                {isRecentlyContacted && latestContact && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 sticky top-0 z-10">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
                     <div>
-                      <CardTitle className="text-xl">{voter.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          variant="secondary"
-                          className={`${stanceColors[voter.stance]} text-white`}
-                        >
-                          {stanceLabels[voter.stance] || voter.stance}
-                        </Badge>
-                        {voter.influenceScore > 0 && (
-                          <Badge variant="outline">
-                            影響力 {voter.influenceScore}
-                          </Badge>
-                        )}
-                      </div>
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        此選民近期已被接觸
+                      </p>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
+                        {latestContact.user?.name || '團隊成員'} 於{' '}
+                        {new Date(latestContact.contactDate).toLocaleDateString('zh-TW')}{' '}
+                        已接觸（{getContactTypeLabel(latestContact.type)}）
+                      </p>
                     </div>
                   </div>
-                  <Link href={`/dashboard/voters/${voter.id}`}>
-                    <Button variant="ghost" size="sm">
-                      查看詳情
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* 聯絡資訊 */}
-                <div className="grid gap-3 text-sm">
-                  {voter.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{voter.phone}</span>
-                    </div>
-                  )}
-                  {voter.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{voter.email}</span>
-                    </div>
-                  )}
-                  {/* LINE 資訊 - 使用 LineDisplay 元件 */}
-                  <LineDisplay
-                    lineId={voter.lineId}
-                    lineUrl={voter.lineUrl}
-                    variant="inline"
-                    showAddButton={true}
-                  />
-                  {voter.address && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{voter.address}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 標籤 */}
-                {voter.tags && voter.tags.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Tag className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">標籤</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {voter.tags.map((tag: string, index: number) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </>
                 )}
 
-                {/* 備註 */}
-                {voter.notes && (
-                  <>
-                    <Separator />
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">備註</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">
-                        {voter.notes}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {/* 最近接觸紀錄（增強版：顯示接觸內容） */}
-                {voter.contacts && voter.contacts.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <History className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">最近接觸</span>
-                      </div>
-                      <div className="space-y-3">
-                        {voter.contacts.slice(0, 3).map((contact: any) => (
-                          <div key={contact.id} className="border-l-2 border-muted pl-3 py-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                {new Date(contact.contactDate).toLocaleDateString('zh-TW')}
-                                {contact.user?.name && ` - ${contact.user.name}`}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {getContactTypeLabel(contact.type)}
+                {/* 選民基本資訊 */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-primary/10">
+                          <User className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl">{voter.name}</CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge 
+                              variant="secondary"
+                              className={`${stanceColors[voter.stance]} text-white`}
+                            >
+                              {stanceLabels[voter.stance] || voter.stance}
+                            </Badge>
+                            {voter.influenceScore > 0 && (
+                              <Badge variant="outline">
+                                影響力 {voter.influenceScore}
                               </Badge>
-                            </div>
-                            {/* 顯示接觸內容/備註 */}
-                            {(contact.notes || contact.summary) && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {contact.notes || contact.summary}
-                              </p>
                             )}
                           </div>
-                        ))}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        總共接觸 {voter._count?.contacts || voter.contactCount || 0} 次
-                      </p>
+                      <Link href={`/dashboard/voters/${voter.id}`}>
+                        <Button variant="ghost" size="sm">
+                          查看詳情
+                        </Button>
+                      </Link>
                     </div>
-                  </>
-                )}
+                  </CardHeader>
+                </Card>
 
-                {/* 建立資訊 */}
-                {voter.creator && (
-                  <>
+                {/* 區域定位卡片（新增） */}
+                <VoterAreaCard
+                  voter={voter}
+                  areaVoters={areaVoters}
+                  isLoadingAreaVoters={isLoadingAreaVoters}
+                />
+
+                {/* 聯絡資訊 + 詳細資料 */}
+                <Card>
+                  <CardContent className="pt-6 space-y-4">
+                    {/* 聯絡資訊 */}
+                    <div className="grid gap-3 text-sm">
+                      {voter.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span>{voter.phone}</span>
+                        </div>
+                      )}
+                      {voter.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span>{voter.email}</span>
+                        </div>
+                      )}
+                      {/* LINE 資訊 */}
+                      <LineDisplay
+                        lineId={voter.lineId}
+                        lineUrl={voter.lineUrl}
+                        variant="inline"
+                        showAddButton={true}
+                      />
+                      {voter.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{voter.address}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 標籤 */}
+                    {voter.tags && voter.tags.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Tag className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">標籤</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {voter.tags.map((tag: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* 備註 */}
+                    {voter.notes && (
+                      <>
+                        <Separator />
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">備註</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">
+                            {voter.notes}
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    {/* 最近接觸紀錄 */}
+                    {voter.contacts && voter.contacts.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <History className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">最近接觸</span>
+                          </div>
+                          <div className="space-y-3">
+                            {voter.contacts.slice(0, 3).map((contact: any) => (
+                              <div key={contact.id} className="border-l-2 border-muted pl-3 py-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">
+                                    {new Date(contact.contactDate).toLocaleDateString('zh-TW')}
+                                    {contact.user?.name && ` - ${contact.user.name}`}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {getContactTypeLabel(contact.type)}
+                                  </Badge>
+                                </div>
+                                {(contact.notes || contact.summary) && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                    {contact.notes || contact.summary}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            總共接觸 {voter._count?.contacts || voter.contactCount || 0} 次
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    {/* 建立資訊 */}
+                    {voter.creator && (
+                      <>
+                        <Separator />
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            由 {voter.creator.name} 於 {new Date(voter.createdAt).toLocaleDateString('zh-TW')} 建立
+                          </span>
+                        </div>
+                      </>
+                    )}
+
                     <Separator />
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>
-                        由 {voter.creator.name} 於 {new Date(voter.createdAt).toLocaleDateString('zh-TW')} 建立
-                      </span>
+
+                    {/* 操作按鈕 */}
+                    <div className="flex flex-wrap gap-2">
+                      <LineOpenButton
+                        lineId={voter.lineId}
+                        lineUrl={voter.lineUrl}
+                      />
+                      <Button variant="outline" onClick={() => handleRecordLineCall(voter)}>
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        記錄 LINE 通話
+                      </Button>
                     </div>
-                  </>
-                )}
+                  </CardContent>
+                </Card>
 
-                <Separator />
-
-                {/* 操作按鈕 */}
-                <div className="flex flex-wrap gap-2">
-                  <LineOpenButton
-                    lineId={voter.lineId}
-                    lineUrl={voter.lineUrl}
-                  />
-                  <Button variant="outline" onClick={() => handleRecordLineCall(voter)}>
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    記錄 LINE 通話
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                {/* 同區域選民列表（可收合） */}
+                <SameAreaVoters
+                  currentVoterId={voter.id}
+                  district={voter.districtName}
+                  village={voter.village}
+                  campaignId={currentCampaign.id}
+                  areaVoters={areaVoters}
+                  isLoading={isLoadingAreaVoters}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : (
         // 未找到選民
@@ -391,22 +578,53 @@ export default function ScanLinePage() {
                   系統中沒有此 LINE 帳號的選民資料。
                   您可以新增此選民，LINE 資訊將自動填入。
                 </p>
-                {scanResult.lineId && (
+                {scanResult && scanResult.lineId && (
                   <p className="text-sm">
                     LINE ID: <span className="font-medium">{scanResult.lineId}</span>
                   </p>
                 )}
               </div>
+
+              {/* GPS 位置提示 */}
+              {gpsArea && (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-sm">
+                  <Navigation className="h-4 w-4 text-blue-600" />
+                  <span className="text-blue-700 dark:text-blue-300">
+                    您目前的位置：{gpsArea.city} {gpsArea.district}
+                  </span>
+                </div>
+              )}
+              {gpsLoading && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  正在偵測您的位置...
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleRescan}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   重新掃描
                 </Button>
-                <Button onClick={handleAddVoter}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  新增選民
+                <Button onClick={handleAddVoter} disabled={isCheckingDuplicate}>
+                  {isCheckingDuplicate ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      確認中...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      新增選民
+                    </>
+                  )}
                 </Button>
               </div>
+
+              {/* 防重複提示 */}
+              <p className="text-xs text-muted-foreground text-center max-w-sm">
+                點擊「新增選民」時，系統會再次確認是否有其他團隊成員已新增此選民，避免重複建立
+              </p>
             </div>
           </CardContent>
         </Card>

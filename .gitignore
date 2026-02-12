@@ -40,3 +40,5 @@ apps/api/prisma/*.db-journal
 # Misc
 *.tsbuildinfo
 .eslintcache
+.vercel
+.env*.local

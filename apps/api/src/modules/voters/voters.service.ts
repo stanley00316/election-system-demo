@@ -27,6 +27,30 @@ export class VotersService {
       [UserRole.ADMIN, UserRole.EDITOR],
     );
 
+    // 多人同時新增防護：檢查 LINE ID/URL 是否已存在於同一活動
+    if (dto.lineId || dto.lineUrl) {
+      const orConditions = [];
+      if (dto.lineId) orConditions.push({ lineId: dto.lineId });
+      if (dto.lineUrl) orConditions.push({ lineUrl: dto.lineUrl });
+
+      const existing = await this.prisma.voter.findFirst({
+        where: {
+          campaignId: dto.campaignId,
+          OR: orConditions,
+        },
+        include: {
+          creator: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      if (existing) {
+        // 回傳已存在的選民，附帶標記讓前端知道是重複
+        return { ...existing, _alreadyExists: true };
+      }
+    }
+
     // 如果有地址但沒有座標，進行 geocoding
     let latitude = dto.latitude;
     let longitude = dto.longitude;

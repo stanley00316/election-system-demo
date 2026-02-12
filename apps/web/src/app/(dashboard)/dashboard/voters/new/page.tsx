@@ -74,9 +74,11 @@ export default function NewVoterPage() {
   const { toast } = useToast();
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
 
-  // 從 URL 取得預設的 LINE 資訊
+  // 從 URL 取得預設的 LINE 資訊及 GPS 區域
   const defaultLineId = searchParams.get('lineId') || '';
   const defaultLineUrl = searchParams.get('lineUrl') || '';
+  const defaultCity = searchParams.get('city') || '';
+  const defaultDistrict = searchParams.get('district') || '';
 
   const {
     register,
@@ -91,6 +93,8 @@ export default function NewVoterPage() {
       influenceScore: 0,
       lineId: defaultLineId,
       lineUrl: defaultLineUrl,
+      city: defaultCity,
+      districtName: defaultDistrict,
     },
   });
 
@@ -104,8 +108,17 @@ export default function NewVoterPage() {
         lineUrl: data.lineUrl || undefined,
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()) : [],
       }),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['voters'] });
+      // 多人防重複：若後端回傳已存在標記，導向該選民詳情頁
+      if (result?._alreadyExists) {
+        toast({
+          title: '選民已存在',
+          description: `此選民已由 ${result.creator?.name || '其他團隊成員'} 建立，為您導向該選民資料`,
+        });
+        router.push(`/dashboard/voters/${result.id}`);
+        return;
+      }
       toast({
         title: '成功',
         description: '選民已建立',

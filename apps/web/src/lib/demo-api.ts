@@ -43,6 +43,9 @@ let tempContacts = [...demoContacts];
 let tempEvents = [...demoEvents];
 let tempSchedules = [...demoSchedules];
 
+// 暫存邀請連結資料
+let tempInviteLinks: any[] = [];
+
 // 暫存活動參與者資料（eventId -> attendees[]）
 const tempEventAttendees = new Map<string, Array<{ voterId: string; status: string; joinedAt: string }>>();
 
@@ -148,20 +151,35 @@ export const demoCampaignsApi = {
   
   createInviteLink: async (_id: string, data: any) => {
     await delay(200);
-    return {
+    const newLink = {
       id: 'invite-' + Date.now(),
       code: 'DEMO' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-      ...data,
+      role: data.role || 'VIEWER',
+      maxUses: data.maxUses || null,
+      usedCount: 0,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      creator: {
+        id: demoUser.id,
+        name: demoUser.name,
+      },
     };
+    tempInviteLinks.unshift(newLink);
+    return newLink;
   },
   
   getInviteLinks: async (_id: string) => {
     await delay(100);
-    return [];
+    return tempInviteLinks;
   },
   
-  deactivateInviteLink: async (_id: string, _inviteId: string) => {
+  deactivateInviteLink: async (_id: string, inviteId: string) => {
     await delay(200);
+    const link = tempInviteLinks.find(l => l.id === inviteId);
+    if (link) {
+      link.isActive = false;
+    }
     return { success: true };
   },
   
@@ -196,8 +214,19 @@ export const demoVotersApi = {
     }
     
     // 區域篩選
+    if (params.city) {
+      filtered = filtered.filter(v => v.city === params.city);
+    }
     if (params.district) {
       filtered = filtered.filter(v => v.districtName === params.district);
+    }
+    if (params.village) {
+      filtered = filtered.filter(v => v.village === params.village);
+    }
+    
+    // 排除指定選民（用於同區域查詢）
+    if (params.excludeId) {
+      filtered = filtered.filter(v => v.id !== params.excludeId);
     }
     
     // 立場篩選
@@ -246,9 +275,22 @@ export const demoVotersApi = {
   
   create: async (data: any) => {
     await delay(300);
+    // 多人防重複：檢查 LINE ID/URL 是否已存在於同一活動
+    if (data.lineId || data.lineUrl) {
+      const existing = tempVoters.find(v =>
+        v.campaignId === data.campaignId &&
+        ((data.lineId && v.lineId === data.lineId) ||
+         (data.lineUrl && v.lineUrl === data.lineUrl))
+      );
+      if (existing) {
+        return { ...existing, _alreadyExists: true };
+      }
+    }
     const newVoter = {
       id: 'voter-new-' + Date.now(),
       ...data,
+      contactCount: 0,
+      lastContactAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

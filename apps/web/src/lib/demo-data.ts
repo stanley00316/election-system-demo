@@ -163,6 +163,7 @@ function generateVoters(count: number): any[] {
       city: '台北市',
       districtName: district.name,
       village,
+      neighborhood: `${seededRandomInt(1, 20)}鄰`,
       latitude: district.lat + latOffset,
       longitude: district.lng + lngOffset,
       politicalParty: seededRandomItem(parties),
