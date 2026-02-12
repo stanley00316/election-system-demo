@@ -2,24 +2,39 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import * as path from 'path';
 import { AppModule } from './app.module';
 import { SentryInterceptor, SentryExceptionFilter } from './modules/sentry';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
   // Security
   app.use(helmet());
 
-  // CORS
+  // CORS — OWASP A05: 僅允許環境變數指定的來源，生產環境不包含硬編碼 localhost
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:3000');
+  const isProduction = configService.get('NODE_ENV') === 'production';
+  const allowedOrigins = corsOrigin.includes(',')
+    ? corsOrigin.split(',').map((o: string) => o.trim())
+    : [corsOrigin];
+
+  // 開發環境額外允許 localhost 變體
+  if (!isProduction) {
+    const devOrigins = ['http://localhost:3000', 'http://localhost:3002'];
+    devOrigins.forEach((o) => {
+      if (!allowedOrigins.includes(o)) allowedOrigins.push(o);
+    });
+  }
+
   app.enableCors({
-    origin: corsOrigin.includes(',')
-      ? corsOrigin.split(',').map((o: string) => o.trim())
-      : [corsOrigin, 'http://localhost:3002'],
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Global prefix
@@ -64,6 +79,13 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('docs', app, document);
+  }
+
+  // 本地檔案上傳靜態路由（開發環境用）
+  const storageProvider = configService.get('STORAGE_PROVIDER', 'local');
+  if (storageProvider === 'local') {
+    const uploadPath = configService.get('UPLOAD_PATH', './uploads');
+    app.useStaticAssets(path.resolve(uploadPath), { prefix: '/uploads' });
   }
 
   const port = configService.get('PORT', 3001);

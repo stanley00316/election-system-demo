@@ -67,6 +67,7 @@ import {
 import { BackButton } from '@/components/common/BackButton';
 import { AddToScheduleDialog } from '@/components/voters/AddToScheduleDialog';
 import { VoterAttachments } from '@/components/voters/VoterAttachments';
+import { VoterAvatar } from '@/components/voters/VoterAvatar';
 import { LineDisplay, LineOpenButton } from '@/components/common/LineDisplay';
 import { useAutoContact } from '@/hooks/use-auto-contact';
 import dynamic from 'next/dynamic';
@@ -276,6 +277,14 @@ export default function VoterDetailPage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
+          <VoterAvatar
+            voterId={voter.id}
+            voterName={voter.name}
+            avatarUrl={voter.avatarPhotoUrl}
+            size="lg"
+            editable
+            onAvatarChange={() => queryClient.invalidateQueries({ queryKey: ['voter', voterId] })}
+          />
           <div>
             <h1 className="text-2xl font-bold">{voter.name}</h1>
             <div className="flex items-center gap-2 mt-1">

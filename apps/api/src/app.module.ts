@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -13,6 +14,7 @@ import { DistrictsModule } from './modules/districts/districts.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { MapsModule } from './modules/maps/maps.module';
 import { HealthModule } from './modules/health/health.module';
+import { RedisModule } from './modules/redis';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { SentryModule } from './modules/sentry';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
@@ -31,6 +33,9 @@ import { AdminPromotersModule } from './modules/admin/promoters/admin-promoters.
 import { PromotersModule } from './modules/promoters/promoters.module';
 import { PromoterSelfModule } from './modules/promoter-self/promoter-self.module';
 import { RoleInvitesModule } from './modules/role-invites/role-invites.module';
+import { StorageModule } from './modules/storage';
+import { PhotosModule } from './modules/photos/photos.module';
+import { AlbumsModule } from './modules/albums/albums.module';
 
 @Module({
   imports: [
@@ -53,6 +58,9 @@ import { RoleInvitesModule } from './modules/role-invites/role-invites.module';
 
     // Database
     PrismaModule,
+
+    // Redis (OWASP A07: Token 黑名單)
+    RedisModule,
 
     // Feature modules
     AuthModule,
@@ -83,6 +91,16 @@ import { RoleInvitesModule } from './modules/role-invites/role-invites.module';
     PromotersModule,
     PromoterSelfModule,
     RoleInvitesModule,
+    StorageModule,
+    PhotosModule,
+    AlbumsModule,
+  ],
+  providers: [
+    // OWASP A05: 全域啟用 Rate Limiting
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

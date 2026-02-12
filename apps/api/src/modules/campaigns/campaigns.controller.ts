@@ -37,7 +37,12 @@ export class CampaignsController {
 
   @Get(':id')
   @ApiOperation({ summary: '取得選舉活動詳情' })
-  async findById(@Param('id') id: string) {
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
+    await this.campaignsService.checkCampaignAccess(id, userId);
     return this.campaignsService.findById(id);
   }
 
@@ -62,7 +67,12 @@ export class CampaignsController {
 
   @Get(':id/team')
   @ApiOperation({ summary: '取得團隊成員' })
-  async getTeamMembers(@Param('id') id: string) {
+  async getTeamMembers(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
+    await this.campaignsService.checkCampaignAccess(id, userId);
     return this.campaignsService.getTeamMembers(id);
   }
 
@@ -99,7 +109,12 @@ export class CampaignsController {
 
   @Get(':id/stats')
   @ApiOperation({ summary: '取得選舉活動統計' })
-  async getStats(@Param('id') id: string) {
+  async getStats(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
+    await this.campaignsService.checkCampaignAccess(id, userId);
     return this.campaignsService.getStats(id);
   }
 

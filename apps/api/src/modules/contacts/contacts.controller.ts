@@ -35,13 +35,25 @@ export class ContactsController {
 
   @Get()
   @ApiOperation({ summary: '查詢接觸紀錄列表' })
-  async findAll(@Query() filter: ContactFilterDto) {
+  async findAll(
+    @Query() filter: ContactFilterDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
+    if (filter.campaignId) {
+      await this.contactsService.checkCampaignAccess(filter.campaignId, userId);
+    }
     return this.contactsService.findAll(filter);
   }
 
   @Get('summary')
   @ApiOperation({ summary: '取得接觸紀錄統計' })
-  async getSummary(@Query('campaignId') campaignId: string) {
+  async getSummary(
+    @Query('campaignId') campaignId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
+    await this.contactsService.checkCampaignAccess(campaignId, userId);
     return this.contactsService.getSummary(campaignId);
   }
 
@@ -58,15 +70,22 @@ export class ContactsController {
   @ApiOperation({ summary: '取得選民的接觸紀錄' })
   async findByVoter(
     @Param('voterId') voterId: string,
+    @CurrentUser('id') userId: string,
     @Query('limit') limit?: number,
   ) {
+    // OWASP A01: 驗證使用者是否有權存取該選民所屬的 campaign
+    await this.contactsService.checkVoterAccess(voterId, userId);
     return this.contactsService.findByVoter(voterId, limit);
   }
 
   @Get(':id')
   @ApiOperation({ summary: '取得接觸紀錄詳情' })
-  async findById(@Param('id') id: string) {
-    return this.contactsService.findById(id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否有權存取該接觸紀錄所屬的 campaign
+    return this.contactsService.findByIdWithAccessCheck(id, userId);
   }
 
   @Put(':id')

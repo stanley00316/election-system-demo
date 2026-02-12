@@ -38,6 +38,7 @@ import {
   Edit2,
   Eye,
   ArrowLeftRight,
+  ImageIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { BottomNavBar } from '@/components/navigation';
@@ -62,6 +63,7 @@ const navigation = [
   { name: '選民管理', href: '/dashboard/voters', icon: Users },
   { name: '接觸紀錄', href: '/dashboard/contacts', icon: MessageSquare },
   { name: '活動管理', href: '/dashboard/events', icon: Calendar },
+  { name: '相簿', href: '/dashboard/albums', icon: ImageIcon },
   { name: '行程規劃', href: '/dashboard/schedules', icon: MapPin },
   { name: '地圖檢視', href: '/dashboard/map', icon: Map },
   { name: '選情分析', href: '/dashboard/analysis', icon: BarChart3 },

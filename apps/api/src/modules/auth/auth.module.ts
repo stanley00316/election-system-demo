@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LineService } from './line.service';
 import { GoogleService } from './google.service';
+import { TokenBlacklistService } from './token-blacklist.service';
 
 @Module({
   imports: [
@@ -16,14 +17,15 @@ import { GoogleService } from './google.service';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get('JWT_EXPIRES_IN', '7d'),
+          // OWASP A07: 縮短 access token 有效期至 30 分鐘
+          expiresIn: configService.get('JWT_EXPIRES_IN', '30m'),
         },
       }),
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LineService, GoogleService],
-  exports: [AuthService, JwtModule, GoogleService],
+  providers: [AuthService, JwtStrategy, LineService, GoogleService, TokenBlacklistService],
+  exports: [AuthService, JwtModule, GoogleService, TokenBlacklistService],
 })
 export class AuthModule {}

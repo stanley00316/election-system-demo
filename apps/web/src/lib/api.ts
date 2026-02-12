@@ -102,6 +102,13 @@ class ApiClient {
     });
   }
 
+  patch<T>(endpoint: string, data?: any) {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   delete<T>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
@@ -627,6 +634,76 @@ const realPromoterSelfApi = {
 };
 
 export const promoterSelfApi = isDemoMode ? demoApi.demoPromoterSelfApi : realPromoterSelfApi;
+
+// Albums API
+const realAlbumsApi = {
+  getAll: (params: { campaignId: string; eventId?: string; isPublished?: string }) =>
+    api.get<any[]>('/albums', params),
+  getById: (id: string) => api.get<any>(`/albums/${id}`),
+  create: (data: { campaignId: string; eventId?: string; title: string; description?: string }) =>
+    api.post<any>('/albums', data),
+  update: (id: string, data: { title?: string; description?: string; sortOrder?: number }) =>
+    api.patch<any>(`/albums/${id}`, data),
+  delete: (id: string) => api.delete(`/albums/${id}`),
+  publish: (id: string) => api.post<any>(`/albums/${id}/publish`),
+  unpublish: (id: string) => api.post<any>(`/albums/${id}/unpublish`),
+  setCoverPhoto: (id: string, photoId: string) =>
+    api.patch<any>(`/albums/${id}/cover`, { photoId }),
+  uploadPhotos: (albumId: string, files: File[], caption?: string) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    if (caption) formData.append('caption', caption);
+
+    const headers: Record<string, string> = {};
+    const token = api.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    return fetch(`${API_URL}/albums/${albumId}/photos`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || `HTTP ${res.status}`);
+      }
+      return res.json();
+    });
+  },
+  reorderPhotos: (albumId: string, photoIds: string[]) =>
+    api.patch<any>(`/albums/${albumId}/photos/reorder`, { photoIds }),
+};
+export const albumsApi = isDemoMode
+  ? (realAlbumsApi as typeof realAlbumsApi) // 暫無 demo，直接用 real
+  : realAlbumsApi;
+
+// Photos API
+const realPhotosApi = {
+  upload: (file: File, data: { campaignId: string; albumId?: string; voterId?: string; caption?: string }) =>
+    api.uploadFile<any>('/photos/upload', file, data as any),
+  getById: (id: string) => api.get<any>(`/photos/${id}`),
+  update: (id: string, data: { caption?: string; sortOrder?: number }) =>
+    api.patch<any>(`/photos/${id}`, data),
+  delete: (id: string) => api.delete(`/photos/${id}`),
+};
+export const photosApi = isDemoMode
+  ? (realPhotosApi as typeof realPhotosApi)
+  : realPhotosApi;
+
+// Public Albums API（不需登入）
+export const publicAlbumsApi = {
+  getBySlug: (slug: string) => api.get<any>(`/public/albums/${slug}`),
+};
+
+// Voter Avatar API
+const realVoterAvatarApi = {
+  upload: (voterId: string, file: File) =>
+    api.uploadFile<any>(`/voters/${voterId}/avatar`, file),
+  delete: (voterId: string) => api.delete(`/voters/${voterId}/avatar`),
+};
+export const voterAvatarApi = isDemoMode
+  ? (realVoterAvatarApi as typeof realVoterAvatarApi)
+  : realVoterAvatarApi;
 
 // Role Invites API（超級管理者 QR 邀請）
 const realRoleInvitesApi = {

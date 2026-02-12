@@ -63,6 +63,10 @@ model User {
   promoterReferrals   PromoterReferral?   @relation("PromoterReferred")
   trialActivations    TrialInvite?        @relation("TrialActivatedUser")
 
+  // 相簿系統
+  createdAlbums       Album[]
+  uploadedPhotos      Photo[]
+
   @@map("users")
 }
 
@@ -165,6 +169,8 @@ model Campaign {
   events       Event[]
   schedules    Schedule[]
   activityLogs ActivityLog[]
+  albums       Album[]
+  photos       Photo[]
 
   @@index([ownerId])
   @@index([isActive])
@@ -241,6 +247,9 @@ model Voter {
   createdAt      DateTime                              @default(now()) @map("created_at")
   updatedAt      DateTime                              @updatedAt @map("updated_at")
 
+  // 辨識照
+  avatarPhotoId String? @unique @map("avatar_photo_id")
+
   // Relations
   campaign          Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   creator           User                @relation("VoterCreator", fields: [createdBy], references: [id])
@@ -250,6 +259,7 @@ model Voter {
   scheduleItems     ScheduleItem[]
   relationshipsFrom VoterRelationship[] @relation("RelationshipSource")
   relationshipsTo   VoterRelationship[] @relation("RelationshipTarget")
+  photos            Photo[]
 
   @@index([campaignId])
   @@index([stance])
@@ -367,6 +377,7 @@ model Event {
   scheduleItems         ScheduleItem[]
   firstMetRelationships VoterRelationship[]   @relation("FirstMetRelations")
   relationshipMeetings  RelationshipMeeting[] @relation("MeetingEvents")
+  albums                Album[]
 
   @@index([campaignId])
   @@index([startTime])
@@ -563,6 +574,69 @@ model Payment {
   @@index([provider])
   @@index([createdAt])
   @@map("payments")
+}
+
+// ==================== 相簿與照片 ====================
+
+model Album {
+  id           String    @id @default(uuid())
+  campaignId   String    @map("campaign_id")
+  eventId      String?   @map("event_id")
+  title        String
+  description  String?
+  coverPhotoId String?   @unique @map("cover_photo_id")
+  isPublished  Boolean   @default(false) @map("is_published")
+  publishedAt  DateTime? @map("published_at")
+  publishSlug  String?   @unique @map("publish_slug")
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdBy    String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  event      Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  creator    User     @relation(fields: [createdBy], references: [id])
+  coverPhoto Photo?   @relation("AlbumCover", fields: [coverPhotoId], references: [id])
+  photos     Photo[]
+
+  @@index([campaignId])
+  @@index([eventId])
+  @@index([publishSlug])
+  @@index([isPublished])
+  @@map("albums")
+}
+
+model Photo {
+  id           String    @id @default(uuid())
+  albumId      String?   @map("album_id")
+  voterId      String?   @map("voter_id")
+  campaignId   String    @map("campaign_id")
+  storageKey   String    @map("storage_key")
+  thumbnailKey String?   @map("thumbnail_key")
+  originalName String    @map("original_name")
+  mimeType     String    @map("mime_type")
+  fileSize     Int       @map("file_size")
+  width        Int?
+  height       Int?
+  caption      String?
+  takenAt      DateTime? @map("taken_at")
+  sortOrder    Int       @default(0) @map("sort_order")
+  uploadedBy   String    @map("uploaded_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  album         Album?   @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  voter         Voter?   @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  uploader      User     @relation(fields: [uploadedBy], references: [id])
+  coverOfAlbum  Album?   @relation("AlbumCover")
+
+  @@index([albumId])
+  @@index([voterId])
+  @@index([campaignId])
+  @@map("photos")
 }
 
 // ==================== 列舉 ====================

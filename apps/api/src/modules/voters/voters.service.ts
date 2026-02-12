@@ -2,11 +2,15 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
 import { CampaignsService } from '../campaigns/campaigns.service';
 import { MapsService } from '../maps/maps.service';
+import { PhotosService } from '../photos/photos.service';
 import { CreateVoterDto } from './dto/create-voter.dto';
 import { UpdateVoterDto } from './dto/update-voter.dto';
 import { VoterFilterDto } from './dto/voter-filter.dto';
@@ -18,6 +22,8 @@ export class VotersService {
     private prisma: PrismaService,
     private campaignsService: CampaignsService,
     private mapsService: MapsService,
+    @Inject(forwardRef(() => PhotosService))
+    private photosService: PhotosService,
   ) {}
 
   async create(userId: string, dto: CreateVoterDto) {
@@ -111,6 +117,11 @@ export class VotersService {
           orderBy: { createdAt: 'desc' },
           take: 5,
         },
+        photos: {
+          where: { voterId: id },
+          take: 1,
+          select: { id: true, thumbnailKey: true, storageKey: true },
+        },
       },
     });
 
@@ -118,7 +129,19 @@ export class VotersService {
       throw new NotFoundException('選民不存在');
     }
 
-    return voter;
+    // 解析辨識照 URL
+    let avatarPhotoUrl: string | null = null;
+    if (voter.avatarPhotoId && voter.photos.length > 0) {
+      const photo = voter.photos[0];
+      avatarPhotoUrl = await this.photosService.getSignedUrl(
+        photo.thumbnailKey || photo.storageKey,
+      );
+    }
+
+    return {
+      ...voter,
+      avatarPhotoUrl,
+    };
   }
 
   async findAll(filter: VoterFilterDto) {
@@ -210,12 +233,32 @@ export class VotersService {
           _count: {
             select: { contacts: true },
           },
+          photos: {
+            where: { voterId: { not: null } },
+            take: 1,
+            select: { thumbnailKey: true, storageKey: true },
+          },
         },
       }),
     ]);
 
+    // 解析每個選民的辨識照 URL
+    const votersWithAvatars = await Promise.all(
+      voters.map(async (voter) => {
+        let avatarPhotoUrl: string | null = null;
+        if (voter.avatarPhotoId && voter.photos.length > 0) {
+          const photo = voter.photos[0];
+          avatarPhotoUrl = await this.photosService.getSignedUrl(
+            photo.thumbnailKey || photo.storageKey,
+          );
+        }
+        const { photos, ...rest } = voter;
+        return { ...rest, avatarPhotoUrl };
+      }),
+    );
+
     return {
-      data: voters,
+      data: votersWithAvatars,
       pagination: {
         total,
         page,
@@ -707,5 +750,139 @@ export class VotersService {
 
   private toRad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+
+  // ==================== OWASP A01: 存取控制方法 ====================
+
+  /**
+   * 委託給 CampaignsService 的 checkCampaignAccess
+   */
+  async checkCampaignAccess(campaignId: string, userId: string) {
+    return this.campaignsService.checkCampaignAccess(campaignId, userId);
+  }
+
+  /**
+   * 取得選民詳情並驗證 campaign 存取權限
+   */
+  async findByIdWithAccessCheck(id: string, userId: string) {
+    const voter = await this.findById(id);
+    await this.campaignsService.checkCampaignAccess(voter.campaignId, userId);
+    return voter;
+  }
+
+  /**
+   * 驗證使用者是否有權存取指定選民所屬的 campaign
+   */
+  async checkVoterAccess(voterId: string, userId: string) {
+    const voter = await this.prisma.voter.findUnique({
+      where: { id: voterId },
+      select: { campaignId: true },
+    });
+    if (!voter) {
+      throw new NotFoundException('選民不存在');
+    }
+    await this.campaignsService.checkCampaignAccess(voter.campaignId, userId);
+  }
+
+  /**
+   * 驗證使用者是否有權存取指定活動所屬的 campaign
+   */
+  async checkEventAccess(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { campaignId: true },
+    });
+    if (!event) {
+      throw new NotFoundException('活動不存在');
+    }
+    await this.campaignsService.checkCampaignAccess(event.campaignId, userId);
+  }
+
+  /**
+   * 驗證使用者是否有權存取指定關係所屬的 campaign
+   */
+  async checkRelationshipAccess(relationshipId: string, userId: string) {
+    const relationship = await this.prisma.voterRelationship.findUnique({
+      where: { id: relationshipId },
+      include: {
+        sourceVoter: { select: { campaignId: true } },
+      },
+    });
+    if (!relationship) {
+      throw new NotFoundException('關係不存在');
+    }
+    await this.campaignsService.checkCampaignAccess(
+      relationship.sourceVoter.campaignId,
+      userId,
+    );
+  }
+
+  // ==================== 選民辨識照 ====================
+
+  /**
+   * 上傳選民辨識照
+   */
+  async uploadAvatar(
+    voterId: string,
+    file: Express.Multer.File,
+    userId: string,
+  ) {
+    const voter = await this.findById(voterId);
+    await this.campaignsService.checkCampaignAccess(
+      voter.campaignId,
+      userId,
+      [UserRole.ADMIN, UserRole.EDITOR],
+    );
+
+    // 如果已有辨識照，先刪除
+    if (voter.avatarPhotoId) {
+      await this.photosService.delete(voter.avatarPhotoId, userId).catch(() => {});
+    }
+
+    // 上傳新照片
+    const photo = await this.photosService.upload(
+      file,
+      {
+        campaignId: voter.campaignId,
+        voterId,
+        caption: `${voter.name} 辨識照`,
+      },
+      userId,
+    );
+
+    // 更新選民的 avatarPhotoId
+    await this.prisma.voter.update({
+      where: { id: voterId },
+      data: { avatarPhotoId: photo.id },
+    });
+
+    return photo;
+  }
+
+  /**
+   * 刪除選民辨識照
+   */
+  async deleteAvatar(voterId: string, userId: string) {
+    const voter = await this.findById(voterId);
+    await this.campaignsService.checkCampaignAccess(
+      voter.campaignId,
+      userId,
+      [UserRole.ADMIN, UserRole.EDITOR],
+    );
+
+    if (!voter.avatarPhotoId) {
+      throw new BadRequestException('此選民沒有辨識照');
+    }
+
+    // 刪除照片
+    await this.photosService.delete(voter.avatarPhotoId, userId);
+
+    // 清除 avatarPhotoId
+    await this.prisma.voter.update({
+      where: { id: voterId },
+      data: { avatarPhotoId: null },
+    });
+
+    return { success: true };
   }
 }

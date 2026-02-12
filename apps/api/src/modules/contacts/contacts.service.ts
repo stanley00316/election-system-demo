@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
 import { CampaignsService } from '../campaigns/campaigns.service';
@@ -251,5 +251,37 @@ export class ContactsService {
         },
       },
     });
+  }
+
+  // ==================== OWASP A01: 存取控制方法 ====================
+
+  /**
+   * 委託給 CampaignsService 的 checkCampaignAccess
+   */
+  async checkCampaignAccess(campaignId: string, userId: string) {
+    return this.campaignsService.checkCampaignAccess(campaignId, userId);
+  }
+
+  /**
+   * 取得接觸紀錄詳情並驗證 campaign 存取權限
+   */
+  async findByIdWithAccessCheck(id: string, userId: string) {
+    const contact = await this.findById(id);
+    await this.campaignsService.checkCampaignAccess(contact.campaignId, userId);
+    return contact;
+  }
+
+  /**
+   * 驗證使用者是否有權存取指定選民所屬的 campaign
+   */
+  async checkVoterAccess(voterId: string, userId: string) {
+    const voter = await this.prisma.voter.findUnique({
+      where: { id: voterId },
+      select: { campaignId: true },
+    });
+    if (!voter) {
+      throw new NotFoundException('選民不存在');
+    }
+    await this.campaignsService.checkCampaignAccess(voter.campaignId, userId);
   }
 }

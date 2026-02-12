@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -52,7 +53,14 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: '取得使用者資料' })
-  async findById(@Param('id') id: string) {
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser('id') currentUserId: string,
+  ) {
+    // OWASP A01: 限制使用者只能查看自己的資料
+    if (id !== currentUserId) {
+      throw new ForbiddenException('您只能查看自己的資料');
+    }
     return this.usersService.findById(id);
   }
 }

@@ -419,11 +419,21 @@ export default function VotersPage() {
                     className="flex items-center gap-4 flex-1 min-w-0"
                   >
                     {/* Avatar */}
-                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <span className="text-lg font-medium">
-                        {voter.name?.charAt(0)}
-                      </span>
-                    </div>
+                    {voter.avatarPhotoUrl ? (
+                      <div className="h-12 w-12 rounded-full overflow-hidden shrink-0">
+                        <img
+                          src={voter.avatarPhotoUrl}
+                          alt={voter.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <span className="text-lg font-medium">
+                          {voter.name?.charAt(0)}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">

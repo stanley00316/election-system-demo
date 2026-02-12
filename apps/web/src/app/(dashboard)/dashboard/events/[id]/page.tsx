@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { eventsApi, votersApi } from '@/lib/api';
+import { eventsApi, votersApi, albumsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStanceLabel } from '@/lib/utils';
 
@@ -49,8 +49,10 @@ import {
   Search,
   QrCode,
   ExternalLink,
+  ImageIcon,
 } from 'lucide-react';
 import { BackButton } from '@/components/common/BackButton';
+import { AlbumCard } from '@/components/albums/AlbumCard';
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
   FAMILY: '家人',
@@ -435,7 +437,7 @@ export default function EventDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-lg grid-cols-4">
           <TabsTrigger value="info" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             基本資訊
@@ -457,6 +459,10 @@ export default function EventDetailPage() {
                 {eventRelationships.totalRelationships}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="albums" className="flex items-center gap-2">
+            <ImageIcon className="h-4 w-4" />
+            相簿
           </TabsTrigger>
         </TabsList>
 
@@ -1114,6 +1120,11 @@ export default function EventDetailPage() {
             </Card>
           )}
         </TabsContent>
+
+        {/* 相簿 Tab */}
+        <TabsContent value="albums" className="mt-6">
+          <EventAlbumsTab eventId={eventId} campaignId={event?.campaignId} eventName={event?.name} />
+        </TabsContent>
       </Tabs>
 
       {/* LINE QR Scanner */}
@@ -1131,5 +1142,92 @@ export default function EventDetailPage() {
         attendees={attendees}
       />
     </div>
+  );
+}
+
+/**
+ * 活動相簿子元件
+ */
+function EventAlbumsTab({
+  eventId,
+  campaignId,
+  eventName,
+}: {
+  eventId: string;
+  campaignId?: string;
+  eventName?: string;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: albums, isLoading } = useQuery({
+    queryKey: ['albums', campaignId, eventId],
+    queryFn: () =>
+      albumsApi.getAll({
+        campaignId: campaignId!,
+        eventId,
+      }),
+    enabled: !!campaignId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      albumsApi.create({
+        campaignId: campaignId!,
+        eventId,
+        title: `${eventName || '活動'} 紀實`,
+      }),
+    onSuccess: (data: any) => {
+      toast({ title: '相簿已建立' });
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
+      router.push(`/dashboard/albums/${data.id}`);
+    },
+    onError: (err: any) => {
+      toast({
+        title: '建立失敗',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>活動相簿</CardTitle>
+          <CardDescription>此活動的紀實照片</CardDescription>
+        </div>
+        <Button size="sm" onClick={() => createMutation.mutate()}>
+          <Plus className="h-4 w-4 mr-2" />
+          建立相簿
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">載入中...</div>
+        ) : albums && albums.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {albums.map((album: any) => (
+              <AlbumCard key={album.id} album={album} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-50" />
+            <p className="text-sm mb-4">此活動尚無相簿</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => createMutation.mutate()}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              一鍵建立活動相簿
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

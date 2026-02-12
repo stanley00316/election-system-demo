@@ -23,6 +23,8 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.988.0",
+    "@aws-sdk/s3-request-presigner": "^3.988.0",
     "@election/shared": "workspace:*",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.1.1",
@@ -47,6 +49,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.5",
     "stripe": "^20.3.0",
     "uuid": "^9.0.1"
   },

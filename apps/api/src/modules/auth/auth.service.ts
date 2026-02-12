@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -34,6 +34,8 @@ export interface TokenResponse {
 
 @Injectable()
 export class AuthService {
+  // OWASP A09: 使用 NestJS 結構化 Logger 取代 console.log
+  private readonly logger = new Logger(AuthService.name);
   private adminLineUserId: string | undefined;
 
   constructor(
@@ -53,15 +55,17 @@ export class AuthService {
   }
 
   async validateLineToken(code: string, redirectUri: string, promoterCode?: string): Promise<TokenResponse> {
-    console.log('[AUTH] validateLineToken called with redirectUri:', redirectUri);
+    // OWASP A09: 不記錄 redirectUri（可能包含敏感資訊）
+    this.logger.log('LINE 登入流程開始');
 
     // 使用 LINE 授權碼換取 access token
     let lineTokens;
     try {
       lineTokens = await this.lineService.getAccessToken(code, redirectUri);
-      console.log('[AUTH] LINE tokens obtained successfully');
+      this.logger.log('LINE token 交換成功');
     } catch (error) {
-      console.error('[AUTH] LINE token exchange failed:', error);
+      // OWASP A09: 記錄登入失敗事件（不記錄敏感錯誤細節）
+      this.logger.warn('LINE token 交換失敗');
       throw error;
     }
     
@@ -69,15 +73,15 @@ export class AuthService {
     let lineProfile;
     try {
       lineProfile = await this.lineService.getProfile(lineTokens.access_token);
-      console.log('[AUTH] LINE profile obtained:', lineProfile.userId, lineProfile.displayName);
+      // OWASP A09: 僅記錄非敏感的識別資訊
+      this.logger.log(`LINE 使用者資料取得成功: ${lineProfile.displayName}`);
     } catch (error) {
-      console.error('[AUTH] LINE profile fetch failed:', error);
+      this.logger.warn('LINE 使用者資料取得失敗');
       throw error;
     }
 
     // 檢查是否為初始管理員
     const shouldBeAdmin = this.isInitialAdmin(lineProfile.userId);
-    console.log('[AUTH] shouldBeAdmin:', shouldBeAdmin, 'adminLineUserId:', this.adminLineUserId);
 
     // 查詢或建立使用者
     let user;
@@ -87,9 +91,8 @@ export class AuthService {
       user = await this.prisma.user.findUnique({
         where: { lineUserId: lineProfile.userId },
       });
-      console.log('[AUTH] User lookup result:', user ? `found (id: ${user.id})` : 'not found');
     } catch (error) {
-      console.error('[AUTH] User findUnique failed:', error);
+      this.logger.error('使用者查詢失敗');
       throw error;
     }
 
@@ -106,13 +109,10 @@ export class AuthService {
           },
         });
         isNewUser = true;
-        console.log('[AUTH] New user created:', user.id);
-
-        if (shouldBeAdmin) {
-          console.log(`初始超級管理員已建立: LINE User ID = ${lineProfile.userId}`);
-        }
+        // OWASP A09: 記錄安全事件 — 新使用者註冊
+        this.logger.log(`新使用者註冊: userId=${user.id}, isAdmin=${shouldBeAdmin}`);
       } catch (error) {
-        console.error('[AUTH] User create failed:', error);
+        this.logger.error('使用者建立失敗');
         throw error;
       }
     } else {
@@ -127,16 +127,16 @@ export class AuthService {
         if (shouldBeAdmin && (!user.isAdmin || !user.isSuperAdmin)) {
           updateData.isAdmin = true;
           updateData.isSuperAdmin = true;
-          console.log(`使用者已升級為超級管理員: LINE User ID = ${lineProfile.userId}`);
+          // OWASP A09: 記錄安全事件 — 權限提升
+          this.logger.warn(`使用者權限提升為超級管理員: userId=${user.id}`);
         }
 
         user = await this.prisma.user.update({
           where: { id: user.id },
           data: updateData,
         });
-        console.log('[AUTH] User updated:', user.id);
       } catch (error) {
-        console.error('[AUTH] User update failed:', error);
+        this.logger.error('使用者更新失敗');
         throw error;
       }
     }
@@ -147,7 +147,7 @@ export class AuthService {
         await this.linkPromoterReferral(user.id, promoterCode);
       } catch (error) {
         // 推廣碼處理失敗不應影響登入流程
-        console.error('處理推廣碼失敗:', error);
+        this.logger.warn(`推廣碼處理失敗: userId=${user.id}`);
       }
     }
 
@@ -158,9 +158,8 @@ export class AuthService {
         where: { userId: user.id },
         select: { id: true, status: true, isActive: true },
       });
-      console.log('[AUTH] Promoter lookup:', promoter ? `found (id: ${promoter.id})` : 'not found');
     } catch (error) {
-      console.error('[AUTH] Promoter findUnique failed:', error);
+      this.logger.error('推廣者查詢失敗');
       throw error;
     }
 
@@ -179,9 +178,9 @@ export class AuthService {
           },
           select: { id: true, status: true, isActive: true },
         });
-        console.log('[AUTH] Auto-created promoter for super admin:', promoter.id);
+        this.logger.log(`超級管理員推廣者記錄自動建立: userId=${user.id}`);
       } catch (error) {
-        console.error('[AUTH] Auto-create promoter for super admin failed:', error);
+        this.logger.warn(`超級管理員推廣者記錄建立失敗: userId=${user.id}`);
         // 不影響登入流程
       }
     }
@@ -201,7 +200,8 @@ export class AuthService {
       };
 
       const accessToken = this.jwtService.sign(payload);
-      console.log('[AUTH] JWT signed successfully for user:', user.id);
+      // OWASP A09: 記錄安全事件 — 登入成功
+      this.logger.log(`登入成功: userId=${user.id}, isNew=${isNewUser}`);
 
       return {
         accessToken,
@@ -217,7 +217,7 @@ export class AuthService {
         },
       };
     } catch (error) {
-      console.error('[AUTH] JWT sign or response construction failed:', error);
+      this.logger.error('JWT 簽發失敗');
       throw error;
     }
   }
@@ -269,6 +269,8 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
+      // OWASP A09: 記錄安全事件 — 驗證失敗
+      this.logger.warn(`Token 驗證失敗: userId=${payload.sub}, 使用者${!user ? '不存在' : '已停用'}`);
       throw new UnauthorizedException('使用者不存在或已停用');
     }
 
