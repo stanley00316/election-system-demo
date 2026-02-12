@@ -280,7 +280,12 @@ export const demoVotersApi = {
     await delay(100);
     const voter = tempVoters.find(v => v.id === id);
     if (!voter) throw new Error('選民不存在');
-    return voter;
+    // 附帶該選民的接觸紀錄（模擬後端 include contacts）
+    const voterContacts = tempContacts
+      .filter(c => c.voterId === id)
+      .sort((a, b) => new Date(b.contactDate || b.createdAt).getTime() - new Date(a.contactDate || a.createdAt).getTime())
+      .slice(0, 10);
+    return { ...voter, contacts: voterContacts };
   },
   
   create: async (data: any) => {
