@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-02-13
+
+### Fixed
+- 修正前端 CSP `connect-src` 指令過度限制，改用 API origin 取代完整路徑，解決子路徑請求被阻擋的問題
+- 清除除錯用 instrumentation 日誌（albums controller / service / new page）
+
 ## [1.2.1] - 2026-02-13
 
 ### Fixed

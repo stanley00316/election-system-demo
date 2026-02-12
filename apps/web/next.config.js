@@ -31,7 +31,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://profile.line-scdn.net https://maps.googleapis.com https://maps.gstatic.com https://*.unsplash.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + " https://maps.googleapis.com https://api.line.me https://access.line.me",
+              "connect-src 'self' " + (() => { try { return new URL(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').origin; } catch { return 'http://localhost:3001'; } })() + " https://maps.googleapis.com https://api.line.me https://access.line.me",
               "frame-src 'self' https://maps.googleapis.com",
               "object-src 'none'",
               "base-uri 'self'",
