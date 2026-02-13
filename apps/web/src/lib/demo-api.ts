@@ -2564,10 +2564,12 @@ let tempAlbums: any[] = [
     campaignId: 'demo-campaign-1',
     title: '社區走訪紀錄',
     description: '記錄每次社區拜訪的精彩瞬間',
-    slug: 'demo-album-1',
+    publishSlug: 'demo-album-1',
     isPublished: true,
     publishedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+    coverPhoto: null,
     coverPhotoUrl: null,
+    photos: [],
     _count: { photos: 5 },
     event: null,
     createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
@@ -2578,12 +2580,14 @@ let tempAlbums: any[] = [
     campaignId: 'demo-campaign-1',
     title: '造勢活動花絮',
     description: '2026 年度大型造勢活動照片集',
-    slug: 'demo-album-2',
+    publishSlug: 'demo-album-2',
     isPublished: false,
     publishedAt: null,
+    coverPhoto: null,
     coverPhotoUrl: null,
+    photos: [],
     _count: { photos: 12 },
-    event: { id: 'event-1', title: '造勢大會' },
+    event: { id: 'event-1', name: '造勢大會' },
     createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
   },
@@ -2602,7 +2606,7 @@ export const demoAlbumsApi = {
     await delay(100);
     const album = tempAlbums.find(a => a.id === id);
     if (!album) throw new Error('相簿不存在');
-    return { ...album, photos: [] };
+    return { ...album };
   },
   create: async (data: { campaignId: string; eventId?: string; title: string; description?: string }) => {
     await delay(300);
@@ -2611,12 +2615,14 @@ export const demoAlbumsApi = {
       campaignId: data.campaignId,
       title: data.title,
       description: data.description || null,
-      slug: 'album-' + Math.random().toString(36).slice(2, 8),
+      publishSlug: 'album-' + Math.random().toString(36).slice(2, 8),
       isPublished: false,
       publishedAt: null,
+      coverPhoto: null,
       coverPhotoUrl: null,
+      photos: [],
       _count: { photos: 0 },
-      event: data.eventId ? { id: data.eventId, title: '關聯活動' } : null,
+      event: data.eventId ? { id: data.eventId, name: '關聯活動' } : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
