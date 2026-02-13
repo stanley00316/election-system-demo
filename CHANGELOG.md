@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-13
+
+### Added
+- 新增選民頁面加入辨識照上傳功能（預覽、選擇、建立後自動上傳）
+- 編輯選民頁面加入 VoterAvatar 元件，支援更換與刪除辨識照
+
 ## [1.2.2] - 2026-02-13
 
 ### Fixed
