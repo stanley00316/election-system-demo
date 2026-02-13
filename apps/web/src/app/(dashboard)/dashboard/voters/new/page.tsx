@@ -23,10 +23,12 @@ import {
 } from '@/components/ui/select';
 import { useCampaignStore } from '@/stores/campaign';
 import { votersApi } from '@/lib/api';
-import { ArrowLeft, Save, QrCode } from 'lucide-react';
+import { useRef } from 'react';
+import { ArrowLeft, Save, QrCode, Camera, X } from 'lucide-react';
 import { BackButton } from '@/components/common/BackButton';
 import { useToast } from '@/hooks/use-toast';
 import { useHydration } from '@/hooks/use-hydration';
+import { voterAvatarApi } from '@/lib/api';
 
 // 動態匯入 QR 掃描器元件，避免 SSR 錯誤
 const LineQrScanner = dynamic(
@@ -73,6 +75,9 @@ export default function NewVoterPage() {
   const { currentCampaign } = useCampaignStore();
   const { toast } = useToast();
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // 從 URL 取得預設的 LINE 資訊及 GPS 區域
   const defaultLineId = searchParams.get('lineId') || '';
@@ -106,16 +111,62 @@ export default function NewVoterPage() {
     if (defaultDistrict) setValue('districtName', defaultDistrict);
   }, [defaultLineId, defaultLineUrl, defaultCity, defaultDistrict, setValue]);
 
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    if (!acceptedTypes.includes(file.type)) {
+      toast({
+        title: '不支援的檔案格式',
+        description: '請使用 JPG、PNG、WebP 或 HEIC 格式',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: '檔案過大',
+        description: '照片大小不能超過 10MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setAvatarFile(file);
+    const url = URL.createObjectURL(file);
+    setAvatarPreview(url);
+  };
+
+  const removeAvatar = () => {
+    setAvatarFile(null);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
   const createMutation = useMutation({
-    mutationFn: (data: VoterFormData) =>
-      votersApi.create({
+    mutationFn: async (data: VoterFormData) => {
+      const voter = await votersApi.create({
         ...data,
         campaignId: currentCampaign?.id,
         age: data.age ? Number(data.age) : undefined,
         lineId: data.lineId || undefined,
         lineUrl: data.lineUrl || undefined,
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()) : [],
-      }),
+      });
+
+      // 建立成功後上傳辨識照
+      if (avatarFile && voter?.id && !voter?._alreadyExists) {
+        try {
+          await voterAvatarApi.upload(voter.id, avatarFile);
+        } catch {
+          // 辨識照上傳失敗不影響選民建立
+        }
+      }
+
+      return voter;
+    },
     onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['voters'] });
       // 多人防重複：若後端回傳已存在標記，導向該選民詳情頁
@@ -129,7 +180,7 @@ export default function NewVoterPage() {
       }
       toast({
         title: '成功',
-        description: '選民已建立',
+        description: avatarFile ? '選民與辨識照已建立' : '選民已建立',
       });
       router.push('/dashboard/voters');
     },
@@ -179,6 +230,68 @@ export default function NewVoterPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* 辨識照上傳 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>辨識照</CardTitle>
+            <CardDescription>上傳選民照片以便辨識（選填）</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div
+                className="relative h-24 w-24 rounded-full overflow-hidden bg-muted flex items-center justify-center cursor-pointer group shrink-0"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt="辨識照預覽"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Camera className="h-8 w-8 text-muted-foreground" />
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  {avatarPreview ? '更換照片' : '選擇照片'}
+                </Button>
+                {avatarPreview && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={removeAvatar}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    移除
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  支援 JPG、PNG、WebP、HEIC，最大 10MB
+                </p>
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                className="hidden"
+                onChange={handleAvatarSelect}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Basic Info */}
           <Card>

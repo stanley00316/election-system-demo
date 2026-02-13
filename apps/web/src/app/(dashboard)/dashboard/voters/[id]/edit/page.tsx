@@ -23,6 +23,7 @@ import {
 import { votersApi } from '@/lib/api';
 import { ArrowLeft, Save, QrCode } from 'lucide-react';
 import { BackButton } from '@/components/common/BackButton';
+import { VoterAvatar } from '@/components/voters/VoterAvatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoContact } from '@/hooks/use-auto-contact';
 import { useEffect, useState } from 'react';
@@ -184,6 +185,26 @@ export default function EditVoterPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* 辨識照 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>辨識照</CardTitle>
+            <CardDescription>點擊照片可更換或上傳辨識照</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VoterAvatar
+              voterId={voterId}
+              voterName={voter.name}
+              avatarUrl={voter.avatarPhotoUrl}
+              size="lg"
+              editable
+              onAvatarChange={() => {
+                queryClient.invalidateQueries({ queryKey: ['voter', voterId] });
+              }}
+            />
+          </CardContent>
+        </Card>
+
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Basic Info */}
           <Card>
