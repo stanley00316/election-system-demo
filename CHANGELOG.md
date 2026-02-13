@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-13
+
+### Added
+- 新增 5 個社群平台支援：Threads、TikTok、YouTube、Telegram、WhatsApp
+- 後端：新增 ThreadsProvider、TikTokProvider、YouTubeProvider、TelegramProvider、WhatsAppProvider
+- 前端 ShareButtons：新增 5 個平台的分享連結按鈕（Threads/Telegram/WhatsApp 開啟分享頁面；TikTok/YouTube 複製連結）
+- 前端 SocialPublishDialog：加入 5 個新平台的 API 自動發佈選項
+- 社群設定頁：加入 9 個平台的管理員設定步驟教學（可摺疊面板），含環境變數說明、開發者後台連結、注意事項
+- 使用者指南頁：新增「社群分享」完整教學區塊（4 個步驟 + 各平台特性說明）
+- 相簿詳情頁：分享按鈕區域加入操作提示文字
+- Demo 模式 getSocialStatus 回傳值加入 5 個新平台
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.3.1] - 2026-02-13
 
 ### Fixed

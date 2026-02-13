@@ -30,6 +30,7 @@ import {
   Shield,
   Target,
   MessageCircle,
+  Share2,
 } from 'lucide-react';
 
 interface GuideSection {
@@ -236,6 +237,51 @@ const guideSections: GuideSection[] = [
       {
         title: '主題切換',
         description: '支援亮白/暗黑主題，點擊側邊欄的主題按鈕切換。',
+      },
+    ],
+  },
+  {
+    id: 'social-share',
+    title: '社群分享',
+    icon: <Share2 className="h-6 w-6" />,
+    description: '將相簿分享到各大社群平台，擴大曝光度',
+    steps: [
+      {
+        title: '發表相簿',
+        description: '進入相簿詳情頁，點擊「發表」按鈕將相簿設為公開。發表後系統會產生一個公開連結，任何人都可透過此連結查看相簿。',
+        tips: ['未發表的相簿無法分享', '發表後仍可隨時取消發表'],
+      },
+      {
+        title: '使用分享按鈕',
+        description: '相簿發表後，詳情頁會出現一排社群分享按鈕。目前支援 9 個平台：Facebook、LINE、X (Twitter)、Instagram、Threads、Telegram、WhatsApp、TikTok、YouTube。',
+        tips: [
+          'Facebook / LINE / X / Threads / Telegram / WhatsApp：點擊按鈕會開啟對應平台的分享頁面',
+          'Instagram / TikTok / YouTube：點擊按鈕會複製連結到剪貼簿，請手動貼到對應 App',
+          '也可點擊最右側的「分享」按鈕使用裝置原生分享功能',
+        ],
+      },
+      {
+        title: '使用「發佈到社群」功能（進階）',
+        description: '如果系統管理員已設定社群平台 API 金鑰，您可以使用「發佈到社群」按鈕一鍵自動發佈到多個平台，無需手動操作。',
+        tips: [
+          '點擊「發佈到社群」按鈕開啟對話框',
+          '勾選要發佈的平台（僅顯示已設定的平台）',
+          '可自訂發佈訊息內容',
+          '如果看不到可用的平台，請聯繫系統管理員完成 API 設定',
+        ],
+      },
+      {
+        title: '各平台特性',
+        description: '每個平台的分享方式略有不同，以下是各平台的特性說明。',
+        tips: [
+          'Facebook：最適合長文搭配照片，觸及範圍廣',
+          'LINE：適合台灣在地推廣，直接觸及好友',
+          'Threads / X：適合簡短貼文搭配連結',
+          'Telegram：適合頻道或群組廣播',
+          'WhatsApp：適合個人或群組傳訊',
+          'TikTok / YouTube：適合影音內容平台的社群貼文',
+          'Instagram：適合視覺導向的照片分享',
+        ],
       },
     ],
   },

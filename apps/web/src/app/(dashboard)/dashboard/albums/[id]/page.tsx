@@ -143,12 +143,17 @@ export default function AlbumDetailPage() {
               onUnpublish={handleUnpublish}
             />
             {album.isPublished && album.publishSlug && (
-              <ShareButtons
-                url={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${album.publishSlug}`}
-                title={album.title}
-                description={album.description || undefined}
-                compact
-              />
+              <div className="flex flex-col gap-1">
+                <ShareButtons
+                  url={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${album.publishSlug}`}
+                  title={album.title}
+                  description={album.description || undefined}
+                  compact
+                />
+                <p className="text-xs text-muted-foreground">
+                  點擊圖示分享到各平台，或使用右側「發佈到社群」自動發佈
+                </p>
+              </div>
             )}
           </div>
 

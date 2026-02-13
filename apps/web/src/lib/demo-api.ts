@@ -2673,7 +2673,7 @@ export const demoAlbumsApi = {
   },
   getSocialStatus: async () => {
     await delay(100);
-    return { facebook: false, instagram: false, line: false, x: false };
+    return { facebook: false, instagram: false, line: false, x: false, threads: false, tiktok: false, youtube: false, telegram: false, whatsapp: false };
   },
 };
 

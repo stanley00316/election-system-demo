@@ -2,7 +2,7 @@
  * 社群分享介面定義
  */
 
-export type SocialPlatform = 'facebook' | 'line' | 'x' | 'instagram';
+export type SocialPlatform = 'facebook' | 'line' | 'x' | 'instagram' | 'threads' | 'tiktok' | 'youtube' | 'telegram' | 'whatsapp';
 
 export interface SocialShareRequest {
   /** 要分享的平台列表 */

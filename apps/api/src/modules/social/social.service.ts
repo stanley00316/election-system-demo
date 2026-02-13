@@ -3,6 +3,11 @@ import { FacebookProvider } from './providers/facebook.provider';
 import { LineProvider } from './providers/line.provider';
 import { XTwitterProvider } from './providers/x-twitter.provider';
 import { InstagramProvider } from './providers/instagram.provider';
+import { ThreadsProvider } from './providers/threads.provider';
+import { TikTokProvider } from './providers/tiktok.provider';
+import { YouTubeProvider } from './providers/youtube.provider';
+import { TelegramProvider } from './providers/telegram.provider';
+import { WhatsAppProvider } from './providers/whatsapp.provider';
 import {
   SocialPlatform,
   SocialProvider,
@@ -20,12 +25,22 @@ export class SocialService {
     private readonly lineProvider: LineProvider,
     private readonly xTwitterProvider: XTwitterProvider,
     private readonly instagramProvider: InstagramProvider,
+    private readonly threadsProvider: ThreadsProvider,
+    private readonly tiktokProvider: TikTokProvider,
+    private readonly youtubeProvider: YouTubeProvider,
+    private readonly telegramProvider: TelegramProvider,
+    private readonly whatsappProvider: WhatsAppProvider,
   ) {
     this.providers = new Map<SocialPlatform, SocialProvider>([
       ['facebook', this.facebookProvider],
       ['line', this.lineProvider],
       ['x', this.xTwitterProvider],
       ['instagram', this.instagramProvider],
+      ['threads', this.threadsProvider],
+      ['tiktok', this.tiktokProvider],
+      ['youtube', this.youtubeProvider],
+      ['telegram', this.telegramProvider],
+      ['whatsapp', this.whatsappProvider],
     ]);
   }
 
@@ -38,6 +53,11 @@ export class SocialService {
       line: this.lineProvider.isConfigured(),
       x: this.xTwitterProvider.isConfigured(),
       instagram: this.instagramProvider.isConfigured(),
+      threads: this.threadsProvider.isConfigured(),
+      tiktok: this.tiktokProvider.isConfigured(),
+      youtube: this.youtubeProvider.isConfigured(),
+      telegram: this.telegramProvider.isConfigured(),
+      whatsapp: this.whatsappProvider.isConfigured(),
     };
   }
 
