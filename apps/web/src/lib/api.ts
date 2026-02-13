@@ -678,7 +678,7 @@ const realAlbumsApi = {
     api.get<Record<string, boolean>>('/albums/social/status'),
 };
 export const albumsApi = isDemoMode
-  ? (realAlbumsApi as typeof realAlbumsApi) // 暫無 demo，直接用 real
+  ? demoApi.demoAlbumsApi
   : realAlbumsApi;
 
 // Photos API
@@ -691,7 +691,7 @@ const realPhotosApi = {
   delete: (id: string) => api.delete(`/photos/${id}`),
 };
 export const photosApi = isDemoMode
-  ? (realPhotosApi as typeof realPhotosApi)
+  ? demoApi.demoPhotosApi
   : realPhotosApi;
 
 // Public Albums API（不需登入）
@@ -706,7 +706,7 @@ const realVoterAvatarApi = {
   delete: (voterId: string) => api.delete(`/voters/${voterId}/avatar`),
 };
 export const voterAvatarApi = isDemoMode
-  ? (realVoterAvatarApi as typeof realVoterAvatarApi)
+  ? demoApi.demoVoterAvatarApi
   : realVoterAvatarApi;
 
 // Role Invites API（超級管理者 QR 邀請）

@@ -2557,6 +2557,158 @@ export const demoPromoterSelfApi = {
   }),
 };
 
+// ==================== Albums Demo API ====================
+let tempAlbums: any[] = [
+  {
+    id: 'album-demo-1',
+    campaignId: 'demo-campaign-1',
+    title: '社區走訪紀錄',
+    description: '記錄每次社區拜訪的精彩瞬間',
+    slug: 'demo-album-1',
+    isPublished: true,
+    publishedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+    coverPhotoUrl: null,
+    _count: { photos: 5 },
+    event: null,
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+  },
+  {
+    id: 'album-demo-2',
+    campaignId: 'demo-campaign-1',
+    title: '造勢活動花絮',
+    description: '2026 年度大型造勢活動照片集',
+    slug: 'demo-album-2',
+    isPublished: false,
+    publishedAt: null,
+    coverPhotoUrl: null,
+    _count: { photos: 12 },
+    event: { id: 'event-1', title: '造勢大會' },
+    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+];
+
+export const demoAlbumsApi = {
+  getAll: async (params: { campaignId: string; eventId?: string; isPublished?: string }) => {
+    await delay(200);
+    let filtered = [...tempAlbums];
+    if (params.eventId) filtered = filtered.filter(a => a.event?.id === params.eventId);
+    if (params.isPublished === 'true') filtered = filtered.filter(a => a.isPublished);
+    if (params.isPublished === 'false') filtered = filtered.filter(a => !a.isPublished);
+    return filtered;
+  },
+  getById: async (id: string) => {
+    await delay(100);
+    const album = tempAlbums.find(a => a.id === id);
+    if (!album) throw new Error('相簿不存在');
+    return { ...album, photos: [] };
+  },
+  create: async (data: { campaignId: string; eventId?: string; title: string; description?: string }) => {
+    await delay(300);
+    const newAlbum = {
+      id: 'album-new-' + Date.now(),
+      campaignId: data.campaignId,
+      title: data.title,
+      description: data.description || null,
+      slug: 'album-' + Math.random().toString(36).slice(2, 8),
+      isPublished: false,
+      publishedAt: null,
+      coverPhotoUrl: null,
+      _count: { photos: 0 },
+      event: data.eventId ? { id: data.eventId, title: '關聯活動' } : null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    tempAlbums.push(newAlbum);
+    return newAlbum;
+  },
+  update: async (id: string, data: any) => {
+    await delay(200);
+    const idx = tempAlbums.findIndex(a => a.id === id);
+    if (idx === -1) throw new Error('相簿不存在');
+    tempAlbums[idx] = { ...tempAlbums[idx], ...data, updatedAt: new Date().toISOString() };
+    return tempAlbums[idx];
+  },
+  delete: async (id: string) => {
+    await delay(200);
+    tempAlbums = tempAlbums.filter(a => a.id !== id);
+    return { success: true };
+  },
+  publish: async (id: string) => {
+    await delay(300);
+    const idx = tempAlbums.findIndex(a => a.id === id);
+    if (idx === -1) throw new Error('相簿不存在');
+    tempAlbums[idx] = { ...tempAlbums[idx], isPublished: true, publishedAt: new Date().toISOString() };
+    return tempAlbums[idx];
+  },
+  unpublish: async (id: string) => {
+    await delay(200);
+    const idx = tempAlbums.findIndex(a => a.id === id);
+    if (idx === -1) throw new Error('相簿不存在');
+    tempAlbums[idx] = { ...tempAlbums[idx], isPublished: false, publishedAt: null };
+    return tempAlbums[idx];
+  },
+  setCoverPhoto: async (_id: string, _photoId: string) => {
+    await delay(200);
+    return { success: true };
+  },
+  uploadPhotos: async (_albumId: string, _files: File[], _caption?: string) => {
+    await delay(500);
+    return { uploaded: 0, photos: [] };
+  },
+  reorderPhotos: async (_albumId: string, _photoIds: string[]) => {
+    await delay(200);
+    return { success: true };
+  },
+  shareSocial: async (_albumId: string, _data: any) => {
+    await delay(300);
+    return { success: true, results: [] };
+  },
+  getSocialStatus: async () => {
+    await delay(100);
+    return { facebook: false, instagram: false, line: false, x: false };
+  },
+};
+
+// ==================== Photos Demo API ====================
+export const demoPhotosApi = {
+  upload: async (_file: File, _data: any) => {
+    await delay(500);
+    return {
+      id: 'photo-new-' + Date.now(),
+      url: '',
+      thumbnailUrl: '',
+      caption: _data?.caption || null,
+      createdAt: new Date().toISOString(),
+    };
+  },
+  getById: async (id: string) => {
+    await delay(100);
+    return { id, url: '', thumbnailUrl: '', caption: null };
+  },
+  update: async (id: string, data: any) => {
+    await delay(200);
+    return { id, ...data };
+  },
+  delete: async (_id: string) => {
+    await delay(200);
+    return { success: true };
+  },
+};
+
+// ==================== Voter Avatar Demo API ====================
+export const demoVoterAvatarApi = {
+  upload: async (_voterId: string, _file: File) => {
+    await delay(300);
+    return { success: true, avatarUrl: '' };
+  },
+  delete: async (_voterId: string) => {
+    await delay(200);
+    return { success: true };
+  },
+};
+
 // Role Invites Demo API（QR 邀請碼）
 export const demoRoleInvitesApi = {
   generate: async (data: { role: 'ADMIN' | 'PROMOTER'; expiresInHours?: number; notes?: string }) => {
