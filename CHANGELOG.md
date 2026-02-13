@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-02-13
+
+### Fixed
+- 修正 Demo 模式下相簿/照片/辨識照功能呼叫真實 API 導致 `Failed to fetch` 錯誤
+- 新增 `demoAlbumsApi`、`demoPhotosApi`、`demoVoterAvatarApi` 完整 mock 實作
+- 修正 demo 相簿資料欄位名稱（`publishSlug`、`event.name`、`coverPhoto`、`photos`）
+
 ## [1.3.0] - 2026-02-13
 
 ### Added
