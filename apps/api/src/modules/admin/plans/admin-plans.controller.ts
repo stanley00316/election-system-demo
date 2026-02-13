@@ -12,8 +12,10 @@ import { AdminPlansService } from './admin-plans.service';
 import { SuperAdminGuard } from '../../admin-auth/guards/super-admin.guard';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 import { CreatePlanDto, UpdatePlanDto } from './dto/update-plan.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('admin/plans')
+@ApiBearerAuth()
 export class AdminPlansController {
   constructor(private readonly adminPlansService: AdminPlansService) {}
 

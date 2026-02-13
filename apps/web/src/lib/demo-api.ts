@@ -1047,7 +1047,7 @@ export const demoAnalysisApi = {
         voterName: v.name,
         influenceScore: v.influenceScore,
         stance: v.stance,
-        connections: Math.floor(Math.random() * 20 + 5),
+        connections: ((v.influenceScore * 7 + v.name.charCodeAt(0)) % 20) + 5,
       })),
     };
   },

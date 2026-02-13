@@ -116,7 +116,7 @@ export class AnalysisService {
     if (campaign.district) {
       // 有區：篩選該區，依里分組
       groupByField = 'village';
-      byDistrict = await this.prisma.voter.groupBy({
+      byDistrict = await (this.prisma.voter.groupBy as any)({
         by: ['village', 'stance'],
         where: {
           campaignId,
@@ -128,7 +128,7 @@ export class AnalysisService {
       });
     } else {
       // 無區：篩選該市，依區分組
-      byDistrict = await this.prisma.voter.groupBy({
+      byDistrict = await (this.prisma.voter.groupBy as any)({
         by: ['districtName', 'stance'],
         where: {
           campaignId,

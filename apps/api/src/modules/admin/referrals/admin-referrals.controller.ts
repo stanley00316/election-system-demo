@@ -12,9 +12,11 @@ import { Response } from 'express';
 import { AdminReferralsService } from './admin-referrals.service';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 import { ReferralFilterDto } from './dto/referral-filter.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('admin/referrals')
 @UseGuards(AdminGuard)
+@ApiBearerAuth()
 export class AdminReferralsController {
   constructor(private readonly adminReferralsService: AdminReferralsService) {}
 

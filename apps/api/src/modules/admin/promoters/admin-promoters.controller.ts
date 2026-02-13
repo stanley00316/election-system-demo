@@ -20,9 +20,11 @@ import {
   RewardConfigDto,
   TrialConfigDto,
 } from './dto/create-promoter.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('admin/promoters')
 @UseGuards(SuperAdminGuard)
+@ApiBearerAuth()
 export class AdminPromotersController {
   constructor(private readonly service: AdminPromotersService) {}
 

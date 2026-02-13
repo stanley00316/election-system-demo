@@ -12,7 +12,7 @@ import { PromoterGuard } from './guards/promoter.guard';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get('JWT_EXPIRES_IN', '7d'),
+          expiresIn: configService.get('PROMOTER_JWT_EXPIRES_IN', '4h'),
         },
       }),
       inject: [ConfigService],

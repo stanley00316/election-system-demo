@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-02-13
+
+### Security
+- **A01 Broken Access Control**: `schedules.controller` 的 `findByDate`、`getSuggestions` 加入 `checkCampaignAccess` 授權檢查
+- **A01 Broken Access Control**: `events.controller` 的 `findAll` 加入 `checkCampaignAccess` 授權檢查
+- **A01 Broken Access Control**: `districts.controller` 的 `getStats` 加入 `checkCampaignAccess` 授權檢查；`DistrictsModule` 匯入 `CampaignsModule`
+- **A01 Swagger 文件**: 10 個 controller 補上缺少的 `@ApiBearerAuth()` 裝飾器（referrals、subscriptions、8 個 admin controllers）
+- **A02 Cryptographic Failures**: 移除 `ecpay.provider.ts` 中硬編碼的測試金鑰，改用 `getOrThrow` 強制要求環境變數
+- **A02 JWT Token 過期**: Admin JWT 從 7d 縮短至 1h（`ADMIN_JWT_EXPIRES_IN`）；Promoter JWT 從 7d 縮短至 4h（`PROMOTER_JWT_EXPIRES_IN`）
+- **A05 Security Misconfiguration**: 新增 `GlobalExceptionFilter` 作為 fallback 例外過濾器，確保 Sentry 未設定時也不洩露堆疊追蹤
+- **A10 SSRF**: `auth.service.ts` 新增 `validateRedirectUri` 方法，驗證 LINE OAuth redirectUri 是否在 CORS 白名單內
+
+### Fixed
+- 修正 `analysis.service.ts` Prisma `groupBy` 型別推斷錯誤
+
 ## [1.4.0] - 2026-02-13
 
 ### Added

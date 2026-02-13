@@ -8,9 +8,11 @@ import {
 import { Response } from 'express';
 import { AdminAnalyticsService } from './admin-analytics.service';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('admin/analytics')
 @UseGuards(AdminGuard)
+@ApiBearerAuth()
 export class AdminAnalyticsController {
   constructor(private readonly adminAnalyticsService: AdminAnalyticsService) {}
 

@@ -1,9 +1,11 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useCampaignStore } from '@/stores/campaign';
 import { analysisApi } from '@/lib/api';
 import { formatNumber, formatPercent, getStanceLabel } from '@/lib/utils';
@@ -24,7 +26,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   chartTooltipStyle,
   chartAxisStyle,
@@ -307,41 +309,115 @@ export default function AnalysisPage() {
       </div>
 
       {/* Key Influencers */}
-      <Card>
-        <CardHeader>
-          <CardTitle>關鍵人物</CardTitle>
-          <CardDescription>高影響力選民名單</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {influence?.topInfluencers?.slice(0, 6).map((person: any) => (
-              <Link
-                key={person.voterId}
-                href={`/dashboard/voters/${person.voterId}`}
-                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 hover:border-primary/50 transition-colors cursor-pointer"
+      <KeyInfluencersCard influence={influence} />
+    </div>
+  );
+}
+
+const STANCE_FILTER_GROUPS: Record<string, string[]> = {
+  SUPPORT_GROUP: ['STRONG_SUPPORT', 'SUPPORT', 'LEAN_SUPPORT'],
+  NEUTRAL_GROUP: ['NEUTRAL', 'UNDECIDED'],
+  OPPOSE_GROUP: ['LEAN_OPPOSE', 'OPPOSE', 'STRONG_OPPOSE'],
+};
+
+const FILTER_OPTIONS = [
+  { key: 'ALL', label: '全部' },
+  { key: 'SUPPORT_GROUP', label: '支持', activeClass: 'bg-green-600 hover:bg-green-700 text-white border-green-600' },
+  { key: 'NEUTRAL_GROUP', label: '中立', activeClass: 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500' },
+  { key: 'OPPOSE_GROUP', label: '反對', activeClass: 'bg-red-600 hover:bg-red-700 text-white border-red-600' },
+];
+
+function KeyInfluencersCard({ influence }: { influence: any }) {
+  const [showAll, setShowAll] = useState(false);
+  const [stanceFilter, setStanceFilter] = useState('ALL');
+
+  const filteredInfluencers = useMemo(() => {
+    const list = influence?.topInfluencers || [];
+    if (stanceFilter === 'ALL') return list;
+    const stances = STANCE_FILTER_GROUPS[stanceFilter];
+    return list.filter((p: any) => stances?.includes(p.stance));
+  }, [influence, stanceFilter]);
+
+  const displayed = showAll ? filteredInfluencers : filteredInfluencers.slice(0, 6);
+  const hasMore = filteredInfluencers.length > 6;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <CardTitle>關鍵人物</CardTitle>
+            <CardDescription>高影響力選民名單</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FILTER_OPTIONS.map((opt) => (
+              <Badge
+                key={opt.key}
+                variant={stanceFilter === opt.key ? 'default' : 'outline'}
+                className={`cursor-pointer transition-colors ${
+                  stanceFilter === opt.key && opt.activeClass
+                    ? opt.activeClass
+                    : ''
+                }`}
+                onClick={() => {
+                  setStanceFilter(opt.key);
+                  setShowAll(false);
+                }}
               >
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">
-                    {person.influenceScore}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{person.voterName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {getStanceLabel(person.stance)} · {person.connections} 連結
-                  </p>
-                </div>
-              </Link>
+                {opt.label}
+              </Badge>
             ))}
           </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {displayed.map((person: any) => (
+            <Link
+              key={person.voterId}
+              href={`/dashboard/voters/${person.voterId}`}
+              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 hover:border-primary/50 transition-colors cursor-pointer"
+            >
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-lg font-bold text-primary">
+                  {person.influenceScore}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{person.voterName}</p>
+                <p className="text-sm text-muted-foreground">
+                  {getStanceLabel(person.stance)} · {person.connections} 連結
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
 
-          {(!influence?.topInfluencers || influence.topInfluencers.length === 0) && (
-            <p className="text-center text-muted-foreground py-8">
-              尚無足夠數據分析關鍵人物
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        {hasMore && (
+          <div className="flex justify-center mt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAll(!showAll)}
+              className="text-muted-foreground"
+            >
+              {showAll ? (
+                <>收合 <ChevronUp className="ml-1 h-4 w-4" /></>
+              ) : (
+                <>顯示更多（共 {filteredInfluencers.length} 人）<ChevronDown className="ml-1 h-4 w-4" /></>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {filteredInfluencers.length === 0 && (
+          <p className="text-center text-muted-foreground py-8">
+            {stanceFilter === 'ALL'
+              ? '尚無足夠數據分析關鍵人物'
+              : `無符合「${FILTER_OPTIONS.find(o => o.key === stanceFilter)?.label}」立場的關鍵人物`}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

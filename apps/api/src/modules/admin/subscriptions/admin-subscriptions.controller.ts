@@ -20,9 +20,11 @@ import {
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 import { CurrentAdmin } from '../../admin-auth/decorators/current-admin.decorator';
 import { AdminAuthService } from '../../admin-auth/admin-auth.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('admin/subscriptions')
 @UseGuards(AdminGuard)
+@ApiBearerAuth()
 export class AdminSubscriptionsController {
   constructor(
     private readonly adminSubscriptionsService: AdminSubscriptionsService,

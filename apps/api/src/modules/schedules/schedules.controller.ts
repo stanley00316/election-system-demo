@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScheduleStatus, ScheduleItemStatus } from '@prisma/client';
 import { SchedulesService } from './schedules.service';
 import { GoogleCalendarService } from '../calendar/google-calendar.service';
+import { CampaignsService } from '../campaigns/campaigns.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
@@ -26,6 +27,7 @@ export class SchedulesController {
   constructor(
     private readonly schedulesService: SchedulesService,
     private readonly googleCalendarService: GoogleCalendarService,
+    private readonly campaignsService: CampaignsService,
   ) {}
 
   @Post()
@@ -42,7 +44,9 @@ export class SchedulesController {
   async findByDate(
     @Query('campaignId') campaignId: string,
     @Param('date') date: string,
+    @CurrentUser('id') userId: string,
   ) {
+    await this.campaignsService.checkCampaignAccess(campaignId, userId);
     return this.schedulesService.findByDate(campaignId, date);
   }
 
@@ -52,8 +56,10 @@ export class SchedulesController {
     @Query('campaignId') campaignId: string,
     @Query('lat') lat: number,
     @Query('lng') lng: number,
+    @CurrentUser('id') userId: string,
     @Query('limit') limit?: number,
   ) {
+    await this.campaignsService.checkCampaignAccess(campaignId, userId);
     return this.schedulesService.getSuggestions(
       campaignId,
       { lat: Number(lat), lng: Number(lng) },

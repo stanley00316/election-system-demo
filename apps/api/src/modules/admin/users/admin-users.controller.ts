@@ -15,9 +15,11 @@ import { AdminUserFilterDto, SuspendUserDto } from './dto/user-filter.dto';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 import { CurrentAdmin } from '../../admin-auth/decorators/current-admin.decorator';
 import { AdminAuthService } from '../../admin-auth/admin-auth.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('admin/users')
 @UseGuards(AdminGuard)
+@ApiBearerAuth()
 export class AdminUsersController {
   constructor(
     private readonly adminUsersService: AdminUsersService,

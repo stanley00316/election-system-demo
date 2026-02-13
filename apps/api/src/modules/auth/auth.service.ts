@@ -54,7 +54,42 @@ export class AuthService {
     return !!this.adminLineUserId && lineUserId === this.adminLineUserId;
   }
 
+  /**
+   * OWASP A10: 驗證 redirectUri 是否在允許的來源白名單內
+   * 防止開放重定向攻擊（Open Redirect）
+   */
+  private validateRedirectUri(redirectUri: string): void {
+    const corsOrigin = this.configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');
+    const allowedOrigins = corsOrigin.includes(',')
+      ? corsOrigin.split(',').map((o: string) => o.trim())
+      : [corsOrigin];
+
+    // 開發環境額外允許 localhost
+    if (this.configService.get<string>('NODE_ENV') !== 'production') {
+      allowedOrigins.push('http://localhost:3000', 'http://localhost:3002');
+    }
+
+    try {
+      const redirectUrl = new URL(redirectUri);
+      const redirectOrigin = redirectUrl.origin;
+      if (!allowedOrigins.includes(redirectOrigin)) {
+        this.logger.warn(`OWASP A10: 被拒絕的 redirectUri origin: ${redirectOrigin}`);
+        throw new Error('Invalid redirect URI');
+      }
+    } catch (e) {
+      if (e instanceof TypeError) {
+        // 無效 URL 格式
+        this.logger.warn('OWASP A10: 無效的 redirectUri 格式');
+        throw new Error('Invalid redirect URI');
+      }
+      throw e;
+    }
+  }
+
   async validateLineToken(code: string, redirectUri: string, promoterCode?: string): Promise<TokenResponse> {
+    // OWASP A10: 驗證 redirectUri 是否在白名單內，防止開放重定向攻擊
+    this.validateRedirectUri(redirectUri);
+
     // OWASP A09: 不記錄 redirectUri（可能包含敏感資訊）
     this.logger.log('LINE 登入流程開始');
 

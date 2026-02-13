@@ -16,9 +16,9 @@ export class EcpayProvider implements IPaymentProvider {
   private isProduction: boolean;
 
   constructor(private configService: ConfigService) {
-    this.merchantId = this.configService.get<string>('ECPAY_MERCHANT_ID') || '3002607';
-    this.hashKey = this.configService.get<string>('ECPAY_HASH_KEY') || 'pwFHCqoQZGmho4w6';
-    this.hashIv = this.configService.get<string>('ECPAY_HASH_IV') || 'EkRm7iFT261dpevs';
+    this.merchantId = this.configService.getOrThrow<string>('ECPAY_MERCHANT_ID');
+    this.hashKey = this.configService.getOrThrow<string>('ECPAY_HASH_KEY');
+    this.hashIv = this.configService.getOrThrow<string>('ECPAY_HASH_IV');
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
   }
 

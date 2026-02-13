@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { SentryInterceptor, SentryExceptionFilter } from './modules/sentry';
+import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -42,10 +43,14 @@ async function bootstrap() {
   const apiPrefix = configService.get('API_PREFIX', 'api/v1');
   app.setGlobalPrefix(apiPrefix);
 
+  // OWASP A05: 全域 fallback 例外過濾器（防止洩露堆疊追蹤）
+  // 注意：NestJS 按反向順序執行過濾器，最後註冊的最先執行
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
   // Sentry Error Monitoring (全域例外過濾器和攔截器)
   if (configService.get('SENTRY_DSN')) {
     app.useGlobalInterceptors(new SentryInterceptor());
-    app.useGlobalFilters(new SentryExceptionFilter());
+    app.useGlobalFilters(new GlobalExceptionFilter(), new SentryExceptionFilter());
   }
 
   // Validation

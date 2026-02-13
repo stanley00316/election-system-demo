@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AttendeeStatus } from '@prisma/client';
 import { EventsService } from './events.service';
+import { CampaignsService } from '../campaigns/campaigns.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -22,7 +23,10 @@ import { UpdateEventDto } from './dto/update-event.dto';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly campaignsService: CampaignsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: '建立活動' })
@@ -37,9 +41,11 @@ export class EventsController {
   @ApiOperation({ summary: '查詢活動列表' })
   async findAll(
     @Query('campaignId') campaignId: string,
+    @CurrentUser('id') userId: string,
     @Query('type') type?: string,
     @Query('status') status?: string,
   ) {
+    await this.campaignsService.checkCampaignAccess(campaignId, userId);
     return this.eventsService.findAll(campaignId, {
       type: type?.split(','),
       status: status?.split(','),
