@@ -953,11 +953,58 @@ export const demoAnalysisApi = {
   
   getDistrict: async (_campaignId: string) => {
     await delay(200);
+
+    // 僅回傳候選人選區內的資料
+    const campaignCity = demoCampaign.city;       // '台北市'
+    const campaignDistrict = demoCampaign.district; // '大安區'
+
+    // 篩選選區內的選民
+    const filteredVoters = demoVoters.filter((v: any) =>
+      v.city === campaignCity &&
+      (!campaignDistrict || v.districtName === campaignDistrict)
+    );
+
+    // 依據是否有 district 決定分組欄位
+    const groupByField = campaignDistrict ? 'village' : 'districtName';
+
+    // 按分組欄位彙整
+    const groupMap: Record<string, { total: number; support: number; neutral: number; oppose: number }> = {};
+    for (const v of filteredVoters) {
+      const key = (v as any)[groupByField];
+      if (!key) continue;
+      if (!groupMap[key]) groupMap[key] = { total: 0, support: 0, neutral: 0, oppose: 0 };
+      groupMap[key].total++;
+      if (['STRONG_SUPPORT', 'SUPPORT', 'LEAN_SUPPORT'].includes(v.stance)) {
+        groupMap[key].support++;
+      } else if (['NEUTRAL', 'UNDECIDED'].includes(v.stance)) {
+        groupMap[key].neutral++;
+      } else {
+        groupMap[key].oppose++;
+      }
+    }
+
+    const byDistrict = Object.entries(groupMap).map(([name, stats]) => ({
+      name,
+      ...stats,
+      supportRate: stats.total > 0 ? Math.round((stats.support / stats.total) * 100) / 100 : 0,
+    }));
+
     return {
-      distribution: demoStats.districtDistribution.map(d => ({
-        ...d,
-        supportRate: Math.round(Math.random() * 30 + 30),
-      })),
+      byDistrict,
+      byCity: [{
+        name: campaignCity,
+        total: filteredVoters.length,
+        support: filteredVoters.filter((v: any) => ['STRONG_SUPPORT', 'SUPPORT', 'LEAN_SUPPORT'].includes(v.stance)).length,
+        neutral: filteredVoters.filter((v: any) => ['NEUTRAL', 'UNDECIDED'].includes(v.stance)).length,
+        oppose: filteredVoters.filter((v: any) => ['LEAN_OPPOSE', 'OPPOSE', 'STRONG_OPPOSE'].includes(v.stance)).length,
+        supportRate: filteredVoters.length > 0
+          ? Math.round((filteredVoters.filter((v: any) => ['STRONG_SUPPORT', 'SUPPORT', 'LEAN_SUPPORT'].includes(v.stance)).length / filteredVoters.length) * 100) / 100
+          : 0,
+      }],
+      filter: {
+        city: campaignCity,
+        district: campaignDistrict || null,
+      },
     };
   },
   

@@ -96,26 +96,61 @@ export class AnalysisService {
   }
 
   async getDistrictAnalysis(campaignId: string) {
-    // 按選區分組統計
+    // 取得活動選區設定
+    const campaign = await this.prisma.campaign.findUniqueOrThrow({
+      where: { id: campaignId },
+      select: { city: true, district: true },
+    });
+
+    // 僅統計候選人所在縣市
     const byCity = await this.prisma.voter.groupBy({
       by: ['city', 'stance'],
-      where: { campaignId, city: { not: null } },
+      where: { campaignId, city: campaign.city },
       _count: true,
     });
 
-    const byDistrict = await this.prisma.voter.groupBy({
-      by: ['districtName', 'stance'],
-      where: { campaignId, districtName: { not: null } },
-      _count: true,
-    });
+    // 依選區層級決定篩選與分組方式
+    let byDistrict: any[];
+    let groupByField: 'districtName' | 'village' = 'districtName';
+
+    if (campaign.district) {
+      // 有區：篩選該區，依里分組
+      groupByField = 'village';
+      byDistrict = await this.prisma.voter.groupBy({
+        by: ['village', 'stance'],
+        where: {
+          campaignId,
+          city: campaign.city,
+          districtName: campaign.district,
+          village: { not: null },
+        },
+        _count: true,
+      });
+    } else {
+      // 無區：篩選該市，依區分組
+      byDistrict = await this.prisma.voter.groupBy({
+        by: ['districtName', 'stance'],
+        where: {
+          campaignId,
+          city: campaign.city,
+          districtName: { not: null },
+        },
+        _count: true,
+      });
+    }
 
     // 整理資料
     const cityStats = this.aggregateByRegion(byCity, 'city');
-    const districtStats = this.aggregateByRegion(byDistrict, 'districtName');
+    const districtStats = this.aggregateByRegion(byDistrict, groupByField);
 
     return {
       byCity: cityStats,
       byDistrict: districtStats,
+      // 回傳篩選資訊供前端顯示
+      filter: {
+        city: campaign.city,
+        district: campaign.district || null,
+      },
     };
   }
 

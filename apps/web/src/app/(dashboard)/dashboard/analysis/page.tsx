@@ -55,6 +55,7 @@ export default function AnalysisPage() {
     enabled: !!campaignId,
   });
 
+
   const { data: trend } = useQuery({
     queryKey: ['analysis', 'trend', campaignId],
     queryFn: () => analysisApi.getTrend(campaignId!, 30),
@@ -227,7 +228,13 @@ export default function AnalysisPage() {
         <Card>
           <CardHeader>
             <CardTitle>區域支持度</CardTitle>
-            <CardDescription>各區域支持率比較</CardDescription>
+            <CardDescription>
+              {districtAnalysis?.filter?.district
+                ? `${districtAnalysis.filter.district}各里支持率`
+                : districtAnalysis?.filter?.city
+                  ? `${districtAnalysis.filter.city}各區支持率`
+                  : '各區域支持率比較'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -235,7 +242,7 @@ export default function AnalysisPage() {
                 <BarChart
                   data={districtAnalysis?.byDistrict?.slice(0, 10) || []}
                   layout="vertical"
-                  margin={{ left: 60 }}
+                  margin={{ left: 80 }}
                 >
                   <CartesianGrid {...chartGridStyle} />
                   <XAxis
@@ -248,7 +255,7 @@ export default function AnalysisPage() {
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={50}
+                    width={70}
                     tick={chartAxisStyle.tick}
                     stroke={chartAxisStyle.stroke}
                   />
