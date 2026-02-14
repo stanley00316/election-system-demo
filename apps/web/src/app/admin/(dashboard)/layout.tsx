@@ -95,10 +95,6 @@ export default function AdminDashboardLayout({
       // 取得使用者資料並檢查是否為管理員
       const userData = await authApi.getMe();
 
-      // #region agent log
-      console.log('[DEBUG] getMe result:', { isAdmin: userData.isAdmin, isSuperAdmin: userData.isSuperAdmin, userId: userData.id, name: userData.name, hasPromoter: !!userData.promoter, isDemoMode });
-      // #endregion
-
       if (!userData.isAdmin) {
         // 不是管理員，導向登入頁
         router.push('/admin/login?error=not_admin');
@@ -106,10 +102,6 @@ export default function AdminDashboardLayout({
       }
 
       setAdmin(userData);
-
-      // #region agent log
-      console.log('[DEBUG] admin state set:', { isDemoMode, isSuperAdmin: userData.isSuperAdmin, allKeys: Object.keys(userData) });
-      // #endregion
 
       // 將 isSuperAdmin 和 promoter 同步存入 Auth Store
       const currentUser = useAuthStore.getState().user;
@@ -212,7 +204,6 @@ export default function AdminDashboardLayout({
             </ul>
 
             {/* 超級管理者專用選單 */}
-            {(() => { console.log('[DEBUG] render superAdmin check:', { adminExists: !!admin, isSuperAdmin: admin?.isSuperAdmin, showSection: !!admin?.isSuperAdmin }); return null; })()}
             {admin?.isSuperAdmin && (
               <div className="mt-4 pt-4 border-t border-gray-800">
                 <p className="px-3 mb-2 text-xs text-gray-500 uppercase tracking-wider">

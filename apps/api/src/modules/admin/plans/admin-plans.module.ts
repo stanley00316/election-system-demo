@@ -1,25 +1,17 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminPlansController } from './admin-plans.controller';
 import { AdminPlansService } from './admin-plans.service';
 import { PrismaModule } from '../../../prisma/prisma.module';
-import { SuperAdminGuard } from '../../admin-auth/guards/super-admin.guard';
-import { AdminGuard } from '../../admin-auth/guards/admin.guard';
+import { AdminAuthModule } from '../../admin-auth/admin-auth.module';
 
 @Module({
   imports: [
     PrismaModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-      }),
-    }),
+    // OWASP A07: 透過 AdminAuthModule 匯入 Guards（含 TokenBlacklistService 依賴）
+    AdminAuthModule,
   ],
   controllers: [AdminPlansController],
-  providers: [AdminPlansService, SuperAdminGuard, AdminGuard],
+  providers: [AdminPlansService],
   exports: [AdminPlansService],
 })
 export class AdminPlansModule {}

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 interface LineMessage {
@@ -11,6 +11,7 @@ interface LineMessage {
 
 @Injectable()
 export class LineMessagingService {
+  private readonly logger = new Logger(LineMessagingService.name);
   private readonly accessToken: string;
   private readonly apiUrl = 'https://api.line.me/v2/bot/message';
 
@@ -21,7 +22,7 @@ export class LineMessagingService {
   // 發送推播訊息
   async sendPushMessage(to: string, message: string | LineMessage) {
     if (!this.accessToken) {
-      console.warn('LINE Messaging API access token not configured');
+      this.logger.warn('LINE Messaging API access token not configured');
       return;
     }
 
@@ -41,13 +42,13 @@ export class LineMessagingService {
 
       if (!response.ok) {
         const errorData: any = await response.json();
-        console.error('LINE push message failed:', errorData);
+        this.logger.error(`LINE push message failed: ${JSON.stringify(errorData)}`);
         throw new Error(errorData.message || 'LINE push message failed');
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Failed to send LINE push message:', error);
+      this.logger.error('Failed to send LINE push message', error instanceof Error ? error.stack : undefined);
       throw error;
     }
   }
@@ -55,7 +56,7 @@ export class LineMessagingService {
   // 發送多播訊息（給多個使用者）
   async sendMulticastMessage(to: string[], message: string | LineMessage) {
     if (!this.accessToken) {
-      console.warn('LINE Messaging API access token not configured');
+      this.logger.warn('LINE Messaging API access token not configured');
       return;
     }
 
@@ -75,13 +76,13 @@ export class LineMessagingService {
 
       if (!response.ok) {
         const errorData: any = await response.json();
-        console.error('LINE multicast message failed:', errorData);
+        this.logger.error(`LINE multicast message failed: ${JSON.stringify(errorData)}`);
         throw new Error(errorData.message || 'LINE multicast message failed');
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Failed to send LINE multicast message:', error);
+      this.logger.error('Failed to send LINE multicast message', error instanceof Error ? error.stack : undefined);
       throw error;
     }
   }

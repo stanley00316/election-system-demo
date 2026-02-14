@@ -4,12 +4,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RoleInvitesController } from './role-invites.controller';
 import { RoleInvitesService } from './role-invites.service';
 import { PrismaModule } from '../../prisma/prisma.module';
-import { SuperAdminGuard } from '../admin-auth/guards/super-admin.guard';
+import { AdminAuthModule } from '../admin-auth/admin-auth.module';
 
 @Module({
   imports: [
     PrismaModule,
     ConfigModule,
+    // OWASP A07: 透過 AdminAuthModule 匯入 Guards（含 TokenBlacklistService 依賴）
+    AdminAuthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -22,6 +24,6 @@ import { SuperAdminGuard } from '../admin-auth/guards/super-admin.guard';
     }),
   ],
   controllers: [RoleInvitesController],
-  providers: [RoleInvitesService, SuperAdminGuard],
+  providers: [RoleInvitesService],
 })
 export class RoleInvitesModule {}

@@ -53,11 +53,15 @@ export class PaymentsController {
 
   /**
    * 取得單筆付款詳情
+   * OWASP A01: 驗證付款記錄所有權
    */
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  async getPayment(@Param('id') id: string) {
-    return this.paymentsService.getPayment(id);
+  async getPayment(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.paymentsService.getPayment(id, user.id);
   }
 
   /**
@@ -117,14 +121,16 @@ export class PaymentsController {
 
   /**
    * 申請退款
+   * OWASP A01: 驗證付款記錄所有權
    */
   @Post(':id/refund')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async refundPayment(
     @Param('id') id: string,
+    @CurrentUser() user: any,
     @Body('reason') reason?: string,
   ) {
-    return this.paymentsService.refundPayment(id, reason);
+    return this.paymentsService.refundPayment(id, user.id, reason);
   }
 }

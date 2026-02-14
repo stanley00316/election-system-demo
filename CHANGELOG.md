@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-02-14
+
+### Fixed
+- **DI 修復**：`AdminAuthModule` 新增 re-export `AuthModule`，解決 `SuperAdminGuard` 在 `HealthModule` context 中無法注入 `TokenBlacklistService` 的問題
+- **ECPay 啟動修復**：`EcpayProvider` 將 `getOrThrow` 改為 `get` 延遲驗證，避免未配置 ECPay 環境變數時整個 API 無法啟動
+- **Middleware matcher 修復**：新增 `/admin` 和 `/promoter` 精確路徑至 matcher，修正 Next.js `:path*` 不匹配根路徑的問題
+- **Admin 登入頁放行**：Middleware 新增 `ADMIN_PUBLIC_PATHS`，允許 `/admin/login` 在未認證時正常存取
+
+## [1.4.3] - 2026-02-14
+
+### Security
+- **防目錄掃描 — Nginx 層**：加入 `server_tokens off` 隱藏版本號、`limit_req_zone` 代理層速率限制（API 20r/s、前端 10r/s）、`autoindex off` 禁用目錄列表
+- **防目錄掃描 — Nginx 層**：Health 端點（`/api/v1/health`）加入 IP 白名單，僅允許內部網路（10.0.0.0/8、172.16.0.0/12、192.168.0.0/16）存取
+- **防目錄掃描 — Next.js Middleware**：重寫 `middleware.ts`，所有 `/admin/*` 和 `/promoter/*` 路徑在服務端攔截，未認證請求直接返回 404（原設計返回 200 後客戶端重定向，可被掃描工具區分）
+- **防目錄掃描 — NestJS 後端**：`GlobalExceptionFilter` 將無 Bearer token 的 401 回應偽裝為 404，消除掃描工具可利用的狀態碼差異；移除回應中的 `path` 欄位
+- **防目錄掃描 — 靜態防護**：新增 `robots.txt`，禁止搜尋引擎爬取 `/admin/`、`/promoter/`、`/dashboard/`、`/api/` 等敏感路徑
+
+## [1.4.2] - 2026-02-14
+
+### Security
+- **A01 Broken Access Control**: `payments.controller` 的 `getPayment` 和 `refundPayment` 加入使用者所有權驗證，防止 IDOR 攻擊
+- **A05 Security Misconfiguration**: 生產環境 CSP 移除 `unsafe-eval`（`next.config.js`、`nginx.conf`），僅開發環境保留
+- **A05 Security Misconfiguration**: Nginx 移除已棄用的 `X-XSS-Protection` 標頭，改由 CSP 提供防護
+- **A07 Authentication Failures**: `AdminGuard` 和 `SuperAdminGuard` 加入 Token 黑名單檢查（`TokenBlacklistService`），確保管理員登出後 token 立即失效
+- **A07 Authentication Failures**: 重構 5 個 admin module（`admin-plans`、`health`、`role-invites`、`admin-referrals`、`admin-promoters`）改為透過 `AdminAuthModule` 匯入 Guards，確保 DI 依賴正確
+- **A09 Security Logging**: 全面將 `console.log`/`console.error`/`console.warn` 替換為 NestJS `Logger`（共 9 個後端檔案）
+- **A09 Security Logging**: 移除前端 admin layout 中 3 處 debug `console.log`，防止在瀏覽器 console 洩露管理員身份、userId、superAdmin 狀態
+
 ## [1.4.1] - 2026-02-13
 
 ### Security

@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { TokenBlacklistService } from '../../auth/token-blacklist.service';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -15,6 +16,7 @@ export class AdminGuard implements CanActivate {
     private jwtService: JwtService,
     private configService: ConfigService,
     private prisma: PrismaService,
+    private tokenBlacklist: TokenBlacklistService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -30,6 +32,17 @@ export class AdminGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
+
+      // OWASP A07: 檢查 token 是否被個別撤銷（登出後的 token 不應再被接受）
+      const jti = `${payload.sub}:${payload.iat}`;
+      if (await this.tokenBlacklist.isBlacklisted(jti)) {
+        throw new UnauthorizedException('Token 已被撤銷');
+      }
+
+      // OWASP A07: 檢查使用者的所有 token 是否被全域撤銷（帳號停用時）
+      if (payload.iat && await this.tokenBlacklist.isUserTokenRevoked(payload.sub, payload.iat)) {
+        throw new UnauthorizedException('Token 已被撤銷');
+      }
 
       // 從資料庫取得使用者，確認 isAdmin 狀態
       const user = await this.prisma.user.findUnique({
@@ -61,6 +74,9 @@ export class AdminGuard implements CanActivate {
       return true;
     } catch (error) {
       if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      if (error instanceof UnauthorizedException) {
         throw error;
       }
       throw new UnauthorizedException('無效的認證 Token');

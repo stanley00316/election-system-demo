@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 interface LineTokenResponse {
@@ -19,6 +19,7 @@ interface LineProfile {
 
 @Injectable()
 export class LineService {
+  private readonly logger = new Logger(LineService.name);
   private readonly channelId: string;
   private readonly channelSecret: string;
 
@@ -48,14 +49,15 @@ export class LineService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error('LINE token error:', error);
+        const errorBody = await response.json();
+        this.logger.error(`LINE token error: ${JSON.stringify(errorBody)}`);
         throw new UnauthorizedException('LINE 登入失敗');
       }
 
       return response.json() as Promise<LineTokenResponse>;
     } catch (error) {
-      console.error('LINE token request failed:', error);
+      if (error instanceof UnauthorizedException) throw error;
+      this.logger.error('LINE token request failed', error instanceof Error ? error.stack : undefined);
       throw new UnauthorizedException('LINE 登入失敗');
     }
   }
@@ -76,7 +78,8 @@ export class LineService {
 
       return response.json() as Promise<LineProfile>;
     } catch (error) {
-      console.error('LINE profile request failed:', error);
+      if (error instanceof UnauthorizedException) throw error;
+      this.logger.error('LINE profile request failed', error instanceof Error ? error.stack : undefined);
       throw new UnauthorizedException('無法取得 LINE 使用者資料');
     }
   }

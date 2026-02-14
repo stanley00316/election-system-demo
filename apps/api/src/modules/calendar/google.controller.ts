@@ -8,6 +8,7 @@ import {
   Res,
   UseGuards,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -59,7 +60,7 @@ export class GoogleController {
       await this.googleService.handleCallback(code, state);
       return res.redirect(`${frontendUrl}/dashboard/settings?google=success`);
     } catch (err) {
-      console.error('Google callback error:', err);
+      new Logger('GoogleController').error('Google callback error', err instanceof Error ? err.stack : undefined);
       return res.redirect(`${frontendUrl}/dashboard/settings?google=error&message=auth_failed`);
     }
   }

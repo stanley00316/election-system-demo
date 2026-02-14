@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { google, Auth } from 'googleapis';
 
 @Injectable()
 export class GoogleService {
+  private readonly logger = new Logger(GoogleService.name);
   private oauth2Client: Auth.OAuth2Client;
 
   constructor(
@@ -70,7 +71,7 @@ export class GoogleService {
         },
       });
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
+      this.logger.error('Google OAuth callback error', error instanceof Error ? error.stack : undefined);
       throw new BadRequestException('Google 授權失敗');
     }
   }
@@ -132,7 +133,7 @@ export class GoogleService {
         },
       });
     } catch (error) {
-      console.error('Token refresh error:', error);
+      this.logger.error('Token refresh error', error instanceof Error ? error.stack : undefined);
       // 如果刷新失敗，清除 tokens
       await this.revokeAccess(userId);
       throw new UnauthorizedException('Google 授權已過期，請重新連結');
@@ -153,7 +154,7 @@ export class GoogleService {
       try {
         await this.oauth2Client.revokeToken(user.googleAccessToken);
       } catch (error) {
-        console.warn('Token revocation failed:', error);
+        this.logger.warn('Token revocation failed', error instanceof Error ? error.message : undefined);
       }
     }
 

@@ -1,23 +1,12 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HealthController } from './health.controller';
-import { SuperAdminGuard } from '../admin-auth/guards/super-admin.guard';
+import { AdminAuthModule } from '../admin-auth/admin-auth.module';
 
 @Module({
   imports: [
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    // OWASP A07: 透過 AdminAuthModule 匯入 Guards（含 TokenBlacklistService 依賴）
+    AdminAuthModule,
   ],
   controllers: [HealthController],
-  providers: [SuperAdminGuard],
 })
 export class HealthModule {}

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentProvider, PaymentStatus } from '@prisma/client';
@@ -11,6 +11,7 @@ import { CreatePaymentParams, PaymentVerifyResult } from './providers/payment-pr
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
   private baseUrl: string;
 
   constructor(
@@ -194,7 +195,7 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      console.error(`找不到付款記錄: ${paymentId}`);
+      this.logger.error(`找不到付款記錄: ${paymentId}`);
       return;
     }
 
@@ -218,7 +219,7 @@ export class PaymentsService {
         await this.referralsService.grantReferralReward(payment.subscription.userId);
       } catch (error) {
         // 推薦獎勵發放失敗不應影響付款流程
-        console.error('發放推薦獎勵失敗:', error);
+        this.logger.error('發放推薦獎勵失敗', error instanceof Error ? error.stack : undefined);
       }
 
       // 處理推廣者推薦記錄（如果有）
@@ -228,7 +229,7 @@ export class PaymentsService {
           payment.subscriptionId,
         );
       } catch (error) {
-        console.error('處理推廣者推薦記錄失敗:', error);
+        this.logger.error('處理推廣者推薦記錄失敗', error instanceof Error ? error.stack : undefined);
       }
 
       // 處理試用邀請轉換（如果有）
@@ -238,7 +239,7 @@ export class PaymentsService {
           payment.subscriptionId,
         );
       } catch (error) {
-        console.error('處理試用邀請轉換失敗:', error);
+        this.logger.error('處理試用邀請轉換失敗', error instanceof Error ? error.stack : undefined);
       }
     } else {
       // 更新付款為失敗
@@ -277,9 +278,10 @@ export class PaymentsService {
 
   /**
    * 取得單筆付款
+   * OWASP A01: 驗證付款記錄屬於當前使用者
    */
-  async getPayment(paymentId: string) {
-    return this.prisma.payment.findUnique({
+  async getPayment(paymentId: string, userId: string) {
+    const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
         subscription: {
@@ -290,6 +292,16 @@ export class PaymentsService {
         },
       },
     });
+
+    if (!payment) {
+      throw new NotFoundException('找不到付款記錄');
+    }
+
+    if (payment.subscription.userId !== userId) {
+      throw new BadRequestException('無權限查看此付款記錄');
+    }
+
+    return payment;
   }
 
   /**
@@ -393,14 +405,20 @@ export class PaymentsService {
 
   /**
    * 申請退款（僅支援 Stripe）
+   * OWASP A01: 驗證付款記錄屬於當前使用者
    */
-  async refundPayment(paymentId: string, reason?: string) {
+  async refundPayment(paymentId: string, userId: string, reason?: string) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
+      include: { subscription: true },
     });
 
     if (!payment) {
       throw new NotFoundException('找不到付款記錄');
+    }
+
+    if (payment.subscription.userId !== userId) {
+      throw new BadRequestException('無權限操作此付款記錄');
     }
 
     if (payment.status !== PaymentStatus.COMPLETED) {
@@ -422,14 +440,10 @@ export class PaymentsService {
       },
     });
 
-    // 取消訂閱
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { id: payment.subscriptionId },
-    });
-
-    if (subscription) {
+    // 取消訂閱（payment.subscription 已在查詢時 include）
+    if (payment.subscription) {
       await this.subscriptionsService.cancelSubscription(
-        subscription.userId,
+        payment.subscription.userId,
         reason || '退款取消',
       );
     }

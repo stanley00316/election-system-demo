@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -96,9 +96,11 @@ async function bootstrap() {
 
   const port = configService.get('PORT', 3001);
   await app.listen(port);
-  
-  console.log(`🚀 選情系統 API 啟動於 http://localhost:${port}/${apiPrefix}`);
-  console.log(`📚 API 文件位於 http://localhost:${port}/docs`);
+
+  // OWASP A09: 使用 NestJS Logger 取代 console.log
+  const logger = new Logger('Bootstrap');
+  logger.log(`選情系統 API 啟動於 http://localhost:${port}/${apiPrefix}`);
+  logger.log(`API 文件位於 http://localhost:${port}/docs`);
 }
 
 bootstrap();

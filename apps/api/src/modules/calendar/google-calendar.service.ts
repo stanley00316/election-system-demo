@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GoogleService } from '../auth/google.service';
 import { google, calendar_v3 } from 'googleapis';
@@ -34,6 +34,8 @@ interface ScheduleWithItems {
 
 @Injectable()
 export class GoogleCalendarService {
+  private readonly logger = new Logger(GoogleCalendarService.name);
+
   constructor(
     private prisma: PrismaService,
     private googleService: GoogleService,
@@ -123,7 +125,7 @@ export class GoogleCalendarService {
         eventId: schedule.googleEventId,
       });
     } catch (error) {
-      console.warn('Failed to delete Google event:', error);
+      this.logger.warn('Failed to delete Google event', error instanceof Error ? error.message : undefined);
     }
 
     // 清除 Google Event ID
@@ -156,7 +158,7 @@ export class GoogleCalendarService {
         await this.syncScheduleToGoogle(schedule.id, userId);
         synced++;
       } catch (error) {
-        console.error(`Failed to sync schedule ${schedule.id}:`, error);
+        this.logger.error(`Failed to sync schedule ${schedule.id}`, error instanceof Error ? error.stack : undefined);
         failed++;
       }
     }

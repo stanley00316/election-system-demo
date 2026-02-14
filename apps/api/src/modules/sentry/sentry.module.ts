@@ -1,4 +1,4 @@
-import { Module, Global, DynamicModule, OnModuleInit } from '@nestjs/common';
+import { Module, Global, DynamicModule, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/node';
 
@@ -102,9 +102,9 @@ export class SentryModule implements OnModuleInit {
         },
       });
 
-      console.log('🔍 Sentry 錯誤監控已啟用');
+      new Logger('SentryModule').log('Sentry 錯誤監控已啟用');
     } else {
-      console.log('⚠️ Sentry DSN 未設定，錯誤監控已停用');
+      new Logger('SentryModule').warn('Sentry DSN 未設定，錯誤監控已停用');
     }
   }
 }

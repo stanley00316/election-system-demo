@@ -19,6 +19,11 @@ const nextConfig = {
   },
   // OWASP A05: 安全標頭（含 Content Security Policy）
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
+    // OWASP A05: 生產環境移除 unsafe-eval，僅保留 unsafe-inline（Next.js styled-jsx 必需）
+    const scriptSrc = isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com"
+      : "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com";
     return [
       {
         source: '/(.*)',
@@ -27,7 +32,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://profile.line-scdn.net https://maps.googleapis.com https://maps.gstatic.com https://*.unsplash.com",
               "font-src 'self' https://fonts.gstatic.com",

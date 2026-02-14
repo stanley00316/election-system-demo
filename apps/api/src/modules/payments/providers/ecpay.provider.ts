@@ -16,10 +16,16 @@ export class EcpayProvider implements IPaymentProvider {
   private isProduction: boolean;
 
   constructor(private configService: ConfigService) {
-    this.merchantId = this.configService.getOrThrow<string>('ECPAY_MERCHANT_ID');
-    this.hashKey = this.configService.getOrThrow<string>('ECPAY_HASH_KEY');
-    this.hashIv = this.configService.getOrThrow<string>('ECPAY_HASH_IV');
+    this.merchantId = this.configService.get<string>('ECPAY_MERCHANT_ID', '');
+    this.hashKey = this.configService.get<string>('ECPAY_HASH_KEY', '');
+    this.hashIv = this.configService.get<string>('ECPAY_HASH_IV', '');
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+  }
+
+  private ensureConfigured(): void {
+    if (!this.merchantId || !this.hashKey || !this.hashIv) {
+      throw new Error('ECPay 尚未配置：缺少 ECPAY_MERCHANT_ID / ECPAY_HASH_KEY / ECPAY_HASH_IV');
+    }
   }
 
   private get apiUrl(): string {
@@ -32,6 +38,7 @@ export class EcpayProvider implements IPaymentProvider {
    * 建立付款請求
    */
   async createPayment(params: CreatePaymentParams): Promise<PaymentResult> {
+    this.ensureConfigured();
     try {
       const merchantTradeNo = `EC${params.orderId.substring(0, 16)}`;
       const merchantTradeDate = this.formatDate(new Date());
@@ -78,6 +85,7 @@ export class EcpayProvider implements IPaymentProvider {
    * 驗證回調
    */
   async verifyCallback(callbackData: any): Promise<PaymentVerifyResult> {
+    this.ensureConfigured();
     try {
       const { CheckMacValue, ...params } = callbackData;
 

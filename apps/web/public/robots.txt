@@ -1,0 +1,15 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /promoter/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /join/
+Disallow: /join-role/
+Disallow: /role-select
+Disallow: /checkout
+
+# 僅允許首頁、定價、指南、公開頁面被搜尋引擎索引
+Allow: /
+Allow: /pricing
+Allow: /guide
+Allow: /p/

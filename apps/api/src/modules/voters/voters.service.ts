@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
@@ -18,6 +19,8 @@ import { CreateRelationshipDto, RecordMeetingDto, BatchCreateRelationshipsDto } 
 
 @Injectable()
 export class VotersService {
+  private readonly logger = new Logger(VotersService.name);
+
   constructor(
     private prisma: PrismaService,
     private campaignsService: CampaignsService,
@@ -68,7 +71,7 @@ export class VotersService {
         longitude = coords.longitude;
       } catch (error) {
         // Geocoding 失敗不影響建立選民
-        console.warn('Geocoding failed for address:', dto.address);
+        this.logger.warn(`Geocoding failed for address: ${dto.address}`);
       }
     }
 
@@ -287,7 +290,7 @@ export class VotersService {
         latitude = coords.latitude;
         longitude = coords.longitude;
       } catch (error) {
-        console.warn('Geocoding failed for address:', dto.address);
+        this.logger.warn(`Geocoding failed for address: ${dto.address}`);
       }
     }
 
