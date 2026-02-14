@@ -10,7 +10,11 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Res,
+  StreamableFile,
+  Header,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { VotersService } from './voters.service';
@@ -50,6 +54,9 @@ export class VotersController {
     @Query() filter: VoterFilterDto,
     @CurrentUser('id') userId: string,
   ) {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'voters.controller.ts:findAll',message:'findAll called',data:{campaignId:filter.campaignId,userId,hasFilter:!!filter.campaignId},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     // OWASP A01: 驗證使用者是否為 campaign 成員
     if (filter.campaignId) {
       await this.votersService.checkCampaignAccess(filter.campaignId, userId);
@@ -129,11 +136,24 @@ export class VotersController {
 
   @Get('export')
   @ApiOperation({ summary: '匯出選民 Excel' })
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   async exportExcel(
     @Query('campaignId') campaignId: string,
+    @Query('format') format: string,
     @CurrentUser('id') userId: string,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.excelService.exportVoters(campaignId, userId);
+    const buffer = await this.excelService.exportVoters(campaignId, userId);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const ext = format === 'csv' ? 'csv' : 'xlsx';
+    const contentType = format === 'csv'
+      ? 'text/csv; charset=utf-8'
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    res.set({
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent('選民資料')}_${dateStr}.${ext}"`,
+    });
+    return new StreamableFile(buffer);
   }
 
   @Post('merge')
