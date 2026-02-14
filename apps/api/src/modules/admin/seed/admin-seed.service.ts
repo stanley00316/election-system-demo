@@ -66,7 +66,7 @@ export class AdminSeedService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error(`使用者 ${userId} 不存在`);
 
-    // 找到使用者的第一個 campaign
+    // 找到使用者的第一個 campaign（先查 TeamMember，再查 ownerId）
     const teamMember = await this.prisma.teamMember.findFirst({
       where: { userId },
       include: { campaign: true },
@@ -75,24 +75,40 @@ export class AdminSeedService {
     let campaign: any;
     if (teamMember?.campaign) {
       campaign = teamMember.campaign;
-      this.logger.log(`使用現有活動: ${campaign.name}`);
+      this.logger.log(`使用現有活動 (TeamMember): ${campaign.name}`);
     } else {
-      // 建立新活動
-      campaign = await this.prisma.campaign.create({
-        data: {
-          ownerId: userId,
-          name: '2026 台北市議員選舉',
-          electionType: ElectionType.CITY_COUNCILOR,
-          electionDate: new Date('2026-11-26'),
-          city: '台北市',
-          district: '中山區',
-          description: '第七選區市議員選舉',
-        },
+      // 再查 Campaign.ownerId
+      const ownedCampaign = await this.prisma.campaign.findFirst({
+        where: { ownerId: userId },
+        orderBy: { createdAt: 'asc' },
       });
-      await this.prisma.teamMember.create({
-        data: { userId, campaignId: campaign.id, role: UserRole.ADMIN },
-      });
-      this.logger.log(`建立新活動: ${campaign.name}`);
+      if (ownedCampaign) {
+        campaign = ownedCampaign;
+        // 順便補建 TeamMember 記錄
+        await this.prisma.teamMember.upsert({
+          where: { userId_campaignId: { userId, campaignId: campaign.id } },
+          update: {},
+          create: { userId, campaignId: campaign.id, role: UserRole.ADMIN },
+        });
+        this.logger.log(`使用現有活動 (ownerId): ${campaign.name}`);
+      } else {
+        // 都找不到才建立新活動
+        campaign = await this.prisma.campaign.create({
+          data: {
+            ownerId: userId,
+            name: '2026 台北市議員選舉',
+            electionType: ElectionType.CITY_COUNCILOR,
+            electionDate: new Date('2026-11-26'),
+            city: '台北市',
+            district: '中山區',
+            description: '第七選區市議員選舉',
+          },
+        });
+        await this.prisma.teamMember.create({
+          data: { userId, campaignId: campaign.id, role: UserRole.ADMIN },
+        });
+        this.logger.log(`建立新活動: ${campaign.name}`);
+      }
     }
 
     // 先檢查現有選民數量
@@ -302,5 +318,100 @@ export class AdminSeedService {
     };
     this.logger.log(JSON.stringify(summary));
     return summary;
+  }
+
+  /**
+   * 清理錯誤建立的 seed campaign 並重新 seed 到使用者的原始 campaign
+   */
+  async cleanupAndReseed(userId: string) {
+    this.logger.log(`開始清理並重新 seed 使用者 ${userId}...`);
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error(`使用者 ${userId} 不存在`);
+
+    // 找到所有使用者相關的 campaigns
+    const ownedCampaigns = await this.prisma.campaign.findMany({
+      where: { ownerId: userId },
+      include: { _count: { select: { voters: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const memberCampaigns = await this.prisma.teamMember.findMany({
+      where: { userId },
+      include: {
+        campaign: {
+          include: { _count: { select: { voters: true } } },
+        },
+      },
+    });
+
+    // 合併所有 campaigns（去重）
+    const allCampaignMap = new Map<string, any>();
+    for (const c of ownedCampaigns) {
+      allCampaignMap.set(c.id, c);
+    }
+    for (const tm of memberCampaigns) {
+      if (tm.campaign) {
+        allCampaignMap.set(tm.campaign.id, tm.campaign);
+      }
+    }
+    const allCampaigns = Array.from(allCampaignMap.values());
+
+    this.logger.log(`找到 ${allCampaigns.length} 個相關活動:`);
+    for (const c of allCampaigns) {
+      this.logger.log(`  - ${c.name} (${c.id}): ${c._count.voters} 位選民`);
+    }
+
+    if (allCampaigns.length < 1) {
+      return { message: '找不到任何活動', userId };
+    }
+
+    // 策略：找到最早建立的 campaign（原始的），刪除其他所有的
+    // 然後 seed 到原始 campaign
+    const [originalCampaign, ...extraCampaigns] = allCampaigns.sort(
+      (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+
+    // 刪除額外的 campaigns（cascade 會清理相關資料）
+    const deletedNames: string[] = [];
+    for (const extra of extraCampaigns) {
+      this.logger.log(`刪除額外活動: ${extra.name} (${extra.id})`);
+      await this.prisma.campaign.delete({ where: { id: extra.id } });
+      deletedNames.push(extra.name);
+    }
+
+    // 清除原始 campaign 的現有資料（如果有的話，先清空再 seed）
+    this.logger.log(`清除原始活動 ${originalCampaign.name} 的現有資料...`);
+    await this.prisma.scheduleItem.deleteMany({
+      where: { schedule: { campaignId: originalCampaign.id } },
+    });
+    await this.prisma.schedule.deleteMany({ where: { campaignId: originalCampaign.id } });
+    await this.prisma.eventAttendee.deleteMany({
+      where: { event: { campaignId: originalCampaign.id } },
+    });
+    await this.prisma.event.deleteMany({ where: { campaignId: originalCampaign.id } });
+    await this.prisma.contact.deleteMany({ where: { campaignId: originalCampaign.id } });
+    await this.prisma.voterRelationship.deleteMany({
+      where: { sourceVoter: { campaignId: originalCampaign.id } },
+    });
+    await this.prisma.voter.deleteMany({ where: { campaignId: originalCampaign.id } });
+
+    // 確保 TeamMember 存在
+    await this.prisma.teamMember.upsert({
+      where: { userId_campaignId: { userId, campaignId: originalCampaign.id } },
+      update: {},
+      create: { userId, campaignId: originalCampaign.id, role: UserRole.ADMIN },
+    });
+
+    // 重新 seed（直接呼叫 seedForUser，現在會找到正確的 campaign）
+    this.logger.log(`重新 seed 到活動: ${originalCampaign.name}`);
+    const seedResult = await this.seedForUser(userId);
+
+    return {
+      message: '清理並重新 seed 完成',
+      deletedCampaigns: deletedNames,
+      originalCampaign: originalCampaign.name,
+      seedResult,
+    };
   }
 }
