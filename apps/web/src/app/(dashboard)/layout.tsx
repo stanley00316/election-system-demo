@@ -95,8 +95,11 @@ export default function DashboardLayout({
   useEffect(() => {
     if (userData?.campaigns) {
       setCampaigns(userData.campaigns);
-      // 如果沒有選擇的 campaign，自動選擇第一個
-      if (!currentCampaign && userData.campaigns.length > 0) {
+      // 如果沒有選擇的 campaign，或選擇的 campaign 不在列表中，自動選擇第一個
+      const isCurrentValid = currentCampaign && userData.campaigns.some(
+        (c: any) => c.id === currentCampaign.id
+      );
+      if (!isCurrentValid && userData.campaigns.length > 0) {
         setCurrentCampaign(userData.campaigns[0]);
       }
     }
