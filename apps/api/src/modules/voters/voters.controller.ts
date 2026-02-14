@@ -54,9 +54,6 @@ export class VotersController {
     @Query() filter: VoterFilterDto,
     @CurrentUser('id') userId: string,
   ) {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'voters.controller.ts:findAll',message:'findAll called',data:{campaignId:filter.campaignId,userId,hasFilter:!!filter.campaignId},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     // OWASP A01: 驗證使用者是否為 campaign 成員
     if (filter.campaignId) {
       await this.votersService.checkCampaignAccess(filter.campaignId, userId);
