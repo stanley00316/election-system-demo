@@ -30,6 +30,7 @@ import { AdminPlansModule } from './modules/admin/plans/admin-plans.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AdminDataRetentionModule } from './modules/admin/data-retention/admin-data-retention.module';
 import { AdminPromotersModule } from './modules/admin/promoters/admin-promoters.module';
+import { AdminSeedModule } from './modules/admin/seed/admin-seed.module';
 import { PromotersModule } from './modules/promoters/promoters.module';
 import { PromoterSelfModule } from './modules/promoter-self/promoter-self.module';
 import { RoleInvitesModule } from './modules/role-invites/role-invites.module';
@@ -88,6 +89,7 @@ import { AlbumsModule } from './modules/albums/albums.module';
     TasksModule,
     AdminDataRetentionModule,
     AdminPromotersModule,
+    AdminSeedModule,
     PromotersModule,
     PromoterSelfModule,
     RoleInvitesModule,
