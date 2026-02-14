@@ -1,6 +1,8 @@
 import * as demoApi from './demo-api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+// 瀏覽器端走 Next.js rewrite proxy 避免 CORS；伺服器端直接連後端
+const _configuredUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = typeof window !== 'undefined' && _configuredUrl.startsWith('http') ? '/api' : _configuredUrl;
 
 // 檢查是否為示範模式
 export const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
