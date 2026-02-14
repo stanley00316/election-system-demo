@@ -381,6 +381,25 @@ export class CampaignsService {
     userId: string,
     allowedRoles: UserRole[] = [UserRole.ADMIN, UserRole.EDITOR, UserRole.VIEWER],
   ) {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaigns.service.ts:checkCampaignAccess',message:'checkCampaignAccess called',data:{campaignId,userId,allowedRoles},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    // 超級管理員豁免：isSuperAdmin 可存取所有 campaign
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaigns.service.ts:checkCampaignAccess',message:'Super admin check',data:{campaignId,userId,isSuperAdmin:user?.isSuperAdmin},timestamp:Date.now(),hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+
+    if (user?.isSuperAdmin) {
+      // 超級管理員直接放行，回傳虛擬 ADMIN 成員
+      return { userId, campaignId, role: UserRole.ADMIN } as any;
+    }
+
     const member = await this.prisma.teamMember.findUnique({
       where: {
         userId_campaignId: {
@@ -389,6 +408,10 @@ export class CampaignsService {
         },
       },
     });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaigns.service.ts:checkCampaignAccess',message:'TeamMember lookup result',data:{campaignId,userId,memberFound:!!member,memberRole:member?.role},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
     if (!member) {
       throw new ForbiddenException('您沒有存取此選舉活動的權限');
