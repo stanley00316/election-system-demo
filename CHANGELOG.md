@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-02-14
+
+### Fixed
+- **超級管理員 campaign 存取**：`checkCampaignAccess` 新增 `isSuperAdmin` 豁免邏輯，超級管理員可存取所有 campaign（原先必須是 TeamMember 才能通過）
+- **Excel 匯出格式**：`exportExcel` endpoint 改用 `StreamableFile` 回傳真實 xlsx 二進位（原先 `return Buffer` 被 NestJS 序列化為 JSON，導致 Excel 無法開啟）
+
 ## [1.4.4] - 2026-02-14
 
 ### Fixed
