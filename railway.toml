@@ -1,12 +1,15 @@
 # =============================================
-# Railway 部署設定 - 選情系統 API
+# 選情系統 Railway 部署配置
 # =============================================
+# 此配置用於 Railway 平台部署後端 API
+# Railway 會自動偵測此檔案並使用指定的 Dockerfile
 
 [build]
 dockerfilePath = "docker/Dockerfile.api"
 
 [deploy]
 healthcheckPath = "/api/v1/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 90
+startCommand = "./start-api.sh"
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+restartPolicyMaxRetries = 3

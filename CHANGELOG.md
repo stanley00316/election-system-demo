@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-02-15
+
+### Added
+- **正式環境部署配置**：建立完整的生產環境部署架構（Vercel + Railway + Supabase + Upstash）
+- **Railway 部署配置**：新增 `railway.toml`，支援 Docker 建置與健康檢查
+- **Supabase 連線池支援**：Prisma schema 新增 `directUrl` 支援 Supabase Transaction Pooler + Direct 雙連線模式
+- **環境變數模板**：新增 `.env.production` 含所有平台（Railway/Vercel/Supabase）的完整配置模板與說明
+- **部署驗證腳本**：`scripts/check-production-env.sh` 自動檢查所有必要環境變數是否已填入
+- **一鍵部署腳本**：`scripts/setup-production.sh` 自動化 Railway 環境變數設定、部署、Vercel 環境切換與健康檢查
+
+### Changed
+- **Prisma datasource**：`directUrl` 欄位允許分離應用程式連線（Pooler）與遷移連線（Direct），提升 Supabase 相容性
+
+## [1.5.0] - 2026-02-15
+
+### Added
+- **接觸紀錄時間軸視圖**：選民詳情頁的接觸紀錄改為垂直時間軸呈現，按日期分群、依 outcome 色彩標記圓點，取代原有扁平卡片列表
+- **接觸類型篩選 Chip**：選民詳情頁新增水平 Chip 列，可按 11 種接觸類型即時篩選紀錄，含各類型計數顯示
+- **編輯接觸紀錄 Dialog**：支援在選民詳情頁直接編輯既有接觸紀錄，含 react-hook-form + zod 表單驗證、GPS 定位
+- **刪除接觸紀錄確認**：AlertDialog 確認流程，刪除後自動刷新選民資料
+
+### New Components
+- `ContactTimeline` — 垂直時間軸元件（日期群組、outcome 色彩圓點、操作按鈕）
+- `ContactTypeFilter` — 水平 Chip 篩選列（全部 + 11 種接觸類型）
+- `EditContactDialog` — 編輯紀錄 Dialog（預填既有值、表單驗證、update API）
+- `DeleteContactDialog` — 刪除確認 Dialog（AlertDialog + delete API）
+
 ## [1.4.6] - 2026-02-15
 
 ### Fixed

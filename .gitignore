@@ -15,6 +15,7 @@ uploads/
 .env
 .env.local
 .env.*.local
+.env.production
 .env.prod-check
 .env.vercel-check
 .env.*-check

@@ -78,6 +78,12 @@ const LineContactDialog = dynamic(
   { ssr: false }
 );
 
+// 接觸紀錄元件
+import { ContactTimeline } from '@/components/contacts/ContactTimeline';
+import { ContactTypeFilter } from '@/components/contacts/ContactTypeFilter';
+import { EditContactDialog } from '@/components/contacts/EditContactDialog';
+import { DeleteContactDialog } from '@/components/contacts/DeleteContactDialog';
+
 // 動態匯入接觸地圖（避免 SSR）
 const ContactMiniMap = dynamic(
   () => import('@/components/contacts/ContactMiniMap').then(mod => mod.ContactMiniMap),
@@ -112,6 +118,9 @@ export default function VoterDetailPage() {
   const [influenceWeight, setInfluenceWeight] = useState(50);
   const [relationNotes, setRelationNotes] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
+  const [contactFilterType, setContactFilterType] = useState<string | undefined>();
+  const [editingContact, setEditingContact] = useState<any>(null);
+  const [deletingContact, setDeletingContact] = useState<any>(null);
   const { recordContact, gpsData, getLocationText } = useAutoContact();
 
   const { data: voter, isLoading, error } = useQuery({
@@ -460,63 +469,55 @@ export default function VoterDetailPage() {
               )}
 
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">接觸紀錄</CardTitle>
-                  <Link href={`/dashboard/contacts/new?voterId=${voterId}`}>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      新增紀錄
-                    </Button>
-                  </Link>
+                <CardHeader className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">接觸紀錄</CardTitle>
+                    <Link href={`/dashboard/contacts/new?voterId=${voterId}`}>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        新增紀錄
+                      </Button>
+                    </Link>
+                  </div>
+                  {/* 接觸類型篩選 */}
+                  {voter.contacts?.length > 0 && (
+                    <ContactTypeFilter
+                      value={contactFilterType}
+                      onChange={setContactFilterType}
+                      counts={
+                        voter.contacts?.reduce((acc: Record<string, number>, c: any) => {
+                          acc[c.type] = (acc[c.type] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
+                      }
+                    />
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {voter.contacts?.length > 0 ? (
-                    <div className="space-y-4">
-                      {voter.contacts.map((contact: any) => (
-                        <div
-                          key={contact.id}
-                          className="flex items-start gap-4 p-3 rounded-lg bg-muted/50"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">
-                                {getContactTypeLabel(contact.type)}
-                              </Badge>
-                              <Badge
-                                variant={
-                                  contact.outcome === 'POSITIVE'
-                                    ? 'success'
-                                    : contact.outcome === 'NEGATIVE'
-                                    ? 'destructive'
-                                    : 'secondary'
-                                }
-                              >
-                                {getContactOutcomeLabel(contact.outcome)}
-                              </Badge>
-                            </div>
-                            {contact.notes && (
-                              <p className="text-sm mt-2">{contact.notes}</p>
-                            )}
-                            {contact.location && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                <MapPin className="h-3 w-3" />
-                                <span>{contact.location}</span>
-                              </div>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {contact.user?.name} · {formatRelativeTime(contact.contactDate)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      尚無接觸紀錄
-                    </p>
-                  )}
+                  <ContactTimeline
+                    contacts={voter.contacts || []}
+                    filterType={contactFilterType}
+                    onEdit={(contact) => setEditingContact(contact)}
+                    onDelete={(contact) => setDeletingContact(contact)}
+                  />
                 </CardContent>
               </Card>
+
+              {/* 編輯接觸紀錄 Dialog */}
+              <EditContactDialog
+                open={!!editingContact}
+                onOpenChange={(open) => { if (!open) setEditingContact(null); }}
+                contact={editingContact}
+                voterId={voterId}
+              />
+
+              {/* 刪除接觸紀錄 Dialog */}
+              <DeleteContactDialog
+                open={!!deletingContact}
+                onOpenChange={(open) => { if (!open) setDeletingContact(null); }}
+                contact={deletingContact}
+                voterId={voterId}
+              />
             </TabsContent>
 
             <TabsContent value="relationships" className="mt-4">
