@@ -508,12 +508,6 @@ export const demoStats = safeGenerate('demoStats', () => ({
   dailyContacts: [],
 });
 
-// #region agent log — H3: demo data module init check
-if (typeof window !== 'undefined') {
-  console.log('[Debug][H3]', JSON.stringify({voterCount:demoVoters?.length??-1,contactCount:demoContacts?.length??-1,eventCount:demoEvents?.length??-1,statsTotal:demoStats?.totalVoters??-1}));
-}
-// #endregion
-
 // 訂閱方案（示範用）
 export const demoPlans = [
   {

@@ -50,11 +50,6 @@ export const useAuthStore = create<AuthState>()(
       storage: safePersistStorage,
       partialize: (state) => ({ user: state.user, token: state.token }),
       onRehydrateStorage: () => (state) => {
-        // #region agent log — H4: auth rehydration
-        if (typeof window !== 'undefined') {
-          console.log('[Debug][H4]', JSON.stringify({hasToken:!!state?.token,hasUser:!!state?.user,userName:state?.user?.name??null}));
-        }
-        // #endregion
         if (state?.token) {
           api.setToken(state.token);
           // 使用 store 的 setState 而非直接突變，確保觸發 re-render

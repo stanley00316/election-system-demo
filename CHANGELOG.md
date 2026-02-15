@@ -8,15 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.6] - 2026-02-15
 
 ### Fixed
-- **Safari Demo 資料不顯示（根因）**：`isDemoMode` 僅依賴 build-time `NEXT_PUBLIC_DEMO_MODE` 環境變數，Vercel 未設定時所有 API 走真實端點返回 401。新增 client-side hostname fallback：域名匹配 `*-demo-*` 或 `*.demo.*` 時自動啟用 demo 模式
-- **Safari Demo 資料不顯示（防禦）**：`demo-data.ts` 所有 `generate*` 呼叫加上 `try-catch` 防禦性包裝，避免單一生成函數失敗導致整個模組崩潰、後續匯出全為 `undefined`
-- **Safari Demo API 初始化**：`demo-api.ts` 的模組級展開運算（`[...demoVoters]`）加入 `Array.isArray` 檢查，防止匯入值為 `undefined` 時拋出 `TypeError: undefined is not iterable`
-- **Safari localStorage 相容性**：新增 `safe-storage.ts`，為 zustand persist 提供 `try-catch` 包裝的 localStorage 存取，Safari 隱私模式或 ITP 限制下自動降級為 in-memory storage
-- **Auth Store 水合突變**：`onRehydrateStorage` 回呼改用 `useAuthStore.setState()` 取代直接突變 `state.isAuthenticated = true`，確保正確觸發 React re-render
-- **Demo 登入 Storage 錯誤處理**：`handleDemoLogin` 中 `localStorage.setItem` / `sessionStorage.setItem` 加上 `try-catch`，防止 Safari 儲存失敗中斷登入流程
-
-### Added
-- **Demo 模式偵錯日誌**：`api.ts` 無條件輸出模組載入狀態（isDemoMode 值、hostname、voters/analysis/contacts API 是否正常），方便在 Safari Console 中定位問題
+- **Safari/所有瀏覽器 Demo 資料不顯示（根因）**：`isDemoMode` 僅依賴 build-time `NEXT_PUBLIC_DEMO_MODE` 環境變數，Vercel 設定值含換行符 (`"false\n"`) 導致 `=== 'true'` 永遠為 false，所有 API 走真實端點返回 401。新增 client-side hostname regex fallback `/[-.]demo[-.]/.test(hostname)`，域名含 `-demo-` 或 `.demo.` 時自動啟用 demo 模式
+- **Demo 資料生成防禦**：`demo-data.ts` 所有 `generate*` 呼叫加上 `safeGenerate` 防禦性包裝
+- **Demo API 初始化防禦**：`demo-api.ts` 加入 `Array.isArray` 檢查，防止匯入值為 `undefined` 時拋出 TypeError
+- **Safari localStorage 相容性**：新增 `safe-storage.ts`，為 zustand persist 提供 `try-catch` 包裝的 localStorage 存取
+- **Auth Store 水合修正**：`onRehydrateStorage` 改用 `useAuthStore.setState()` 取代直接突變
+- **Demo 登入 Storage 錯誤處理**：`handleDemoLogin` 中 storage 操作加上 `try-catch`
 
 ## [1.4.5] - 2026-02-14
 
