@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '@/lib/api';
+import { safePersistStorage } from '@/lib/safe-storage';
 
 interface User {
   id: string;
@@ -46,13 +47,21 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      storage: safePersistStorage,
       partialize: (state) => ({ user: state.user, token: state.token }),
       onRehydrateStorage: () => (state) => {
+        // #region agent log — H4: auth rehydration
+        if (typeof window !== 'undefined') {
+          console.log('[Debug][H4]', JSON.stringify({hasToken:!!state?.token,hasUser:!!state?.user,userName:state?.user?.name??null}));
+        }
+        // #endregion
         if (state?.token) {
           api.setToken(state.token);
-          state.isAuthenticated = true;
+          // 使用 store 的 setState 而非直接突變，確保觸發 re-render
+          useAuthStore.setState({ isAuthenticated: true, isLoading: false });
+        } else {
+          useAuthStore.setState({ isLoading: false });
         }
-        state?.setLoading(false);
       },
     }
   )

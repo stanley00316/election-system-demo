@@ -5,7 +5,17 @@ const _configuredUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001
 const API_URL = typeof window !== 'undefined' && _configuredUrl.startsWith('http') ? '/api' : _configuredUrl;
 
 // 檢查是否為示範模式
-export const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+// 主要：build-time 環境變數
+// 備援：client-side hostname 包含 "demo"（解決 Vercel 未設定環境變數的情況）
+export const isDemoMode =
+  process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ||
+  (typeof window !== 'undefined' && /[-.]demo[-.]/.test(window.location.hostname));
+
+// #region agent log — H1/H2: isDemoMode 偵測
+if (typeof window !== 'undefined') {
+  console.log('[Debug][H1]', JSON.stringify({isDemoMode,env:process.env.NEXT_PUBLIC_DEMO_MODE,hostname:window.location.hostname,regexTest:/[-.]demo[-.]/.test(window.location.hostname),hasVotersApi:!!demoApi.demoVotersApi,hasAnalysisApi:!!demoApi.demoAnalysisApi}));
+}
+// #endregion
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -357,6 +367,12 @@ const realAnalysisApi = {
     }>('/analysis/visit-stats', { campaignId }),
 };
 export const analysisApi = isDemoMode ? demoApi.demoAnalysisApi : realAnalysisApi;
+
+// #region agent log — H5: API routing verification
+if (typeof window !== 'undefined') {
+  console.log('[Debug][H5]', JSON.stringify({isDemoMode,authIsDemo:authApi===demoApi.demoAuthApi,votersIsDemo:votersApi===demoApi.demoVotersApi,analysisIsDemo:analysisApi===demoApi.demoAnalysisApi}));
+}
+// #endregion
 
 // Maps API
 const realMapsApi = {

@@ -429,16 +429,26 @@ function generateDistricts(): any[] {
 
 // ==================== 匯出示範資料 ====================
 
-// 生成所有資料
-export const demoVoters = generateVoters(500);
-export const demoContacts = generateContacts(demoVoters, 800);
-export const demoEvents = generateEvents(demoVoters, 25);
-export const demoSchedules = generateSchedules(demoVoters);
-export const demoRelationships = generateRelationships(demoVoters, 100);
-export const demoDistricts = generateDistricts();
+// 防禦性包裝：確保任何資料生成失敗時不會導致整個模組崩潰
+function safeGenerate<T>(name: string, fn: () => T, fallback: T): T {
+  try {
+    return fn();
+  } catch (e) {
+    console.error(`[Demo] ${name} failed:`, e);
+    return fallback;
+  }
+}
 
-// 統計資料
-export const demoStats = {
+// 生成所有資料（每個步驟獨立 try-catch，避免單點失敗導致全部 undefined）
+export const demoVoters = safeGenerate('generateVoters', () => generateVoters(500), []);
+export const demoContacts = safeGenerate('generateContacts', () => generateContacts(demoVoters, 800), []);
+export const demoEvents = safeGenerate('generateEvents', () => generateEvents(demoVoters, 25), []);
+export const demoSchedules = safeGenerate('generateSchedules', () => generateSchedules(demoVoters), []);
+export const demoRelationships = safeGenerate('generateRelationships', () => generateRelationships(demoVoters, 100), []);
+export const demoDistricts = safeGenerate('generateDistricts', () => generateDistricts(), []);
+
+// 統計資料（安全存取，避免空陣列導致 NaN）
+export const demoStats = safeGenerate('demoStats', () => ({
   totalVoters: demoVoters.length,
   totalContacts: demoContacts.length,
   totalEvents: demoEvents.length,
@@ -484,7 +494,25 @@ export const demoStats = {
       }).length,
     };
   }).reverse(),
-};
+}), {
+  totalVoters: 0,
+  totalContacts: 0,
+  totalEvents: 0,
+  totalSchedules: 0,
+  stanceDistribution: {
+    STRONG_SUPPORT: 0, SUPPORT: 0, LEAN_SUPPORT: 0, NEUTRAL: 0,
+    UNDECIDED: 0, LEAN_OPPOSE: 0, OPPOSE: 0, STRONG_OPPOSE: 0,
+  },
+  districtDistribution: [],
+  contactTypeDistribution: [],
+  dailyContacts: [],
+});
+
+// #region agent log — H3: demo data module init check
+if (typeof window !== 'undefined') {
+  console.log('[Debug][H3]', JSON.stringify({voterCount:demoVoters?.length??-1,contactCount:demoContacts?.length??-1,eventCount:demoEvents?.length??-1,statsTotal:demoStats?.totalVoters??-1}));
+}
+// #endregion
 
 // 訂閱方案（示範用）
 export const demoPlans = [

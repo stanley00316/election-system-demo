@@ -38,10 +38,15 @@ function paginate<T>(data: T[], page: number = 1, limit: number = 20): { data: T
 }
 
 // 暫存資料（用於模擬新增/修改）
-let tempVoters = [...demoVoters];
-let tempContacts = [...demoContacts];
-let tempEvents = [...demoEvents];
-let tempSchedules = [...demoSchedules];
+// 防禦性檢查：確保匯入的資料為陣列，避免 Safari 中模組初始化失敗
+let tempVoters = Array.isArray(demoVoters) ? [...demoVoters] : [];
+let tempContacts = Array.isArray(demoContacts) ? [...demoContacts] : [];
+let tempEvents = Array.isArray(demoEvents) ? [...demoEvents] : [];
+let tempSchedules = Array.isArray(demoSchedules) ? [...demoSchedules] : [];
+
+if (tempVoters.length === 0) {
+  console.warn('[Demo] tempVoters is empty — demo data may not have loaded correctly');
+}
 
 // 暫存邀請連結資料
 let tempInviteLinks: any[] = [];
@@ -51,9 +56,10 @@ const tempEventAttendees = new Map<string, Array<{ voterId: string; status: stri
 
 // 初始化：為每個活動隨機分配 5-15 位選民作為初始參與者
 function initEventAttendees() {
+  if (tempVoters.length === 0) return; // 防禦：無選民資料時跳過
   tempEvents.forEach((event, eventIndex) => {
     const attendeeCount = 5 + Math.floor((eventIndex * 7 + 3) % 11); // 確定性偽隨機 5-15
-    const startIdx = (eventIndex * 13) % tempVoters.length;
+    const startIdx = tempVoters.length > 0 ? (eventIndex * 13) % tempVoters.length : 0;
     const attendees: Array<{ voterId: string; status: string; joinedAt: string }> = [];
     const statuses = ['INVITED', 'CONFIRMED', 'ATTENDED', 'CONFIRMED', 'ATTENDED'];
     for (let i = 0; i < attendeeCount && i < tempVoters.length; i++) {

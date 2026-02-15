@@ -52,15 +52,75 @@
 }
 
 @layer base {
+  /* ─── 跨平台字型渲染與反鋸齒 ─── */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+
+  /* ─── 表單元件正規化（統一 macOS / Windows） ─── */
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    letter-spacing: inherit;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  /* placeholder 顏色統一（Windows Chrome 預設偏深） */
+  ::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+
+  /* focus 外觀統一，移除 Windows 預設 outline */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* ─── CJK 排版（防溢位 / 斷行差異） ─── */
+  html:lang(zh-TW) {
+    font-feature-settings: "kern" 1;
+    hanging-punctuation: allow-end;
+  }
+
+  /* ─── SVG / Icon 垂直對齊 ─── */
+  svg {
+    vertical-align: middle;
+    display: inline-block;
+    flex-shrink: 0;
   }
 }
 
-/* 自定義滾動條 */
+/* ─── 捲軸樣式 ─── */
+
+/* Firefox 支援 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
+}
+
+/* Webkit（Chrome / Safari / Edge） */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -76,6 +136,13 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/50;
+}
+
+/* Windows 強制 overlay scrollbar 行為 */
+@supports (overflow: overlay) {
+  html {
+    overflow-y: overlay;
+  }
 }
 
 /* 修正 Leaflet 地圖 z-index 問題 */

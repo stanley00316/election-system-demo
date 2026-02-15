@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { safePersistStorage } from '@/lib/safe-storage';
 
 interface Campaign {
   id: string;
@@ -49,6 +50,7 @@ export const useCampaignStore = create<CampaignState>()(
     }),
     {
       name: 'campaign-storage',
+      storage: safePersistStorage,
       partialize: (state) => ({ currentCampaign: state.currentCampaign }),
     }
   )

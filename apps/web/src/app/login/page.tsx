@@ -210,8 +210,12 @@ function LoginContent() {
       const demoToken = 'demo-token-' + Date.now();
       
       if (typeof window !== 'undefined') {
-        localStorage.setItem('currentCampaignId', demoCampaign.id);
-        sessionStorage.setItem('intendedRole', role);
+        try {
+          localStorage.setItem('currentCampaignId', demoCampaign.id);
+          sessionStorage.setItem('intendedRole', role);
+        } catch (e) {
+          console.warn('[Demo] Storage write failed:', e);
+        }
       }
       
       setAuth(demoUser, demoToken);
