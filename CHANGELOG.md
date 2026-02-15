@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-02-15
+
+### Added
+- 匯入功能大幅強化：分步匯入精靈（選擇檔案 → 欄位驗證 → 資料預覽 → 匯入 → 結果）
+- 後端新增 CSV 解析支援（.csv UTF-8 編碼）
+- 後端新增智能欄位辨識：自動對應中英文標題名稱，支援模糊比對建議
+- 後端新增逐列詳細驗證（Email 格式、電話格式、列舉值範圍、年齡合理性）
+- 後端新增 POST /voters/import/validate 端點（僅驗證不寫入）
+- 前端匯入結果報告重構：分類 Tabs 篩選、完整錯誤清單、可下載錯誤報告 Excel
+- 錯誤訊息包含修正建議與可接受值，引導使用者修正
+- 前端資料預覽功能：匯入前可預覽前 5 列資料
+
+### Changed
+- ImportResult / ImportError 型別定義升級（含 type、column、suggestion、acceptedValues 欄位）
+- demo-api.ts 模擬驗證/匯入回傳新結構
+
 ## [1.8.0] - 2026-02-15
 
 ### Added

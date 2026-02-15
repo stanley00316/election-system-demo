@@ -395,9 +395,40 @@ export const demoVotersApi = {
     return [];
   },
   
+  validateImport: async (_file: File, _campaignId: string) => {
+    await delay(300);
+    return {
+      headerValidation: {
+        valid: true,
+        missingRequired: [],
+        missingOptional: ['Email', '標籤'],
+        unrecognized: [],
+        mappedColumns: { '姓名': '姓名', '電話': '電話', '地址': '地址', '縣市': '縣市', '區': '區', '里': '里', '政黨': '政黨', '政治傾向': '政治傾向', '年齡': '年齡', '性別': '性別', '職業': '職業', '備註': '備註' },
+      },
+      previewRows: [
+        { '姓名': '陳志明', '電話': '0912-345-678', '地址': '台北市信義區松仁路100號', '政治傾向': '支持' },
+        { '姓名': '林淑芬', '電話': '0923-456-789', '地址': '台北市大安區忠孝東路四段250號', '政治傾向': '強力支持' },
+        { '姓名': '王建國', '電話': '0934-567-890', '地址': '台北市松山區南京東路五段123巷45號', '政治傾向': '中立' },
+      ],
+      totalRows: 3,
+    };
+  },
   importExcel: async (_file: File, _campaignId: string) => {
-    await delay(500);
-    return { imported: 0, skipped: 0, errors: [] };
+    await delay(1500);
+    return {
+      success: 3,
+      failed: 0,
+      duplicates: 0,
+      totalRows: 3,
+      errors: [],
+      headerValidation: {
+        valid: true,
+        missingRequired: [],
+        missingOptional: [],
+        unrecognized: [],
+        mappedColumns: {},
+      },
+    };
   },
   
   exportExcel: async (_campaignId: string) => {

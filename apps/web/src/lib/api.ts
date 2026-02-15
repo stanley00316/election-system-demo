@@ -273,6 +273,8 @@ const realVotersApi = {
     api.get<{ found: boolean; voters: any[] }>('/voters/search-by-line', params),
   getDuplicates: (campaignId: string) =>
     api.get<any[]>('/voters/duplicates', { campaignId }),
+  validateImport: (file: File, campaignId: string) =>
+    api.uploadFile<any>('/voters/import/validate', file, { campaignId }),
   importExcel: (file: File, campaignId: string) =>
     api.uploadFile<any>('/voters/import', file, { campaignId }),
   exportExcel: (campaignId: string) =>

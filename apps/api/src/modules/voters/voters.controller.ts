@@ -106,6 +106,31 @@ export class VotersController {
     return this.votersService.findDuplicates(campaignId);
   }
 
+  @Post('import/validate')
+  @ApiOperation({ summary: '驗證匯入檔案（不寫入資料庫）' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        campaignId: { type: 'string' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+    },
+  }))
+  async validateImport(
+    @CurrentUser('id') userId: string,
+    @UploadedFile(ExcelFileValidationPipe()) file: Express.Multer.File,
+    @Body('campaignId') campaignId: string,
+  ) {
+    return this.excelService.validateImport(file, campaignId, userId);
+  }
+
   @Post('import')
   @ApiOperation({ summary: '匯入選民 Excel' })
   @ApiConsumes('multipart/form-data')
