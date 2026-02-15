@@ -19,7 +19,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload & { iat?: number }) {
+  async validate(payload: JwtPayload & { iat?: number; pending2fa?: boolean }) {
+    // OWASP A07: 拒絕未完成 2FA 驗證的臨時 token 存取一般 API
+    if (payload.pending2fa) {
+      throw new UnauthorizedException('請先完成雙因素驗證');
+    }
+
     // OWASP A07: 檢查 token 是否被個別撤銷
     const jti = `${payload.sub}:${payload.iat}`;
     if (await this.tokenBlacklist.isBlacklisted(jti)) {

@@ -94,6 +94,42 @@ export const demoAuthApi = {
     await delay(100);
     return { success: true };
   },
+  // 2FA (demo mode 不啟用 2FA)
+  setup2fa: async (_tempToken: string) => {
+    await delay(100);
+    return { qrCodeDataUrl: '', otpauthUrl: '', secret: 'DEMO' };
+  },
+  verifySetup2fa: async (_tempToken: string, _code: string) => {
+    await delay(100);
+    return { accessToken: 'demo-token-' + Date.now(), user: demoUser };
+  },
+  verify2fa: async (_tempToken: string, _code: string) => {
+    await delay(100);
+    return { accessToken: 'demo-token-' + Date.now(), user: demoUser };
+  },
+  acceptConsent: async (consentVersion: string, portraitConsent: boolean) => {
+    await delay(200);
+    const now = new Date().toISOString();
+    demoUser.consentAcceptedAt = now;
+    demoUser.consentVersion = consentVersion;
+    demoUser.portraitConsentAcceptedAt = portraitConsent ? now : null;
+    return {
+      consentAcceptedAt: now,
+      consentVersion,
+      portraitConsentAcceptedAt: portraitConsent ? now : null,
+    };
+  },
+  revokeConsent: async () => {
+    await delay(200);
+    demoUser.consentAcceptedAt = null;
+    demoUser.consentVersion = null;
+    demoUser.portraitConsentAcceptedAt = null;
+    return {
+      consentAcceptedAt: null,
+      consentVersion: null,
+      portraitConsentAcceptedAt: null,
+    };
+  },
 };
 
 // ==================== Campaigns API ====================

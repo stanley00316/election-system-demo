@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-02-15
+
+### Added
+- 登入後個資法同意彈窗：首次登入或版本更新時顯示不可關閉的同意書對話框
+- 完整 12 條個人資料保護聲明 + 肖像權暨聲音授權同意條款
+- 三個強制核取項目（個資蒐集、敏感資料、操作紀錄）+ 肖像權同意/不同意選項
+- 自動帶入使用者姓名、帳號、競選辦公室名稱
+- 後端 POST /auth/consent、POST /auth/revoke-consent 端點
+- Prisma schema 新增 consentAcceptedAt、consentVersion、portraitConsentAcceptedAt 欄位
+- 設定頁新增「個資保護與法規」完整條款頁面，含同意狀態檢視與撤回同意功能
+- Demo 模式完整支援同意書流程
+- Dialog 元件新增 hideCloseButton 屬性支援
+
+## [1.7.0] - 2026-02-15
+
+### Added
+- **Google Authenticator 雙因素驗證 (2FA/TOTP)**：所有使用者每次登入必須完成 TOTP 驗證
+  - 後端：TotpService（密鑰產生/加密/驗證）、TempTokenGuard（臨時 token 保護）
+  - 新增 API 端點：`POST /auth/2fa/setup`、`POST /auth/2fa/verify-setup`、`POST /auth/2fa/verify`
+  - JwtStrategy 拒絕未完成 2FA 的 pending token 存取一般 API
+  - TOTP 密鑰使用 AES-256-GCM 加密儲存
+  - 2FA 端點每分鐘限制 5 次請求（防暴力破解）
+  - 前端：`/setup-2fa` 頁面（QR Code 顯示 + 手動密鑰 + 驗證碼輸入）
+  - 前端：`/verify-2fa` 頁面（6 位數 TOTP 驗證碼輸入）
+  - Auth Store 新增 tempToken 暫存機制
+  - 登入流程改為兩階段：LINE Login → 2FA 驗證 → 取得完整 JWT
+
+### Changed
+- User model 新增 `totpSecret`、`totpEnabled`、`totpEnabledAt` 欄位
+- `validateLineToken()` 改為回傳 tempToken + requiresTwoFactor 狀態
+- 前端 login callback 重構為 `computePostLoginRedirect` 統一導向邏輯
+
+### Security
+- OWASP A07：tempToken 有效期僅 5 分鐘，未完成 2FA 無法存取任何 API
+- OWASP A02：TOTP 密鑰使用 AES-256-GCM 加密儲存（`TOTP_ENCRYPTION_KEY`）
+- OWASP A05：2FA 驗證端點嚴格頻率限制
+
 ## [1.6.0] - 2026-02-15
 
 ### Added

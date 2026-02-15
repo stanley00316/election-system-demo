@@ -45,6 +45,7 @@ import { BottomNavBar } from '@/components/navigation';
 import { SubscriptionBanner } from '@/components/subscription';
 import { BackButton, getParentPath } from '@/components/common/BackButton';
 import { DemoTip } from '@/components/DemoTip';
+import { ConsentDialog } from '@/components/consent/ConsentDialog';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: '管理員',
@@ -423,6 +424,9 @@ export default function DashboardLayout({
 
       {/* 底部導航欄 - 僅行動裝置顯示 */}
       <BottomNavBar />
+
+      {/* 個資法同意彈窗 */}
+      <ConsentDialog />
     </div>
   );
 }

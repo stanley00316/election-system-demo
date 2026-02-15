@@ -8,6 +8,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LineService } from './line.service';
 import { GoogleService } from './google.service';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { TotpService } from './totp.service';
+import { TempTokenGuard } from './guards/temp-token.guard';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { TokenBlacklistService } from './token-blacklist.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LineService, GoogleService, TokenBlacklistService],
-  exports: [AuthService, JwtModule, GoogleService, TokenBlacklistService],
+  providers: [AuthService, JwtStrategy, LineService, GoogleService, TokenBlacklistService, TotpService, TempTokenGuard],
+  exports: [AuthService, JwtModule, GoogleService, TokenBlacklistService, TotpService],
 })
 export class AuthModule {}

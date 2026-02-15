@@ -116,6 +116,15 @@ class ApiClient {
     });
   }
 
+  /** POST with a custom Bearer token (used for 2FA temp token) */
+  postWithToken<T>(endpoint: string, token: string, data?: any) {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   delete<T>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
@@ -192,13 +201,35 @@ export const api = new ApiClient(API_URL);
 // Auth API
 const realAuthApi = {
   lineCallback: (code: string, redirectUri: string, promoterCode?: string) =>
-    api.post<{ accessToken: string; user: any }>('/auth/line/callback', {
+    api.post<{
+      accessToken?: string;
+      user: any;
+      requiresTwoFactor?: boolean;
+      setupRequired?: boolean;
+      tempToken?: string;
+    }>('/auth/line/callback', {
       code,
       redirectUri,
       ...(promoterCode && { promoterCode }),
     }),
   getMe: () => api.get<any>('/auth/me'),
+  acceptConsent: (consentVersion: string, portraitConsent: boolean) =>
+    api.post<any>('/auth/consent', { consentVersion, portraitConsent }),
+  revokeConsent: () => api.post<any>('/auth/revoke-consent'),
   logout: () => api.post('/auth/logout'),
+  // 2FA
+  setup2fa: (tempToken: string) =>
+    api.postWithToken<{ qrCodeDataUrl: string; otpauthUrl: string; secret: string }>(
+      '/auth/2fa/setup', tempToken,
+    ),
+  verifySetup2fa: (tempToken: string, code: string) =>
+    api.postWithToken<{ accessToken: string; user: any }>(
+      '/auth/2fa/verify-setup', tempToken, { code },
+    ),
+  verify2fa: (tempToken: string, code: string) =>
+    api.postWithToken<{ accessToken: string; user: any }>(
+      '/auth/2fa/verify', tempToken, { code },
+    ),
 };
 export const authApi = isDemoMode ? demoApi.demoAuthApi : realAuthApi;
 

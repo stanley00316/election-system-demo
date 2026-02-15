@@ -34,7 +34,7 @@ function getPostLoginPath(user: any): string {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, setAuth } = useAuthStore();
+  const { isAuthenticated, setAuth, setTempAuth } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +118,39 @@ function LoginContent() {
     }
   }, [isAuthenticated, router]);
 
+  /**
+   * 計算登入後的導向路徑（根據角色和 sessionStorage 中的待處理項目）
+   */
+  const computePostLoginRedirect = (user: any): string => {
+    const intendedRole = typeof window !== 'undefined'
+      ? sessionStorage.getItem('intendedRole')
+      : null;
+    if (intendedRole) sessionStorage.removeItem('intendedRole');
+
+    const pendingRoleInvite = typeof window !== 'undefined'
+      ? sessionStorage.getItem('pendingRoleInvite')
+      : null;
+    const pendingTrialCode = typeof window !== 'undefined'
+      ? sessionStorage.getItem('pendingTrialCode')
+      : null;
+
+    if (pendingRoleInvite) {
+      sessionStorage.removeItem('pendingRoleInvite');
+      return `/join-role/${pendingRoleInvite}`;
+    }
+    if (pendingTrialCode) {
+      return `/trial/${pendingTrialCode}`;
+    }
+    if (intendedRole === 'user') return '/dashboard';
+    if (intendedRole === 'promoter') {
+      const { promoter } = user;
+      if (promoter?.isActive && promoter?.status === 'APPROVED') return '/promoter/dashboard';
+      if (promoter) return '/promoter/login?status=pending';
+      return '/promoter/register';
+    }
+    return getPostLoginPath(user);
+  };
+
   const handleLineCallback = async (code: string) => {
     setIsLoading(true);
     setError(null);
@@ -128,55 +161,29 @@ function LoginContent() {
         : null;
 
       const result = await authApi.lineCallback(code, callbackUrl, pendingPromoterCode || undefined);
-      setAuth(result.user, result.accessToken);
 
       // 清除已使用的推廣碼
       if (pendingPromoterCode) {
         sessionStorage.removeItem('pendingPromoterCode');
       }
 
-      // 讀取並清除意圖角色
-      const intendedRole = typeof window !== 'undefined'
-        ? sessionStorage.getItem('intendedRole')
-        : null;
-      if (intendedRole) {
-        sessionStorage.removeItem('intendedRole');
+      // 2FA 流程：後端要求雙因素驗證
+      if (result.requiresTwoFactor && result.tempToken) {
+        const redirectPath = computePostLoginRedirect(result.user);
+        setTempAuth(result.tempToken, result.user, redirectPath);
+
+        if (result.setupRequired) {
+          router.push('/setup-2fa');
+        } else {
+          router.push('/verify-2fa');
+        }
+        return;
       }
 
-      // 檢查是否有角色邀請碼
-      const pendingRoleInvite = typeof window !== 'undefined'
-        ? sessionStorage.getItem('pendingRoleInvite')
-        : null;
-
-      // 檢查是否有待處理的試用碼
-      const pendingTrialCode = typeof window !== 'undefined'
-        ? sessionStorage.getItem('pendingTrialCode')
-        : null;
-
-      if (pendingRoleInvite) {
-        // 有角色邀請 → 導向邀請落地頁自動 claim
-        sessionStorage.removeItem('pendingRoleInvite');
-        router.push(`/join-role/${pendingRoleInvite}`);
-      } else if (pendingTrialCode) {
-        router.push(`/trial/${pendingTrialCode}`);
-      } else if (intendedRole === 'user') {
-        // 使用者連結登入 → 直接進入使用者儀表板
-        router.push('/dashboard');
-      } else if (intendedRole === 'promoter') {
-        // 推廣者連結登入 → 根據推廣者狀態導向
-        const { promoter } = result.user;
-        if (promoter?.isActive && promoter?.status === 'APPROVED') {
-          router.push('/promoter/dashboard');
-        } else if (promoter) {
-          // 已申請但未通過 → 顯示狀態頁
-          router.push('/promoter/login?status=pending');
-        } else {
-          // 未申請 → 導向註冊頁
-          router.push('/promoter/register');
-        }
-      } else {
-        // 無特定意圖 → 原有邏輯（多角色偵測）
-        router.push(getPostLoginPath(result.user));
+      // 直接登入（向下相容：理論上不再走此路徑）
+      if (result.accessToken) {
+        setAuth(result.user, result.accessToken);
+        router.push(computePostLoginRedirect(result.user));
       }
     } catch (err: any) {
       console.error('LINE login failed:', err);

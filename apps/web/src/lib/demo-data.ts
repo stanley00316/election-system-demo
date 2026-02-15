@@ -89,6 +89,9 @@ export const demoUser = {
   isActive: true,
   isAdmin: false,
   isSuperAdmin: false,
+  consentAcceptedAt: null as string | null,
+  consentVersion: null as string | null,
+  portraitConsentAcceptedAt: null as string | null,
   promoter: {
     id: 'demo-promoter-id',
     status: 'APPROVED',

@@ -15,8 +15,11 @@ import { ConfigService } from '@nestjs/config';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { TempTokenGuard } from './guards/temp-token.guard';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { LineCallbackDto } from './dto/line-callback.dto';
+import { AcceptConsentDto } from './dto/accept-consent.dto';
+import { VerifyTotpDto } from './dto/verify-totp.dto';
 import { Public } from './decorators/public.decorator';
 
 @ApiTags('auth')
@@ -54,6 +57,31 @@ export class AuthController {
   @ApiOperation({ summary: '取得當前使用者資訊' })
   async getMe(@Req() req: any) {
     return this.authService.getMe(req.user.id);
+  }
+
+  @Post('consent')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '接受個資法同意書' })
+  async acceptConsent(
+    @Req() req: any,
+    @Body() dto: AcceptConsentDto,
+  ) {
+    return this.authService.acceptConsent(
+      req.user.id,
+      dto.consentVersion,
+      dto.portraitConsent,
+    );
+  }
+
+  @Post('revoke-consent')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '撤回個資法同意' })
+  async revokeConsent(@Req() req: any) {
+    return this.authService.revokeConsent(req.user.id);
   }
 
   @Post('logout')
@@ -109,6 +137,41 @@ export class AuthController {
         avatarUrl: user.avatarUrl,
       },
     };
+  }
+
+  // ==================== 2FA / TOTP ====================
+
+  // OWASP A05: 2FA 端點使用嚴格的頻率限制（每分鐘 5 次，防暴力破解）
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('2fa/setup')
+  @UseGuards(TempTokenGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '產生 2FA QR Code（首次設定）' })
+  async setup2fa(@Req() req: any) {
+    return this.authService.setupTotp(req.user.id);
+  }
+
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('2fa/verify-setup')
+  @UseGuards(TempTokenGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '驗證 TOTP 並啟用 2FA' })
+  @ApiBody({ type: VerifyTotpDto })
+  async verifySetup2fa(@Req() req: any, @Body() dto: VerifyTotpDto) {
+    return this.authService.verifyAndEnableTotp(req.user.id, dto.code);
+  }
+
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('2fa/verify')
+  @UseGuards(TempTokenGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '驗證 TOTP 驗證碼（登入）' })
+  @ApiBody({ type: VerifyTotpDto })
+  async verify2fa(@Req() req: any, @Body() dto: VerifyTotpDto) {
+    return this.authService.verifyTotp(req.user.id, dto.code);
   }
 
   // OWASP A05: 移除 debug-check 端點

@@ -43,6 +43,16 @@ model User {
   googleTokenExpiry  DateTime? @map("google_token_expiry")
   googleCalendarId   String?   @map("google_calendar_id")
 
+  // 個資法同意
+  consentAcceptedAt         DateTime? @map("consent_accepted_at")
+  consentVersion            String?   @map("consent_version")
+  portraitConsentAcceptedAt DateTime? @map("portrait_consent_accepted_at")
+
+  // 2FA / TOTP
+  totpSecret    String?   @map("totp_secret")
+  totpEnabled   Boolean   @default(false) @map("totp_enabled")
+  totpEnabledAt DateTime? @map("totp_enabled_at")
+
   // Relations
   campaigns        Campaign[]
   teamMembers      TeamMember[]

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth';
 import { useCampaignStore } from '@/stores/campaign';
-import { Settings, User, Building, Users, Bell, Shield, Database, Loader2, Download, HardDrive, CreditCard, Gift, MessageCircle, ExternalLink, Share2 } from 'lucide-react';
+import { Settings, User, Building, Users, Bell, Shield, Database, Loader2, Download, HardDrive, CreditCard, Gift, MessageCircle, ExternalLink, Share2, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
@@ -379,6 +379,27 @@ export default function SettingsPage() {
             <Link href="/dashboard/settings/security">
               <Button variant="outline" className="w-full">
                 安全設定
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Consent & Privacy */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              個資保護與法規
+            </CardTitle>
+            <CardDescription>個人資料保護聲明暨使用同意書</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              檢視完整法規條款、同意紀錄與撤回同意
+            </p>
+            <Link href="/dashboard/settings/consent">
+              <Button variant="outline" className="w-full">
+                檢視條款與同意紀錄
               </Button>
             </Link>
           </CardContent>
