@@ -74,7 +74,19 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: safePersistStorage,
-      partialize: (state) => ({ user: state.user, token: state.token }),
+      // OWASP A07: 僅持久化必要欄位，減少敏感資料暴露
+      partialize: (state) => ({
+        user: state.user ? {
+          id: state.user.id,
+          lineUserId: state.user.lineUserId,
+          name: state.user.name,
+          avatarUrl: state.user.avatarUrl,
+          isAdmin: state.user.isAdmin,
+          isSuperAdmin: state.user.isSuperAdmin,
+          promoter: state.user.promoter,
+        } : null,
+        token: state.token,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state?.token) {
           api.setToken(state.token);

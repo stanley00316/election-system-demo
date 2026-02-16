@@ -21,6 +21,11 @@ import { TempTokenGuard } from './guards/temp-token.guard';
         signOptions: {
           // OWASP A07: 縮短 access token 有效期至 30 分鐘
           expiresIn: configService.get('JWT_EXPIRES_IN', '30m'),
+          // OWASP A02: 明確指定簽章演算法，避免演算法混淆攻擊
+          algorithm: 'HS256' as const,
+        },
+        verifyOptions: {
+          algorithms: ['HS256' as const],
         },
       }),
       inject: [ConfigService],

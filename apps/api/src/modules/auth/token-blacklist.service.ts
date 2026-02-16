@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../redis/redis.service';
 
 /**
@@ -9,15 +10,22 @@ import { RedisService } from '../redis/redis.service';
  * - 管理員停用帳號時撤銷該使用者所有 token
  * - Token 過期後自動從 Redis 清除（利用 TTL）
  *
- * 降級模式：若 Redis 不可用，黑名單功能停用，
- * 系統退回到僅依賴 token 過期時間的方式。
+ * 安全降級模式：若 Redis 不可用且處於生產環境，
+ * 將所有 token 視為已撤銷（安全優先）。
+ * 開發環境則降級為不檢查黑名單。
  */
 @Injectable()
 export class TokenBlacklistService {
   private readonly logger = new Logger(TokenBlacklistService.name);
   private readonly PREFIX = 'token_blacklist:';
+  private readonly isProduction: boolean;
 
-  constructor(private redis: RedisService) {}
+  constructor(
+    private redis: RedisService,
+    private configService: ConfigService,
+  ) {
+    this.isProduction = this.configService.get('NODE_ENV') === 'production';
+  }
 
   /**
    * 將 token 加入黑名單
@@ -26,7 +34,9 @@ export class TokenBlacklistService {
    */
   async blacklist(jti: string, ttlSeconds: number): Promise<void> {
     if (!this.redis.available) {
-      this.logger.warn('Redis 不可用，無法將 token 加入黑名單');
+      this.logger.error(
+        'OWASP A07: Redis 不可用，無法將 token 加入黑名單。已登出的 token 在 Redis 恢復前仍可使用。',
+      );
       return;
     }
     await this.redis.set(`${this.PREFIX}${jti}`, '1', ttlSeconds);
@@ -34,12 +44,19 @@ export class TokenBlacklistService {
 
   /**
    * 檢查 token 是否在黑名單中
+   * OWASP A07: 生產環境 Redis 不可用時，安全優先 — 視所有 token 為已撤銷
    * @param jti token 的唯一識別碼
    * @returns true 表示 token 已被撤銷
    */
   async isBlacklisted(jti: string): Promise<boolean> {
     if (!this.redis.available) {
-      return false; // Redis 不可用時，降級為不檢查黑名單
+      if (this.isProduction) {
+        this.logger.error(
+          'OWASP A07: 生產環境 Redis 不可用，安全降級 — 拒絕所有請求直到 Redis 恢復',
+        );
+        return true; // 生產環境安全優先：視為已撤銷
+      }
+      return false; // 開發環境降級為不檢查
     }
     return this.redis.exists(`${this.PREFIX}${jti}`);
   }
@@ -51,7 +68,7 @@ export class TokenBlacklistService {
    */
   async revokeAllUserTokens(userId: string, ttlSeconds: number): Promise<void> {
     if (!this.redis.available) {
-      this.logger.warn('Redis 不可用，無法撤銷使用者 token');
+      this.logger.error('OWASP A07: Redis 不可用，無法撤銷使用者 token');
       return;
     }
     // 標記使用者的所有 token 都應被撤銷（在此時間戳之前簽發的 token 都無效）
@@ -70,6 +87,12 @@ export class TokenBlacklistService {
    */
   async isUserTokenRevoked(userId: string, issuedAt: number): Promise<boolean> {
     if (!this.redis.available) {
+      if (this.isProduction) {
+        this.logger.error(
+          'OWASP A07: 生產環境 Redis 不可用，安全降級 — 視 token 為已撤銷',
+        );
+        return true;
+      }
       return false;
     }
     const revokedAt = await this.redis.get(`${this.PREFIX}user:${userId}`);

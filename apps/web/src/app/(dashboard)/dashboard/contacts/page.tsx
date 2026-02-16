@@ -326,7 +326,7 @@ export default function ContactsPage() {
                   <div
                     key={contact.id}
                     className="flex items-start gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/dashboard/voters/${contact.voter?.id}`)}
+                    onClick={() => router.push(`/dashboard/contacts/${contact.id}`)}
                   >
                     <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
                       <Icon className="h-5 w-5" />

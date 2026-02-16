@@ -77,7 +77,10 @@ initEventAttendees();
 
 // ==================== Auth API ====================
 export const demoAuthApi = {
-  lineCallback: async (_code: string, _redirectUri: string, _promoterCode?: string) => {
+  generateOAuthState: async () => {
+    return { state: 'demo-state-' + Date.now() };
+  },
+  lineCallback: async (_code: string, _redirectUri: string, _promoterCode?: string, _state?: string) => {
     await delay(300);
     return {
       accessToken: 'demo-token-' + Date.now(),
@@ -2052,6 +2055,19 @@ export const demoAdminPaymentsApi = {
   },
   getPayment: async (id: string) => demoPayments.find((p) => p.id === id) || null,
   refundPayment: async () => { throw new Error('示範模式不支援管理功能'); },
+  getRevenueChart: async () => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (11 - i));
+      return { month: d.toISOString().slice(0, 7), revenue: Math.floor(Math.random() * 20000) + 5000, count: Math.floor(Math.random() * 10) + 1 };
+    });
+  },
+  getConversionFunnel: async () => ({
+    totalTrials: 50, trialToActive: 15, conversionRate: 30, totalActive: 20, totalChurned: 5, churnRate: 20,
+  }),
+  getMRR: async () => ({ mrr: 39800, arr: 477600, activeSubscriptions: 20 }),
+  getPendingManual: async () => [],
+  confirmPayment: async () => { throw new Error('示範模式不支援管理功能'); },
 };
 
 export const demoAdminAnalyticsApi = {

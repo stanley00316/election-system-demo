@@ -1,21 +1,22 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, Max, IsDateString, IsEnum, IsUUID, MaxLength, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaymentStatus, PaymentProvider } from '@prisma/client';
 
 export class AdminPaymentFilterDto {
   @IsOptional()
-  @IsString()
-  status?: string; // PENDING, PROCESSING, COMPLETED, FAILED, REFUNDED, CANCELLED
+  @IsEnum(PaymentStatus)
+  status?: PaymentStatus;
 
   @IsOptional()
-  @IsString()
-  provider?: string; // ECPAY, NEWEBPAY, STRIPE, MANUAL
+  @IsEnum(PaymentProvider)
+  provider?: PaymentProvider;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   userId?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   subscriptionId?: string;
 
   @IsOptional()
@@ -40,22 +41,23 @@ export class AdminPaymentFilterDto {
   limit?: number = 20;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['createdAt', 'amount', 'status', 'paidAt'])
   sortBy?: string = 'createdAt';
 
   @IsOptional()
-  @IsString()
+  @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'desc';
 }
 
 export class RefundPaymentDto {
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   reason?: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  amount?: number; // 部分退款金額，不填則全額退款
+  amount?: number;
 }

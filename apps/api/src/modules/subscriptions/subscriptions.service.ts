@@ -1,15 +1,29 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionStatus, PlanInterval, PlanCategory, TrialInviteStatus } from '@prisma/client';
 
 @Injectable()
 export class SubscriptionsService {
+  private readonly logger = new Logger(SubscriptionsService.name);
   // 試用期天數（改為 7 天）
   private readonly TRIAL_DAYS = 7;
   // 未付款資料緩衝期（天）
   private readonly GRACE_PERIOD_DAYS = 30;
 
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * OWASP A09: 記錄敏感操作審計日誌
+   */
+  private async logActivity(userId: string, action: string, entity: string, entityId?: string, details?: any) {
+    try {
+      await this.prisma.activityLog.create({
+        data: { userId, action, entity, entityId, details },
+      });
+    } catch (err) {
+      this.logger.warn(`審計日誌寫入失敗: ${action}`, err instanceof Error ? err.message : undefined);
+    }
+  }
 
   /**
    * 取得目前訂閱狀態
@@ -57,47 +71,55 @@ export class SubscriptionsService {
 
   /**
    * 開始免費試用
+   * OWASP A01: 使用 serializable transaction 防止 race condition 建立重複訂閱
    */
   async startTrial(userId: string) {
-    // 檢查是否已有訂閱
-    const existingSubscription = await this.prisma.subscription.findFirst({
-      where: { userId },
+    return this.prisma.$transaction(async (tx) => {
+      // 在交易內檢查，確保原子性
+      const existingSubscription = await tx.subscription.findFirst({
+        where: { userId },
+      });
+
+      if (existingSubscription) {
+        throw new BadRequestException('您已經使用過試用或訂閱服務');
+      }
+
+      // 取得試用方案
+      let trialPlan = await tx.plan.findFirst({
+        where: { code: 'FREE_TRIAL', isActive: true },
+      });
+
+      // 如果沒有試用方案，建立一個（在交易外處理以避免序列化衝突）
+      if (!trialPlan) {
+        trialPlan = await this.createDefaultPlans();
+      }
+
+      // 計算試用期結束時間
+      const now = new Date();
+      const trialEndsAt = new Date(now.getTime() + this.TRIAL_DAYS * 24 * 60 * 60 * 1000);
+
+      // 建立訂閱
+      const subscription = await tx.subscription.create({
+        data: {
+          userId,
+          planId: trialPlan.id,
+          status: SubscriptionStatus.TRIAL,
+          currentPeriodStart: now,
+          currentPeriodEnd: trialEndsAt,
+          trialEndsAt,
+        },
+        include: {
+          plan: true,
+        },
+      });
+
+      // OWASP A09: 審計日誌
+      await this.logActivity(userId, 'START_TRIAL', 'SUBSCRIPTION', subscription.id, { planId: trialPlan.id });
+
+      return subscription;
+    }, {
+      isolationLevel: 'Serializable',
     });
-
-    if (existingSubscription) {
-      throw new BadRequestException('您已經使用過試用或訂閱服務');
-    }
-
-    // 取得試用方案
-    let trialPlan = await this.prisma.plan.findFirst({
-      where: { code: 'FREE_TRIAL', isActive: true },
-    });
-
-    // 如果沒有試用方案，建立一個
-    if (!trialPlan) {
-      trialPlan = await this.createDefaultPlans();
-    }
-
-    // 計算試用期結束時間
-    const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + this.TRIAL_DAYS * 24 * 60 * 60 * 1000);
-
-    // 建立訂閱
-    const subscription = await this.prisma.subscription.create({
-      data: {
-        userId,
-        planId: trialPlan.id,
-        status: SubscriptionStatus.TRIAL,
-        currentPeriodStart: now,
-        currentPeriodEnd: trialEndsAt,
-        trialEndsAt,
-      },
-      include: {
-        plan: true,
-      },
-    });
-
-    return subscription;
   }
 
   /**
@@ -285,6 +307,8 @@ export class SubscriptionsService {
         plan: true,
       },
     });
+
+    await this.logActivity(userId, 'CANCEL_SUBSCRIPTION', 'SUBSCRIPTION', updated.id, { reason });
 
     return updated;
   }
@@ -549,6 +573,181 @@ export class SubscriptionsService {
 
     return this.prisma.plan.findFirst({
       where: { code: 'FREE_TRIAL' },
+    });
+  }
+
+  // ==================== P0-3: 方案升降級 ====================
+
+  /**
+   * P0-3: 預覽升級（計算補差價）
+   */
+  async previewUpgrade(userId: string, newPlanId: string) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { userId, status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+      include: { plan: true },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('找不到有效訂閱');
+    }
+
+    const newPlan = await this.prisma.plan.findUnique({ where: { id: newPlanId } });
+    if (!newPlan || !newPlan.isActive) {
+      throw new NotFoundException('找不到該方案');
+    }
+
+    if (newPlan.price <= subscription.plan.price) {
+      throw new BadRequestException('升級方案價格必須高於目前方案');
+    }
+
+    const now = new Date();
+    const totalDays = Math.ceil(
+      (subscription.currentPeriodEnd.getTime() - subscription.currentPeriodStart.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const remainingDays = Math.max(0, Math.ceil(
+      (subscription.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    ));
+
+    const priceDiff = newPlan.price - subscription.plan.price;
+    const prorated = totalDays > 0 ? Math.ceil((remainingDays / totalDays) * priceDiff) : priceDiff;
+
+    return {
+      currentPlan: subscription.plan,
+      newPlan,
+      remainingDays,
+      totalDays,
+      proratedAmount: prorated,
+      effectiveImmediately: true,
+    };
+  }
+
+  /**
+   * P0-3: 執行升級
+   */
+  async upgradeSubscription(userId: string, newPlanId: string) {
+    // OWASP A04: 使用交易保護防止查詢與更新之間的狀態不一致
+    return this.prisma.$transaction(async (tx) => {
+      const preview = await this.previewUpgrade(userId, newPlanId);
+
+      const subscription = await tx.subscription.findFirst({
+        where: { userId, status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+      });
+
+      if (!subscription) {
+        throw new NotFoundException('找不到有效訂閱');
+      }
+
+      const updated = await tx.subscription.update({
+        where: { id: subscription.id },
+        data: { planId: newPlanId, pendingPlanId: null },
+        include: { plan: true },
+      });
+
+      await this.logActivity(userId, 'UPGRADE_SUBSCRIPTION', 'SUBSCRIPTION', updated.id, { newPlanId });
+
+      return { subscription: updated, proratedAmount: preview.proratedAmount };
+    });
+  }
+
+  /**
+   * P0-3: 預覽降級
+   */
+  async previewDowngrade(userId: string, newPlanId: string) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { userId, status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+      include: { plan: true },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('找不到有效訂閱');
+    }
+
+    const newPlan = await this.prisma.plan.findUnique({ where: { id: newPlanId } });
+    if (!newPlan || !newPlan.isActive) {
+      throw new NotFoundException('找不到該方案');
+    }
+
+    if (newPlan.price >= subscription.plan.price) {
+      throw new BadRequestException('降級方案價格必須低於目前方案');
+    }
+
+    return {
+      currentPlan: subscription.plan,
+      newPlan,
+      effectiveDate: subscription.currentPeriodEnd,
+      effectiveImmediately: false,
+    };
+  }
+
+  /**
+   * P0-3: 排程降級（下個計費週期生效）
+   */
+  async downgradeSubscription(userId: string, newPlanId: string) {
+    // OWASP A04: 使用交易保護防止查詢與更新之間的狀態不一致
+    return this.prisma.$transaction(async (tx) => {
+      await this.previewDowngrade(userId, newPlanId);
+
+      const subscription = await tx.subscription.findFirst({
+        where: { userId, status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+      });
+
+      if (!subscription) {
+        throw new NotFoundException('找不到有效訂閱');
+      }
+
+      const updated = await tx.subscription.update({
+        where: { id: subscription.id },
+        data: { pendingPlanId: newPlanId },
+        include: { plan: true },
+      });
+
+      await this.logActivity(userId, 'DOWNGRADE_SUBSCRIPTION', 'SUBSCRIPTION', updated.id, { pendingPlanId: newPlanId });
+
+      return updated;
+    });
+  }
+
+  /**
+   * P0-3: 取消排程降級
+   */
+  async cancelDowngrade(userId: string) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { userId, status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('找不到有效訂閱');
+    }
+
+    if (!subscription.pendingPlanId) {
+      throw new BadRequestException('目前無排程降級');
+    }
+
+    return this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { pendingPlanId: null },
+      include: { plan: true },
+    });
+  }
+
+  // ==================== P2-11: 自動續約 ====================
+
+  /**
+   * P2-11: 切換自動續約
+   */
+  async toggleAutoRenew(userId: string, autoRenew: boolean) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { userId, status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] } },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('找不到有效訂閱');
+    }
+
+    return this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { autoRenew },
+      include: { plan: true },
     });
   }
 

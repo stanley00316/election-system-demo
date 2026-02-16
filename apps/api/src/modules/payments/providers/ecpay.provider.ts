@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import {
@@ -10,6 +10,7 @@ import {
 
 @Injectable()
 export class EcpayProvider implements IPaymentProvider {
+  private readonly logger = new Logger(EcpayProvider.name);
   private merchantId: string;
   private hashKey: string;
   private hashIv: string;
@@ -54,7 +55,11 @@ export class EcpayProvider implements IPaymentProvider {
         ReturnURL: params.notifyUrl,
         OrderResultURL: params.returnUrl,
         ClientBackURL: params.clientBackUrl || params.returnUrl,
-        ChoosePayment: 'Credit',
+        ChoosePayment: 'ALL',
+      CREDIT: '1',
+      VACC: '1',
+      CVS: '1',
+      WEBATM: '1',
         EncryptType: '1',
         NeedExtraPaidInfo: 'Y',
       };
@@ -73,10 +78,12 @@ export class EcpayProvider implements IPaymentProvider {
           apiUrl: this.apiUrl,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
+      // OWASP A05: 不洩漏 ECPay 內部錯誤給客戶端
+      this.logger.error('ECPay createPayment failed', error.stack);
       return {
         success: false,
-        errorMessage: error.message,
+        errorMessage: '付款建立失敗，請稍後再試',
       };
     }
   }
@@ -114,11 +121,93 @@ export class EcpayProvider implements IPaymentProvider {
         paidAt: this.parseEcpayDate(callbackData.PaymentDate),
         rawResponse: callbackData,
       };
-    } catch (error) {
+    } catch (error: any) {
+      // OWASP A05: 不洩漏 ECPay 驗證錯誤給客戶端
+      this.logger.error('ECPay verifyCallback failed', error.stack);
       return {
         success: false,
-        errorMessage: error.message,
+        errorMessage: '付款驗證失敗',
       };
+    }
+  }
+
+  /**
+   * P1-6: ECPay 信用卡退刷
+   */
+  async refund(merchantTradeNo: string, tradeNo: string, amount: number): Promise<{ success: boolean; errorMessage?: string }> {
+    this.ensureConfigured();
+    try {
+      const actionUrl = this.isProduction
+        ? 'https://payment.ecpay.com.tw/CreditDetail/DoAction'
+        : 'https://payment-stage.ecpay.com.tw/CreditDetail/DoAction';
+
+      const params: Record<string, string> = {
+        MerchantID: this.merchantId,
+        MerchantTradeNo: merchantTradeNo,
+        TradeNo: tradeNo,
+        Action: 'R',
+        TotalAmount: String(amount),
+      };
+
+      const checkMacValue = this.generateCheckMacValue(params);
+      params.CheckMacValue = checkMacValue;
+
+      const response = await fetch(actionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(params).toString(),
+      });
+
+      const result: any = await response.json();
+      if (result.RtnCode === '1') {
+        return { success: true };
+      }
+      return { success: false, errorMessage: result.RtnMsg || '退刷失敗' };
+    } catch (error: any) {
+      this.logger.error('ECPay refund failed', error.stack);
+      return { success: false, errorMessage: '退款處理失敗，請稍後再試' };
+    }
+  }
+
+  /**
+   * P2-10: ECPay 交易查詢
+   */
+  async queryTransaction(merchantTradeNo: string): Promise<PaymentVerifyResult> {
+    this.ensureConfigured();
+    try {
+      const queryUrl = this.isProduction
+        ? 'https://payment.ecpay.com.tw/Cashier/QueryTradeInfo/V5'
+        : 'https://payment-stage.ecpay.com.tw/Cashier/QueryTradeInfo/V5';
+
+      const params: Record<string, string> = {
+        MerchantID: this.merchantId,
+        MerchantTradeNo: merchantTradeNo,
+        TimeStamp: String(Math.floor(Date.now() / 1000)),
+      };
+
+      const checkMacValue = this.generateCheckMacValue(params);
+      params.CheckMacValue = checkMacValue;
+
+      const response = await fetch(queryUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(params).toString(),
+      });
+
+      const result: any = await response.json();
+      const success = result.TradeStatus === '1';
+
+      return {
+        success,
+        transactionId: result.TradeNo,
+        amount: parseInt(result.TradeAmt, 10) || undefined,
+        paidAt: result.PaymentDate ? this.parseEcpayDate(result.PaymentDate) : undefined,
+        errorMessage: success ? undefined : (result.TradeStatus === '0' ? '未付款' : '交易查詢異常'),
+        rawResponse: result,
+      };
+    } catch (error: any) {
+      this.logger.error('ECPay queryTransaction failed', error.stack);
+      return { success: false, errorMessage: '交易查詢失敗' };
     }
   }
 

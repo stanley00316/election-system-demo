@@ -35,6 +35,30 @@ export class AdminPaymentsController {
   }
 
   /**
+   * P2-12: 營收趨勢圖
+   */
+  @Get('revenue-chart')
+  async getRevenueChart(@Query('months') months?: string) {
+    return this.adminPaymentsService.getRevenueChart(months ? parseInt(months, 10) : 12);
+  }
+
+  /**
+   * P2-12: 轉換漏斗
+   */
+  @Get('conversion-funnel')
+  async getConversionFunnel() {
+    return this.adminPaymentsService.getConversionFunnel();
+  }
+
+  /**
+   * P2-12: MRR
+   */
+  @Get('mrr')
+  async getMRR() {
+    return this.adminPaymentsService.getMRR();
+  }
+
+  /**
    * 取得付款統計
    */
   @Get('stats')
@@ -74,11 +98,45 @@ export class AdminPaymentsController {
   }
 
   /**
+   * P1-5: 取得待確認的手動付款列表
+   * 注意：此路由必須在 :id 路由之前，否則 'pending-manual' 會被當作 :id 參數
+   */
+  @Get('pending-manual')
+  async getPendingManualPayments() {
+    return this.adminPaymentsService.getPendingManualPayments();
+  }
+
+  /**
    * 取得單一付款詳情
    */
   @Get(':id')
   async getPaymentById(@Param('id') id: string) {
     return this.adminPaymentsService.getPaymentById(id);
+  }
+
+  /**
+   * P1-5: 手動確認付款
+   */
+  @Post(':id/confirm')
+  async confirmPayment(
+    @Param('id') id: string,
+    @Body('notes') notes: string,
+    @CurrentAdmin() admin: any,
+    @Req() req: Request,
+  ) {
+    const result = await this.adminPaymentsService.confirmPayment(id, admin.id, notes);
+
+    await this.adminAuthService.logAction(
+      admin.id,
+      'PAYMENT_CONFIRM',
+      'PAYMENT',
+      id,
+      { notes },
+      req.ip,
+      req.headers['user-agent'],
+    );
+
+    return result;
   }
 
   /**

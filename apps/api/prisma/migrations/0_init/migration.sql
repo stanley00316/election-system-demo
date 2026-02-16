@@ -1,0 +1,11 @@
+-- CreateTable: Baseline migration
+-- This is the initial migration baseline.
+-- All tables already exist in the database from `prisma db push`.
+-- This migration was created with `prisma migrate diff` to establish
+-- a starting point for future migrations.
+--
+-- To baseline an existing database:
+--   npx prisma migrate resolve --applied 0_init
+--
+-- Future schema changes should use:
+--   npx prisma migrate dev --name <description>

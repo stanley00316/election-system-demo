@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -23,8 +23,20 @@ export class LocalStorageProvider implements StorageProvider {
     );
   }
 
+  /**
+   * OWASP A03: 驗證檔案路徑不包含目錄遍歷攻擊（../）
+   */
+  private validateKey(key: string): string {
+    const resolved = path.resolve(this.uploadPath, key);
+    const uploadRoot = path.resolve(this.uploadPath);
+    if (!resolved.startsWith(uploadRoot + path.sep) && resolved !== uploadRoot) {
+      throw new BadRequestException('Invalid file path');
+    }
+    return resolved;
+  }
+
   async upload(key: string, buffer: Buffer, _mimeType: string): Promise<void> {
-    const filePath = path.join(this.uploadPath, key);
+    const filePath = this.validateKey(key);
     const dir = path.dirname(filePath);
 
     await fs.mkdir(dir, { recursive: true });
@@ -33,7 +45,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
-    const filePath = path.join(this.uploadPath, key);
+    const filePath = this.validateKey(key);
     try {
       await fs.unlink(filePath);
       this.logger.debug(`檔案已刪除: ${filePath}`);

@@ -188,6 +188,74 @@ export class AdminPaymentsService {
   }
 
   /**
+   * P1-5: 手動確認付款（銀行轉帳）
+   */
+  async confirmPayment(id: string, adminId: string, notes?: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id },
+      include: { subscription: true },
+    });
+
+    if (!payment) {
+      throw new NotFoundException('付款記錄不存在');
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new BadRequestException('只能確認待付款的記錄');
+    }
+
+    // 更新付款狀態
+    const updated = await this.prisma.payment.update({
+      where: { id },
+      data: {
+        status: PaymentStatus.COMPLETED,
+        paidAt: new Date(),
+        confirmedBy: adminId,
+        confirmedAt: new Date(),
+        providerData: {
+          ...(payment.providerData as any || {}),
+          confirmNotes: notes,
+          confirmedByAdmin: true,
+        },
+      },
+      include: {
+        subscription: { include: { user: { select: { id: true, name: true, email: true } }, plan: true } },
+      },
+    });
+
+    // 啟用訂閱
+    if (payment.subscription) {
+      await this.prisma.subscription.update({
+        where: { id: payment.subscriptionId },
+        data: { status: 'ACTIVE' as any },
+      });
+    }
+
+    return updated;
+  }
+
+  /**
+   * P1-5: 取得待確認的手動付款列表
+   */
+  async getPendingManualPayments() {
+    return this.prisma.payment.findMany({
+      where: {
+        provider: PaymentProvider.MANUAL,
+        status: PaymentStatus.PENDING,
+      },
+      include: {
+        subscription: {
+          include: {
+            user: { select: { id: true, name: true, email: true, phone: true } },
+            plan: { select: { id: true, name: true, code: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * 取得付款統計
    */
   async getPaymentStats(startDate?: string, endDate?: string) {
@@ -238,6 +306,91 @@ export class AdminPaymentsService {
         count: p._count.id,
         amount: p._sum.amount || 0,
       })),
+    };
+  }
+
+  /**
+   * P2-12: 月度營收趨勢
+   */
+  async getRevenueChart(months: number = 12) {
+    const result: { month: string; revenue: number; count: number }[] = [];
+    const now = new Date();
+
+    for (let i = months - 1; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+
+      const stats = await this.prisma.payment.aggregate({
+        where: {
+          status: PaymentStatus.COMPLETED,
+          paidAt: { gte: start, lte: end },
+        },
+        _sum: { amount: true },
+        _count: { id: true },
+      });
+
+      result.push({
+        month: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+        revenue: stats._sum.amount || 0,
+        count: stats._count.id || 0,
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * P2-12: 試用→付費轉換漏斗
+   */
+  async getConversionFunnel() {
+    const [totalTrials, activeFromTrial, totalActive, totalChurned] = await Promise.all([
+      this.prisma.subscription.count({ where: { trialEndsAt: { not: null } } }),
+      this.prisma.subscription.count({
+        where: {
+          trialEndsAt: { not: null },
+          status: { in: ['ACTIVE' as any] },
+          payments: { some: { status: PaymentStatus.COMPLETED } },
+        },
+      }),
+      this.prisma.subscription.count({ where: { status: 'ACTIVE' as any } }),
+      this.prisma.subscription.count({ where: { status: { in: ['CANCELLED' as any, 'EXPIRED' as any] } } }),
+    ]);
+
+    return {
+      totalTrials,
+      trialToActive: activeFromTrial,
+      conversionRate: totalTrials > 0 ? Math.round((activeFromTrial / totalTrials) * 10000) / 100 : 0,
+      totalActive,
+      totalChurned,
+      churnRate: (totalActive + totalChurned) > 0
+        ? Math.round((totalChurned / (totalActive + totalChurned)) * 10000) / 100
+        : 0,
+    };
+  }
+
+  /**
+   * P2-12: MRR（每月經常性收入）
+   */
+  async getMRR() {
+    const activeSubscriptions = await this.prisma.subscription.findMany({
+      where: { status: 'ACTIVE' as any },
+      include: { plan: { select: { price: true, interval: true } } },
+    });
+
+    let mrr = 0;
+    for (const sub of activeSubscriptions) {
+      const effectivePrice = (sub as any).customPrice ?? sub.plan.price;
+      if (sub.plan.interval === 'YEAR') {
+        mrr += Math.round(effectivePrice / 12);
+      } else {
+        mrr += effectivePrice;
+      }
+    }
+
+    return {
+      mrr,
+      arr: mrr * 12,
+      activeSubscriptions: activeSubscriptions.length,
     };
   }
 

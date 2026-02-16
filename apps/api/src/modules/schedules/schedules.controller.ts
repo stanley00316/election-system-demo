@@ -17,6 +17,7 @@ import { CampaignsService } from '../campaigns/campaigns.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { AddScheduleItemDto } from './dto/add-schedule-item.dto';
 
 @ApiTags('schedules')
@@ -39,6 +40,19 @@ export class SchedulesController {
     return this.schedulesService.create(userId, dto);
   }
 
+  @Get()
+  @ApiOperation({ summary: '取得行程列表' })
+  async findAll(
+    @Query('campaignId') campaignId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
+    await this.campaignsService.checkCampaignAccess(campaignId, userId);
+    return this.schedulesService.findAll(campaignId, Number(page), Number(limit));
+  }
+
   @Get('date/:date')
   @ApiOperation({ summary: '取得指定日期行程' })
   async findByDate(
@@ -46,6 +60,7 @@ export class SchedulesController {
     @Param('date') date: string,
     @CurrentUser('id') userId: string,
   ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
     await this.campaignsService.checkCampaignAccess(campaignId, userId);
     return this.schedulesService.findByDate(campaignId, date);
   }
@@ -59,6 +74,7 @@ export class SchedulesController {
     @CurrentUser('id') userId: string,
     @Query('limit') limit?: number,
   ) {
+    // OWASP A01: 驗證使用者是否為 campaign 成員
     await this.campaignsService.checkCampaignAccess(campaignId, userId);
     return this.schedulesService.getSuggestions(
       campaignId,
@@ -69,40 +85,80 @@ export class SchedulesController {
 
   @Get(':id')
   @ApiOperation({ summary: '取得行程詳情' })
-  async findById(@Param('id') id: string) {
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否有權存取該行程
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.findById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: '更新行程' })
+  async update(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateScheduleDto,
+  ) {
+    return this.schedulesService.update(id, userId, dto);
   }
 
   @Put(':id/status')
   @ApiOperation({ summary: '更新行程狀態' })
   async updateStatus(
     @Param('id') id: string,
+    @CurrentUser('id') userId: string,
     @Body('status') status: ScheduleStatus,
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.updateStatus(id, status);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: '刪除行程' })
+  async delete(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.schedulesService.delete(id, userId);
   }
 
   @Post(':id/items')
   @ApiOperation({ summary: '新增行程項目' })
   async addItem(
     @Param('id') id: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: AddScheduleItemDto,
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.addItem(id, dto);
   }
 
   @Put(':id/items/:itemId/status')
   @ApiOperation({ summary: '更新行程項目狀態' })
   async updateItemStatus(
+    @Param('id') id: string,
     @Param('itemId') itemId: string,
+    @CurrentUser('id') userId: string,
     @Body('status') status: ScheduleItemStatus,
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.updateItemStatus(itemId, status);
   }
 
   @Delete(':id/items/:itemId')
   @ApiOperation({ summary: '刪除行程項目' })
-  async removeItem(@Param('itemId') itemId: string) {
+  async removeItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.removeItem(itemId);
   }
 
@@ -110,8 +166,11 @@ export class SchedulesController {
   @ApiOperation({ summary: '重新排序行程項目' })
   async reorderItems(
     @Param('id') id: string,
+    @CurrentUser('id') userId: string,
     @Body('itemIds') itemIds: string[],
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.reorderItems(id, itemIds);
   }
 
@@ -119,8 +178,11 @@ export class SchedulesController {
   @ApiOperation({ summary: '優化行程路徑' })
   async optimizeRoute(
     @Param('id') id: string,
+    @CurrentUser('id') userId: string,
     @Body('startLocation') startLocation: { lat: number; lng: number },
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     return this.schedulesService.optimizeRoute(id, startLocation);
   }
 
@@ -132,6 +194,8 @@ export class SchedulesController {
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     await this.googleCalendarService.syncScheduleToGoogle(id, userId);
     return { success: true, message: '行程已同步到 Google Calendar' };
   }
@@ -142,6 +206,8 @@ export class SchedulesController {
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     await this.googleCalendarService.deleteEventFromGoogle(id, userId);
     return { success: true, message: '已從 Google Calendar 移除' };
   }
@@ -153,6 +219,8 @@ export class SchedulesController {
     @Param('id') id: string,
     @Body('enabled') enabled: boolean,
   ) {
+    // OWASP A01: 驗證使用者是否有權操作
+    await this.schedulesService.checkScheduleAccess(id, userId);
     await this.googleCalendarService.toggleSync(id, userId, enabled);
     return { success: true, enabled };
   }

@@ -278,6 +278,75 @@ export class AdminSubscriptionsService {
   }
 
   /**
+   * P0-2: 調整訂閱金額（超級管理員）
+   */
+  async adjustPrice(
+    subscriptionId: string,
+    data: { customPrice?: number; priceAdjustment?: number; reason: string },
+    adminId: string,
+  ) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      include: { plan: true },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('訂閱不存在');
+    }
+
+    if (data.customPrice !== undefined && data.priceAdjustment !== undefined) {
+      throw new BadRequestException('customPrice 和 priceAdjustment 只能擇一設定');
+    }
+
+    if (data.customPrice !== undefined && data.customPrice < 0) {
+      throw new BadRequestException('自訂金額不可為負數');
+    }
+
+    return this.prisma.subscription.update({
+      where: { id: subscriptionId },
+      data: {
+        customPrice: data.customPrice ?? null,
+        priceAdjustment: data.priceAdjustment ?? null,
+        adjustmentReason: data.reason,
+        adjustedBy: adminId,
+        adjustedAt: new Date(),
+      },
+      include: {
+        plan: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
+  /**
+   * P0-2: 清除金額調整（恢復原價）
+   */
+  async clearPriceAdjustment(subscriptionId: string) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('訂閱不存在');
+    }
+
+    return this.prisma.subscription.update({
+      where: { id: subscriptionId },
+      data: {
+        customPrice: null,
+        priceAdjustment: null,
+        adjustmentReason: null,
+        adjustedBy: null,
+        adjustedAt: null,
+      },
+      include: {
+        plan: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
+  /**
    * 匯出訂閱列表（CSV 資料）
    */
   async exportSubscriptions(filter: AdminSubscriptionFilterDto) {

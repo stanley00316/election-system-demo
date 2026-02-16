@@ -13,6 +13,7 @@ import {
   RawBodyRequest,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -28,6 +29,7 @@ export class PaymentsController {
    */
   @Post('create')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @HttpCode(HttpStatus.CREATED)
   async createPayment(
     @CurrentUser() user: any,
@@ -75,6 +77,24 @@ export class PaymentsController {
   ) {
     const success = await this.paymentsService.verifyStripeSession(sessionId, paymentId);
     return { success };
+  }
+
+  /**
+   * P1-5: 建立銀行轉帳付款
+   */
+  @Post('bank-transfer')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @HttpCode(HttpStatus.CREATED)
+  async createBankTransfer(
+    @CurrentUser() user: any,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.paymentsService.createBankTransferPayment(
+      user.id,
+      dto.subscriptionId,
+      dto.returnUrl,
+    );
   }
 
   // ==================== Webhooks ====================

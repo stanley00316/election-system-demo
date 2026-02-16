@@ -130,9 +130,26 @@ export class AdminUsersService {
    * 取得單一使用者詳情
    */
   async getUserById(id: string) {
+    // OWASP A07: 使用 select 排除敏感欄位（totpSecret, googleTokens 等）
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        lineUserId: true,
+        name: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        isActive: true,
+        isSuspended: true,
+        isAdmin: true,
+        isSuperAdmin: true,
+        totpEnabled: true,
+        consentAcceptedAt: true,
+        consentVersion: true,
+        portraitConsentAcceptedAt: true,
+        createdAt: true,
+        updatedAt: true,
         campaigns: {
           select: {
             id: true,
@@ -154,7 +171,9 @@ export class AdminUsersService {
         },
         promoter: true,
         teamMembers: {
-          include: {
+          select: {
+            id: true,
+            role: true,
             campaign: {
               select: {
                 id: true,
@@ -164,7 +183,15 @@ export class AdminUsersService {
           },
         },
         subscriptions: {
-          include: {
+          select: {
+            id: true,
+            status: true,
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+            trialEndsAt: true,
+            cancelReason: true,
+            cancelledAt: true,
+            createdAt: true,
             plan: true,
             payments: {
               orderBy: { createdAt: 'desc' },

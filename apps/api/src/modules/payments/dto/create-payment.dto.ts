@@ -1,8 +1,8 @@
-import { IsString, IsEnum, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNumber, IsUUID, MaxLength } from 'class-validator';
 import { PaymentProvider } from '@prisma/client';
 
 export class CreatePaymentDto {
-  @IsString()
+  @IsUUID()
   subscriptionId: string;
 
   @IsEnum(PaymentProvider)
@@ -10,15 +10,17 @@ export class CreatePaymentDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   returnUrl?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   clientBackUrl?: string;
 }
 
 export class ProcessPaymentDto {
-  @IsString()
+  @IsUUID()
   paymentId: string;
 
   @IsEnum(PaymentProvider)

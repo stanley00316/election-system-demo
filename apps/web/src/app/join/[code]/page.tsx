@@ -110,7 +110,11 @@ export default function JoinPage() {
     // 保存邀請碼到 sessionStorage，登入後可以繼續加入
     sessionStorage.setItem('pendingInviteCode', code);
     
-    const state = Math.random().toString(36).substring(7);
+    // OWASP A08: 使用加密安全的隨機值作為 OAuth state，防止 CSRF 攻擊
+    const stateArray = new Uint8Array(32);
+    crypto.getRandomValues(stateArray);
+    const state = Array.from(stateArray, b => b.toString(16).padStart(2, '0')).join('');
+    sessionStorage.setItem('oauth_state', state);
     const callbackUrl = `${window.location.origin}/login`;
     const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}&scope=profile%20openid`;
     window.location.href = lineAuthUrl;

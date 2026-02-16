@@ -544,6 +544,19 @@ model Subscription {
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
+  // P0-2: 超級管理員金額調整
+  customPrice       Int?               @map("custom_price")       // 自訂金額（覆蓋方案原價）
+  priceAdjustment   Int?               @map("price_adjustment")   // 調整金額（正=加價，負=折扣）
+  adjustmentReason  String?            @map("adjustment_reason")  // 調整原因
+  adjustedBy        String?            @map("adjusted_by")        // 調整者 ID
+  adjustedAt        DateTime?          @map("adjusted_at")        // 調整時間
+
+  // P0-3: 方案升降級
+  pendingPlanId     String?            @map("pending_plan_id")    // 待生效方案（降級排程）
+
+  // P2-11: 自動續約
+  autoRenew         Boolean            @default(false) @map("auto_renew")
+
   // Relations
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan              Plan               @relation(fields: [planId], references: [id])
@@ -574,6 +587,24 @@ model Payment {
   invoiceNumber     String?         @map("invoice_number") // 發票號碼
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  // P0-2: 金額調整記錄
+  originalAmount    Int?            @map("original_amount")    // 原始方案金額
+  discountAmount    Int?            @map("discount_amount")    // 折扣金額
+  adjustmentNote    String?         @map("adjustment_note")    // 金額調整備註
+
+  // P1-4: 發票資訊
+  invoiceType       String?         @map("invoice_type")       // PERSONAL, COMPANY
+  carrierType       String?         @map("carrier_type")       // PHONE, CERTIFICATE, ECPAY
+  carrierNumber     String?         @map("carrier_number")     // 載具號碼
+  companyTaxId      String?         @map("company_tax_id")     // 統一編號
+  companyName       String?         @map("company_name")       // 公司名稱
+  invoiceStatus     String?         @map("invoice_status")     // PENDING, ISSUED, VOID
+
+  // P1-5: 手動確認
+  confirmedBy       String?         @map("confirmed_by")       // 手動確認者 ID
+  confirmedAt       DateTime?       @map("confirmed_at")       // 手動確認時間
+  bankTransferInfo  Json?           @map("bank_transfer_info") // 銀行轉帳資訊
 
   // Relations
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)

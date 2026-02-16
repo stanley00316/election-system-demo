@@ -1,3 +1,9 @@
+// OWASP A05: 生產環境禁止啟用 Demo 模式，防止所有前端安全檢查被繞過
+if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+  console.error('FATAL: Demo mode MUST NOT be enabled in production! Aborting.');
+  process.exit(1);
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -21,6 +27,7 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
     // OWASP A05: 生產環境移除 unsafe-eval，僅保留 unsafe-inline（Next.js styled-jsx 必需）
+    // TODO: 未來升級 Next.js 15+ 後可改用 nonce 機制取代 unsafe-inline
     const scriptSrc = isDev
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com"
       : "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com";
@@ -60,6 +67,11 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(self)',
           },
+          // OWASP A05: HSTS — 強制使用 HTTPS（1 年，含子域名）
+          ...(isDev ? [] : [{
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          }]),
         ],
       },
     ];

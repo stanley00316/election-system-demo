@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SuperAdminGuard } from '../admin-auth/guards/super-admin.guard';
@@ -6,37 +6,34 @@ import { SuperAdminGuard } from '../admin-auth/guards/super-admin.guard';
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
+  private readonly logger = new Logger(HealthController.name);
+
   constructor(private prisma: PrismaService) {}
 
   @Get()
   @ApiOperation({ summary: '健康檢查' })
   async check() {
+    // OWASP A05: 公開端點只回傳最小資訊，不暴露內部服務狀態
     const dbHealthy = await this.checkDatabase();
-
     return {
-      status: dbHealthy ? 'healthy' : 'unhealthy',
+      status: dbHealthy ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
-      services: {
-        database: dbHealthy ? 'up' : 'down',
-      },
     };
   }
 
   @Get('ready')
-  @ApiOperation({ summary: '就緒檢查' })
+  @UseGuards(SuperAdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '就緒檢查（需超級管理員權限）' })
   async ready() {
+    // OWASP A05: 詳細服務狀態需要認證
     const dbHealthy = await this.checkDatabase();
-
-    if (!dbHealthy) {
-      return {
-        status: 'not_ready',
-        message: '資料庫連線失敗',
-      };
-    }
-
     return {
-      status: 'ready',
+      status: dbHealthy ? 'ready' : 'not_ready',
       timestamp: new Date().toISOString(),
+      services: {
+        database: dbHealthy ? 'up' : 'down',
+      },
     };
   }
 
@@ -51,19 +48,16 @@ export class HealthController {
   @ApiOperation({ summary: '為超級管理員建立推廣人員記錄（需超級管理員權限）' })
   async fixPromoter() {
     try {
-      // 找到超級管理員
       const superAdmin = await this.prisma.user.findFirst({
         where: { isSuperAdmin: true },
       });
       if (!superAdmin) return { error: '找不到超級管理員' };
 
-      // 檢查是否已有推廣人員記錄
       const existing = await this.prisma.promoter.findUnique({
         where: { userId: superAdmin.id },
       });
       if (existing) return { message: '推廣人員記錄已存在', promoter: existing };
 
-      // 建立推廣人員記錄
       const promoter = await this.prisma.promoter.create({
         data: {
           userId: superAdmin.id,
@@ -77,7 +71,9 @@ export class HealthController {
       });
       return { message: '推廣人員記錄已建立', promoter };
     } catch (error: any) {
-      return { error: error.message };
+      // OWASP A05: 不洩漏內部錯誤訊息給客戶端
+      this.logger.error('Fix promoter failed', error.stack);
+      return { error: '操作失敗，請查看伺服器日誌' };
     }
   }
 

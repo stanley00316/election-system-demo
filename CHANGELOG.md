@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1] - 2026-02-16
+
+### Added
+- **全域錯誤頁面** (`error.tsx`)：未預期錯誤顯示友善提示，含重試與返回首頁按鈕，自動記錄錯誤代碼
+- **404 頁面** (`not-found.tsx`)：訪問不存在路由時顯示友善 404 頁面
+- **全域載入狀態** (`loading.tsx`)：頁面切換時顯示統一的載入動畫
+- **行程列表 API** (`GET /schedules`)：支援分頁查詢行程列表
+- **行程更新 API** (`PUT /schedules/:id`)：支援更新行程標題、描述、日期
+- **行程刪除 API** (`DELETE /schedules/:id`)：支援刪除行程及其所有項目
+- **UpdateScheduleDto**：新增行程更新 DTO，含 `@MaxLength` 驗證 (OWASP A04)
+- **GitHub Actions CI/CD**：自動化 lint、build、安全審計工作流程
+
+### Security
+- **OWASP A01 — Schedules 存取控制修復**：`findById`、`updateStatus`、`addItem`、`updateItemStatus`、`removeItem`、`reorderItems`、`optimizeRoute`、`syncToGoogle`、`unsyncFromGoogle`、`toggleSyncEnabled` 全部加入 `checkScheduleAccess` 存取驗證
+- **OWASP A04 — DTO 強化**：`CreateScheduleDto` 所有字串欄位加入 `@MaxLength()` 限制
+
+### Changed
+- 前端 `schedulesApi` 新增 `getAll`、`update`、`delete` 方法
+
 ## [1.10.0] - 2026-02-12
 
 ### Added

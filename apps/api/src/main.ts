@@ -13,6 +13,20 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
+  // OWASP A02/A07: 啟動時強制驗證關鍵安全環境變數
+  const jwtSecret = configService.get<string>('JWT_SECRET');
+  if (!jwtSecret || jwtSecret.length < 32) {
+    throw new Error(
+      '[OWASP A02] JWT_SECRET 未設定或長度不足 32 字元，無法啟動。',
+    );
+  }
+  const dangerousDefaults = ['your-super-secret', 'dev-jwt-secret', 'fallback-secret', 'changeme'];
+  if (configService.get('NODE_ENV') === 'production' && dangerousDefaults.some(d => jwtSecret.includes(d))) {
+    throw new Error(
+      '[OWASP A02] 生產環境 JWT_SECRET 不得使用範例/預設值，請生成安全的隨機密鑰。',
+    );
+  }
+
   // Security
   app.set('trust proxy', 1); // OWASP A05: 信任反向代理以正確識別客戶端 IP（Rate Limiting）
   app.use(helmet());

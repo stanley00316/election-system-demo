@@ -25,8 +25,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('請先完成雙因素驗證');
     }
 
-    // OWASP A07: 檢查 token 是否被個別撤銷
-    const jti = `${payload.sub}:${payload.iat}`;
+    // OWASP A07: 檢查 token 是否被個別撤銷（優先使用隨機 JTI，向下相容舊格式）
+    const jti = payload.jti || `${payload.sub}:${payload.iat}`;
     if (await this.tokenBlacklist.isBlacklisted(jti)) {
       throw new UnauthorizedException('Token 已被撤銷');
     }

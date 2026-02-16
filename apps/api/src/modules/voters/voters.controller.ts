@@ -17,6 +17,7 @@ import {
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { VotersService } from './voters.service';
 import { ExcelService } from './excel.service';
 import { PhotosService } from '../photos/photos.service';
@@ -132,6 +133,7 @@ export class VotersController {
   }
 
   @Post('import')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @ApiOperation({ summary: '匯入選民 Excel' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

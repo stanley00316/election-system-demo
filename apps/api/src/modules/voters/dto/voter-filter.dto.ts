@@ -7,6 +7,7 @@ import {
   IsBoolean,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
@@ -20,6 +21,7 @@ export class VoterFilterDto {
   @ApiPropertyOptional({ description: '搜尋關鍵字' })
   @IsString()
   @IsOptional()
+  @MaxLength(200)
   search?: string;
 
   @ApiPropertyOptional({ description: '縣市' })

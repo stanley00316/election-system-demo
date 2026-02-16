@@ -21,6 +21,7 @@ import {
   ArrowLeftRight,
   QrCode,
   MapPin,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const navigation = [
   { name: '付款管理', href: '/admin/payments', icon: Receipt },
   { name: '推薦管理', href: '/admin/referrals', icon: Gift },
   { name: '數據分析', href: '/admin/analytics', icon: BarChart3 },
+  { name: '營收報表', href: '/admin/revenue', icon: DollarSign },
   { name: '地區總覽', href: '/admin/regions', icon: MapPin },
 ];
 

@@ -2,13 +2,16 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
+  Param,
   Query,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -92,6 +95,7 @@ export class SubscriptionsController {
    * 開始免費試用
    */
   @Post('trial')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @HttpCode(HttpStatus.CREATED)
   async startTrial(@CurrentUser() user: any) {
     return this.subscriptionsService.startTrial(user.id);
@@ -135,5 +139,77 @@ export class SubscriptionsController {
       isTrialing: subscription?.status === 'TRIAL',
       trialEndsAt: subscription?.trialEndsAt || null,
     };
+  }
+
+  // ==================== P0-3: 方案升降級 ====================
+
+  /**
+   * 預覽升級
+   */
+  @Get('upgrade/preview/:planId')
+  async previewUpgrade(
+    @CurrentUser() user: any,
+    @Param('planId') planId: string,
+  ) {
+    return this.subscriptionsService.previewUpgrade(user.id, planId);
+  }
+
+  /**
+   * 執行升級
+   */
+  @Post('upgrade/:planId')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @HttpCode(HttpStatus.OK)
+  async upgradeSubscription(
+    @CurrentUser() user: any,
+    @Param('planId') planId: string,
+  ) {
+    return this.subscriptionsService.upgradeSubscription(user.id, planId);
+  }
+
+  /**
+   * 預覽降級
+   */
+  @Get('downgrade/preview/:planId')
+  async previewDowngrade(
+    @CurrentUser() user: any,
+    @Param('planId') planId: string,
+  ) {
+    return this.subscriptionsService.previewDowngrade(user.id, planId);
+  }
+
+  /**
+   * 排程降級
+   */
+  @Post('downgrade/:planId')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @HttpCode(HttpStatus.OK)
+  async downgradeSubscription(
+    @CurrentUser() user: any,
+    @Param('planId') planId: string,
+  ) {
+    return this.subscriptionsService.downgradeSubscription(user.id, planId);
+  }
+
+  /**
+   * 取消排程降級
+   */
+  @Post('downgrade/cancel')
+  @HttpCode(HttpStatus.OK)
+  async cancelDowngrade(@CurrentUser() user: any) {
+    return this.subscriptionsService.cancelDowngrade(user.id);
+  }
+
+  // ==================== P2-11: 自動續約 ====================
+
+  /**
+   * 切換自動續約
+   */
+  @Put('auto-renew')
+  async toggleAutoRenew(
+    @CurrentUser() user: any,
+    @Body('autoRenew') autoRenew: boolean,
+  ) {
+    return this.subscriptionsService.toggleAutoRenew(user.id, autoRenew);
   }
 }

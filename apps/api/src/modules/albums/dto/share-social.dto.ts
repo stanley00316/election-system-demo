@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsOptional, IsString, ArrayMinSize } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString, ArrayMinSize, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ShareSocialDto {
@@ -16,5 +16,6 @@ export class ShareSocialDto {
   @ApiPropertyOptional({ description: '自訂訊息文字' })
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   message?: string;
 }

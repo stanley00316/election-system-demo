@@ -16,7 +16,14 @@ export class TotpService {
       this.logger.warn(
         'TOTP_ENCRYPTION_KEY 未設定或長度不足 32 bytes，使用 JWT_SECRET 衍生金鑰',
       );
-      const jwtSecret = this.configService.get<string>('JWT_SECRET', 'fallback-secret');
+      // OWASP A02: 禁止使用 fallback 預設值，強制要求 JWT_SECRET 已設定
+      const jwtSecret = this.configService.get<string>('JWT_SECRET');
+      if (!jwtSecret || jwtSecret.length < 32) {
+        throw new Error(
+          'JWT_SECRET 環境變數未設定或長度不足 32 字元。' +
+          '請設定安全的 JWT_SECRET 或提供 TOTP_ENCRYPTION_KEY（64 字元 hex）。',
+        );
+      }
       this.encryptionKey = crypto
         .createHash('sha256')
         .update(jwtSecret)

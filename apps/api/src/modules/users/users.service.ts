@@ -2,6 +2,28 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
+/**
+ * OWASP A07: 安全的 User select 物件，排除所有敏感欄位
+ */
+export const SAFE_USER_SELECT = {
+  id: true,
+  lineUserId: true,
+  name: true,
+  email: true,
+  phone: true,
+  avatarUrl: true,
+  isActive: true,
+  isSuspended: true,
+  isAdmin: true,
+  isSuperAdmin: true,
+  consentAcceptedAt: true,
+  consentVersion: true,
+  portraitConsentAcceptedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  // 排除: totpSecret, totpEnabled, googleAccessToken, googleRefreshToken, googleTokenExpiry, googleCalendarId
+} as const;
+
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -9,6 +31,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: SAFE_USER_SELECT,
     });
 
     if (!user) {
@@ -21,6 +44,7 @@ export class UsersService {
   async findByLineUserId(lineUserId: string) {
     return this.prisma.user.findUnique({
       where: { lineUserId },
+      select: SAFE_USER_SELECT,
     });
   }
 
@@ -30,6 +54,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: user.id },
       data: dto,
+      select: SAFE_USER_SELECT,
     });
   }
 

@@ -31,6 +31,15 @@ export class AuthController {
     private readonly tokenBlacklist: TokenBlacklistService,
   ) {}
 
+  // OWASP A04: 產生帶 HMAC 簽章的 OAuth state，前端使用此 state 發起 LINE 登入
+  @Public()
+  @Get('oauth-state')
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
+  @ApiOperation({ summary: '產生 OAuth CSRF state' })
+  generateOAuthState() {
+    return { state: this.authService.generateOAuthState() };
+  }
+
   // OWASP A05: 登入端點使用更嚴格的頻率限制（每分鐘 10 次）
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('line/callback')
@@ -38,7 +47,7 @@ export class AuthController {
   @ApiOperation({ summary: 'LINE 登入回呼' })
   @ApiBody({ type: LineCallbackDto })
   async lineCallback(@Body() dto: LineCallbackDto) {
-    return this.authService.validateLineToken(dto.code, dto.redirectUri);
+    return this.authService.validateLineToken(dto.code, dto.redirectUri, dto.promoterCode, dto.state);
   }
 
   @Post('refresh')
@@ -97,7 +106,8 @@ export class AuthController {
         const payload = JSON.parse(
           Buffer.from(token.split('.')[1], 'base64').toString(),
         );
-        const jti = `${payload.sub}:${payload.iat}`;
+        // OWASP A07: 優先使用隨機 JTI，向下相容舊 token 格式
+        const jti = payload.jti || `${payload.sub}:${payload.iat}`;
         // 計算剩餘 TTL（token 過期時間 - 當前時間）
         const ttl = payload.exp ? payload.exp - Math.floor(Date.now() / 1000) : 1800;
         if (ttl > 0) {
@@ -112,6 +122,7 @@ export class AuthController {
 
   @Public()
   @Get('dev-login')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @ApiOperation({ summary: '開發環境測試登入（僅限開發環境）' })
   async devLogin() {
     const nodeEnv = this.configService.get<string>('NODE_ENV');

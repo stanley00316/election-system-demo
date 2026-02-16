@@ -33,7 +33,8 @@ export class SuperAdminGuard implements CanActivate {
       });
 
       // OWASP A07: 檢查 token 是否被個別撤銷（登出後的 token 不應再被接受）
-      const jti = `${payload.sub}:${payload.iat}`;
+      // 統一 JTI 格式：優先使用 payload.jti，與 JwtStrategy 一致
+      const jti = payload.jti || `${payload.sub}:${payload.iat}`;
       if (await this.tokenBlacklist.isBlacklisted(jti)) {
         throw new UnauthorizedException('Token 已被撤銷');
       }

@@ -1,15 +1,10 @@
 import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 
 /**
- * Safari-safe localStorage 包裝
+ * OWASP A07: 使用 sessionStorage 取代 localStorage
+ * sessionStorage 在分頁關閉時自動清除，降低 XSS 竊取 token 的風險
  *
- * Safari 在以下情境可能阻斷 localStorage 存取：
- * - 私密瀏覽模式（較舊版本會拋出 QuotaExceededError）
- * - Intelligent Tracking Prevention (ITP) 限制
- * - 使用者手動關閉網站資料儲存
- *
- * 此包裝在 localStorage 不可用時自動降級為 in-memory storage，
- * 確保 zustand persist middleware 不會因 storage 錯誤而中斷。
+ * Safari-safe 包裝：在 sessionStorage 不可用時降級為 in-memory storage
  */
 
 const memoryStore = new Map<string, string>();
@@ -17,20 +12,33 @@ const memoryStore = new Map<string, string>();
 const safeStorage: StateStorage = {
   getItem: (name: string): string | null => {
     try {
-      return localStorage.getItem(name);
+      // 優先讀取 sessionStorage，向後相容從 localStorage 遷移
+      const value = sessionStorage.getItem(name);
+      if (value) return value;
+      // 遷移舊 localStorage 資料
+      const legacy = localStorage.getItem(name);
+      if (legacy) {
+        sessionStorage.setItem(name, legacy);
+        localStorage.removeItem(name);
+        return legacy;
+      }
+      return null;
     } catch {
       return memoryStore.get(name) ?? null;
     }
   },
   setItem: (name: string, value: string): void => {
     try {
-      localStorage.setItem(name, value);
+      sessionStorage.setItem(name, value);
+      // 清除舊的 localStorage 資料
+      try { localStorage.removeItem(name); } catch { /* ignore */ }
     } catch {
       memoryStore.set(name, value);
     }
   },
   removeItem: (name: string): void => {
     try {
+      sessionStorage.removeItem(name);
       localStorage.removeItem(name);
     } catch {
       memoryStore.delete(name);

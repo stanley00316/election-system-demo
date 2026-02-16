@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRole, ScheduleStatus, ScheduleItemStatus } from '@prisma/client';
 import { CampaignsService } from '../campaigns/campaigns.service';
 import { MapsService } from '../maps/maps.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { AddScheduleItemDto } from './dto/add-schedule-item.dto';
 
 @Injectable()
@@ -13,6 +14,29 @@ export class SchedulesService {
     private campaignsService: CampaignsService,
     private mapsService: MapsService,
   ) {}
+
+  /**
+   * OWASP A01: 驗證使用者是否有權存取該行程所屬的 campaign
+   */
+  async checkScheduleAccess(
+    scheduleId: string,
+    userId: string,
+    roles?: UserRole[],
+  ) {
+    const schedule = await this.prisma.schedule.findUnique({
+      where: { id: scheduleId },
+      select: { campaignId: true },
+    });
+    if (!schedule) {
+      throw new NotFoundException('行程不存在');
+    }
+    await this.campaignsService.checkCampaignAccess(
+      schedule.campaignId,
+      userId,
+      roles,
+    );
+    return schedule;
+  }
 
   async create(userId: string, dto: CreateScheduleDto) {
     await this.campaignsService.checkCampaignAccess(
@@ -28,6 +52,61 @@ export class SchedulesService {
         date: new Date(dto.date),
       },
     });
+  }
+
+  async findAll(campaignId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit, 100);
+
+    const [data, total] = await Promise.all([
+      this.prisma.schedule.findMany({
+        where: { campaignId },
+        orderBy: { date: 'desc' },
+        skip,
+        take: safeLimit,
+        include: {
+          items: { orderBy: { order: 'asc' } },
+          user: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.schedule.count({ where: { campaignId } }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
+  }
+
+  async update(id: string, userId: string, dto: UpdateScheduleDto) {
+    await this.checkScheduleAccess(id, userId, [UserRole.ADMIN, UserRole.EDITOR]);
+
+    const updateData: any = { ...dto };
+    if (dto.date) {
+      updateData.date = new Date(dto.date);
+    }
+
+    return this.prisma.schedule.update({
+      where: { id },
+      data: updateData,
+      include: {
+        items: { orderBy: { order: 'asc' } },
+        user: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  async delete(id: string, userId: string) {
+    await this.checkScheduleAccess(id, userId, [UserRole.ADMIN]);
+
+    await this.prisma.scheduleItem.deleteMany({ where: { scheduleId: id } });
+    await this.prisma.schedule.delete({ where: { id } });
+    return { message: '行程已刪除' };
   }
 
   async findById(id: string) {

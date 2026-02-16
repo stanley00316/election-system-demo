@@ -56,12 +56,13 @@ export class GoogleController {
     }
 
     try {
-      // state 中儲存了 userId
+      // OWASP A01: state 含 HMAC 簽章，handleCallback 內部驗證
       await this.googleService.handleCallback(code, state);
       return res.redirect(`${frontendUrl}/dashboard/settings?google=success`);
     } catch (err) {
       new Logger('GoogleController').error('Google callback error', err instanceof Error ? err.stack : undefined);
-      return res.redirect(`${frontendUrl}/dashboard/settings?google=error&message=auth_failed`);
+      const msg = err instanceof BadRequestException ? 'invalid_state' : 'auth_failed';
+      return res.redirect(`${frontendUrl}/dashboard/settings?google=error&message=${msg}`);
     }
   }
 

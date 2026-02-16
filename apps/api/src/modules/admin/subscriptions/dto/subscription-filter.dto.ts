@@ -54,3 +54,19 @@ export class CancelSubscriptionDto {
   @IsString()
   reason?: string;
 }
+
+export class AdjustPriceDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  customPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  priceAdjustment?: number;
+
+  @IsString()
+  reason: string;
+}

@@ -1,57 +1,48 @@
 ---
-description: OWASP Top 10 安全合規規則 — 適用於所有後端程式碼
+description: OWASP Top 10 安全合規檢查清單 — 所有後端程式碼必須遵守
 globs: apps/api/**/*.ts
 alwaysApply: false
 ---
 
-# OWASP Top 10 安全合規
+# OWASP Top 10 安全清單
 
-## A01: 存取控制
+## A01 存取控制
+- 所有 Controller 必須有 `@UseGuards(JwtAuthGuard)` 或 `@Public()`
+- 涉及 `campaignId` 的端點必須呼叫 `checkCampaignAccess`
+- 禁止 IDOR：查詢資源後必須驗證 `userId` 所有權
 
-- 所有資源端點必須注入 `@CurrentUser('id')` 並驗證所有權或 campaign 成員資格
-- 使用 `CampaignsService.checkCampaignAccess()` 驗證 campaign 層級權限
-- DELETE/PUT/PATCH 操作必須驗證資源所有權
+## A02 加密
+- 禁止硬編碼 secret/fallback（`'fallback-secret'` 等）
+- `JWT_SECRET` 啟動時強制驗證 >= 32 字元
+- TOTP secret 不回傳前端明文
+- 敏感資料必須 AES-256-GCM 加密
 
-```typescript
-// ✅ 正確
-@Get(':id')
-async findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
-  await this.service.checkAccess(id, userId);
-  return this.service.findById(id);
-}
+## A03 注入
+- 使用 Prisma tagged template（`$queryRaw\`...\``），禁止 `$queryRawUnsafe`
+- 禁止 `eval()`、`Function()`、`dangerouslySetInnerHTML`
+- 全域 `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })`
 
-// ❌ 錯誤 — 缺少存取控制
-@Get(':id')
-async findById(@Param('id') id: string) {
-  return this.service.findById(id);
-}
-```
+## A04 不安全設計
+- 所有 DTO 字串欄位加 `@MaxLength()`
+- 分頁加 `@Max(100)`
+- 付款需冪等性保護 + 狀態機驗證
+- 退款必須實際呼叫支付商 API
 
-## A03: 注入攻擊
+## A05 安全設定
+- 生產環境禁止 Swagger
+- `error.message` 禁止回傳客戶端，用 Logger 記錄
+- CORS 需明確白名單
+- HSTS + helmet + CSP 標頭
 
-- 禁止使用 `$executeRawUnsafe` 搭配動態輸入
-- `$queryRaw` 必須使用 tagged template literal（自動參數化）
-- 禁止在任何端點使用 `execSync`、`exec`、`spawn` 搭配使用者輸入
+## A07 認證失敗
+- `JWT_EXPIRES_IN` <= 30m
+- JTI 使用 `crypto.randomUUID()`
+- 2FA 累計 5 次失敗鎖定 15 分鐘
+- Redis 降級：生產環境安全優先（拒絕所有請求）
 
-## A05: 安全配置
+## A08 資料完整性
+- OAuth state 使用 `crypto.getRandomValues()` + sessionStorage 驗證
+- Webhook 驗證簽章 + MerchantID
 
-- 新增公開端點必須有充分理由並加上 `@Throttle()` 限制
-- CORS 生產環境不得包含 localhost
-- 所有新 Controller 預設使用 `@UseGuards(JwtAuthGuard)`
-
-## A07: 認證
-
-- JWT token 有效期不超過 30 分鐘
-- 登出必須將 token 加入黑名單（`TokenBlacklistService`）
-- 敏感操作（刪除、權限變更）需要額外驗證
-
-## A09: 日誌
-
-- 使用 NestJS `Logger`，禁止 `console.log`
-- 禁止記錄 token、密碼、API key 等敏感資訊
-- 安全事件（登入、登出、權限變更、存取拒絕）必須記錄
-
-## 檔案上傳
-
-- 必須使用 `FileValidationPipe` 驗證 MIME type、副檔名、檔案大小
-- 檔案名稱必須清理（防止路徑遍歷）
+## A10 SSRF
+- 付款 returnUrl/clientBackUrl 需域名白名單驗證

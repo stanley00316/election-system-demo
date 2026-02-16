@@ -1,9 +1,12 @@
 import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LineService } from './line.service';
 import { TotpService } from './totp.service';
+import { RedisService } from '../redis/redis.service';
 
 export interface JwtPayload {
   sub: string;
@@ -14,6 +17,7 @@ export interface JwtPayload {
   isPromoter?: boolean;
   promoterId?: string;
   pending2fa?: boolean;
+  jti?: string; // OWASP A07: 隨機 JWT ID 防止可預測性
 }
 
 export interface UserInfo {
@@ -49,12 +53,18 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private adminLineUserId: string | undefined;
 
+  // OWASP A07: 2FA 失敗鎖定常數
+  private readonly TOTP_MAX_FAILURES = 5;
+  private readonly TOTP_LOCKOUT_SECONDS = 900; // 15 分鐘
+  private readonly TOTP_FAIL_PREFIX = '2fa_fail:';
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private lineService: LineService,
     private configService: ConfigService,
     private totpService: TotpService,
+    private redisService: RedisService,
   ) {
     this.adminLineUserId = this.configService.get<string>('ADMIN_LINE_USER_ID');
   }
@@ -98,7 +108,53 @@ export class AuthService {
     }
   }
 
-  async validateLineToken(code: string, redirectUri: string, promoterCode?: string): Promise<TokenResponse | TwoFactorPendingResponse> {
+  /**
+   * OWASP A04: 產生帶 HMAC 簽章的 OAuth state（用於 LINE 登入 CSRF 防護）
+   * 格式：nonce:timestamp:hmac
+   */
+  generateOAuthState(): string {
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const timestamp = Date.now().toString();
+    const payload = `${nonce}:${timestamp}`;
+    const secret = this.configService.get<string>('JWT_SECRET', '');
+    const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    return `${payload}:${signature}`;
+  }
+
+  /**
+   * OWASP A04: 驗證 OAuth state 簽章及時效（5 分鐘內有效）
+   */
+  verifyOAuthState(state: string): boolean {
+    const parts = state.split(':');
+    if (parts.length !== 3) return false;
+    const [nonce, timestamp, signature] = parts;
+    const payload = `${nonce}:${timestamp}`;
+    const secret = this.configService.get<string>('JWT_SECRET', '');
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    // 檢查時效：5 分鐘內有效
+    const ts = parseInt(timestamp, 10);
+    if (isNaN(ts) || Date.now() - ts > 5 * 60 * 1000) {
+      return false;
+    }
+    return true;
+  }
+
+  async validateLineToken(code: string, redirectUri: string, promoterCode?: string, state?: string): Promise<TokenResponse | TwoFactorPendingResponse> {
+    // OWASP A04: 驗證 state 簽章（若提供）
+    if (state) {
+      if (!this.verifyOAuthState(state)) {
+        this.logger.warn('OWASP A04: LINE OAuth state 驗證失敗');
+        throw new BadRequestException('OAuth state 驗證失敗，請重新登入');
+      }
+    }
+
     // OWASP A10: 驗證 redirectUri 是否在白名單內，防止開放重定向攻擊
     this.validateRedirectUri(redirectUri);
 
@@ -248,11 +304,13 @@ export class AuthService {
     // 2FA 檢查：所有使用者必須完成雙因素驗證
     try {
       // 簽發臨時 token（5 分鐘有效，標記 pending2fa）
+      // OWASP A07: 使用隨機 UUID 作為 JTI，防止可預測性攻擊
       const tempPayload = {
         sub: user.id,
         lineUserId: user.lineUserId,
         name: user.name,
         pending2fa: true,
+        jti: randomUUID(),
       };
       const tempToken = this.jwtService.sign(tempPayload, { expiresIn: '5m' });
 
@@ -341,6 +399,7 @@ export class AuthService {
 
     const isPromoter = !!promoter && promoter.isActive && promoter.status === 'APPROVED';
 
+    // OWASP A07: 使用隨機 UUID 作為 JTI
     const payload: JwtPayload = {
       sub: user.id,
       lineUserId: user.lineUserId,
@@ -349,15 +408,33 @@ export class AuthService {
       isSuperAdmin: user.isSuperAdmin,
       isPromoter,
       promoterId: promoter?.id,
+      jti: randomUUID(),
     };
 
     return this.jwtService.sign(payload);
   }
 
   async getMe(userId: string) {
+    // OWASP A07: 使用 select 排除敏感欄位（totpSecret, googleTokens 等）
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        lineUserId: true,
+        name: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        isActive: true,
+        isSuspended: true,
+        isAdmin: true,
+        isSuperAdmin: true,
+        totpEnabled: true,
+        consentAcceptedAt: true,
+        consentVersion: true,
+        portraitConsentAcceptedAt: true,
+        createdAt: true,
+        updatedAt: true,
         campaigns: {
           where: { isActive: true },
           orderBy: { createdAt: 'desc' },
@@ -451,7 +528,9 @@ export class AuthService {
       data: { totpSecret: encryptedSecret },
     });
 
-    return { qrCodeDataUrl, otpauthUrl, secret };
+    // OWASP A02: 不回傳明文 secret，QR Code 中已包含密鑰資訊
+    // 僅回傳 otpauthUrl 供手動輸入場景使用（使用者在 authenticator app 中手動新增）
+    return { qrCodeDataUrl, otpauthUrl };
   }
 
   /**
@@ -469,12 +548,36 @@ export class AuthService {
       throw new BadRequestException('請先執行 2FA 設定');
     }
 
+    // OWASP A07: 累計失敗鎖定機制（與 verifyTotp 共用計數器）
+    const failKey = `${this.TOTP_FAIL_PREFIX}${userId}`;
+    if (this.redisService.available) {
+      const failCountStr = await this.redisService.get(failKey);
+      const failCount = parseInt(failCountStr || '0', 10);
+      if (failCount >= this.TOTP_MAX_FAILURES) {
+        this.logger.warn(`2FA 設定已鎖定: userId=${userId}, 連續失敗 ${failCount} 次`);
+        throw new BadRequestException(
+          `驗證碼嘗試次數過多，請等待 ${this.TOTP_LOCKOUT_SECONDS / 60} 分鐘後再試`,
+        );
+      }
+    }
+
     const decryptedSecret = this.totpService.decrypt(user.totpSecret);
     const isValid = this.totpService.verifyToken(decryptedSecret, code);
     if (!isValid) {
       // OWASP A09: 記錄安全事件
       this.logger.warn(`2FA 設定驗證失敗: userId=${userId}`);
+      // OWASP A07: 遞增失敗計數
+      if (this.redisService.available) {
+        const failCountStr = await this.redisService.get(failKey);
+        const newCount = (parseInt(failCountStr || '0', 10) + 1).toString();
+        await this.redisService.set(failKey, newCount, this.TOTP_LOCKOUT_SECONDS);
+      }
       throw new BadRequestException('驗證碼不正確，請確認 Google Authenticator 上的驗證碼');
+    }
+
+    // OWASP A07: 驗證成功，清除失敗計數
+    if (this.redisService.available) {
+      await this.redisService.del(failKey);
     }
 
     // 啟用 2FA
@@ -499,11 +602,35 @@ export class AuthService {
       throw new BadRequestException('雙因素驗證未啟用');
     }
 
+    // OWASP A07: 累計失敗鎖定機制 — 連續 5 次失敗後鎖定 15 分鐘
+    const failKey = `${this.TOTP_FAIL_PREFIX}${userId}`;
+    if (this.redisService.available) {
+      const failCountStr = await this.redisService.get(failKey);
+      const failCount = parseInt(failCountStr || '0', 10);
+      if (failCount >= this.TOTP_MAX_FAILURES) {
+        this.logger.warn(`2FA 已鎖定: userId=${userId}, 連續失敗 ${failCount} 次`);
+        throw new BadRequestException(
+          `驗證碼嘗試次數過多，請等待 ${this.TOTP_LOCKOUT_SECONDS / 60} 分鐘後再試`,
+        );
+      }
+    }
+
     const decryptedSecret = this.totpService.decrypt(user.totpSecret);
     const isValid = this.totpService.verifyToken(decryptedSecret, code);
     if (!isValid) {
       this.logger.warn(`2FA 驗證失敗: userId=${userId}`);
+      // OWASP A07: 遞增失敗計數
+      if (this.redisService.available) {
+        const failCountStr = await this.redisService.get(failKey);
+        const newCount = (parseInt(failCountStr || '0', 10) + 1).toString();
+        await this.redisService.set(failKey, newCount, this.TOTP_LOCKOUT_SECONDS);
+      }
       throw new BadRequestException('驗證碼不正確');
+    }
+
+    // OWASP A07: 驗證成功，清除失敗計數
+    if (this.redisService.available) {
+      await this.redisService.del(failKey);
     }
 
     this.logger.log(`2FA 驗證成功: userId=${userId}`);
@@ -521,6 +648,7 @@ export class AuthService {
 
     const isPromoter = !!promoter && promoter.isActive && promoter.status === 'APPROVED';
 
+    // OWASP A07: 使用隨機 UUID 作為 JTI
     const payload: JwtPayload = {
       sub: user.id,
       lineUserId: user.lineUserId,
@@ -529,6 +657,7 @@ export class AuthService {
       isSuperAdmin: user.isSuperAdmin,
       isPromoter,
       promoterId: promoter?.id,
+      jti: randomUUID(),
     };
 
     const accessToken = this.jwtService.sign(payload);

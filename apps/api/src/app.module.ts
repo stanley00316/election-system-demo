@@ -37,6 +37,8 @@ import { RoleInvitesModule } from './modules/role-invites/role-invites.module';
 import { StorageModule } from './modules/storage';
 import { PhotosModule } from './modules/photos/photos.module';
 import { AlbumsModule } from './modules/albums/albums.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
@@ -96,6 +98,8 @@ import { AlbumsModule } from './modules/albums/albums.module';
     StorageModule,
     PhotosModule,
     AlbumsModule,
+    InvoicesModule,
+    EmailModule,
   ],
   providers: [
     // OWASP A05: 全域啟用 Rate Limiting

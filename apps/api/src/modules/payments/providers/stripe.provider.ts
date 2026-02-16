@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import {
@@ -10,6 +10,7 @@ import {
 
 @Injectable()
 export class StripeProvider implements IPaymentProvider {
+  private readonly logger = new Logger(StripeProvider.name);
   private stripe: Stripe | null = null;
   private webhookSecret: string;
 
@@ -64,10 +65,12 @@ export class StripeProvider implements IPaymentProvider {
         transactionId: session.id,
         rawResponse: session,
       };
-    } catch (error) {
+    } catch (error: any) {
+      // OWASP A05: 不洩漏 Stripe 內部錯誤給客戶端
+      this.logger.error('Stripe createPayment failed', error.stack);
       return {
         success: false,
-        errorMessage: error.message,
+        errorMessage: '付款建立失敗，請稍後再試',
       };
     }
   }
@@ -135,10 +138,12 @@ export class StripeProvider implements IPaymentProvider {
             rawResponse: event,
           };
       }
-    } catch (error) {
+    } catch (error: any) {
+      // OWASP A05: 不洩漏 Stripe webhook 錯誤給客戶端
+      this.logger.error('Stripe verifyCallback failed', error.stack);
       return {
         success: false,
-        errorMessage: error.message,
+        errorMessage: '付款驗證失敗',
       };
     }
   }
@@ -173,10 +178,42 @@ export class StripeProvider implements IPaymentProvider {
         errorMessage: `付款狀態: ${session.payment_status}`,
         rawResponse: session,
       };
-    } catch (error) {
+    } catch (error: any) {
+      // OWASP A05: 不洩漏 Stripe 查詢錯誤給客戶端
+      this.logger.error('Stripe queryTransaction failed', error.stack);
       return {
         success: false,
-        errorMessage: error.message,
+        errorMessage: '付款查詢失敗',
+      };
+    }
+  }
+
+  /**
+   * OWASP A04: 實際呼叫 Stripe Refund API 進行退款
+   */
+  async refund(paymentIntentId: string, amount?: number): Promise<{ success: boolean; refundId?: string; errorMessage?: string }> {
+    if (!this.stripe) {
+      return { success: false, errorMessage: 'Stripe 尚未設定' };
+    }
+
+    try {
+      const refundParams: Stripe.RefundCreateParams = {
+        payment_intent: paymentIntentId,
+      };
+      if (amount) {
+        refundParams.amount = amount;
+      }
+
+      const refund = await this.stripe.refunds.create(refundParams);
+      return {
+        success: refund.status === 'succeeded' || refund.status === 'pending',
+        refundId: refund.id,
+      };
+    } catch (error: any) {
+      this.logger.error('Stripe refund failed', error.stack);
+      return {
+        success: false,
+        errorMessage: '退款處理失敗，請稍後再試',
       };
     }
   }

@@ -9,6 +9,7 @@ import {
   IsArray,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PoliticalStance, PoliticalParty } from '@prisma/client';
@@ -19,54 +20,65 @@ export class CreateVoterDto {
   @IsNotEmpty()
   campaignId: string;
 
+  // OWASP A04: 所有字串欄位加入長度限制，防止資源濫用
   @ApiProperty({ description: '姓名' })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name: string;
 
   @ApiPropertyOptional({ description: '電話' })
   @IsString()
   @IsOptional()
+  @MaxLength(30)
   phone?: string;
 
   @ApiPropertyOptional({ description: 'Email' })
   @IsEmail()
   @IsOptional()
+  @MaxLength(255)
   email?: string;
 
   @ApiPropertyOptional({ description: 'LINE ID' })
   @IsString()
   @IsOptional()
+  @MaxLength(100)
   lineId?: string;
 
   @ApiPropertyOptional({ description: 'LINE 個人連結' })
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   lineUrl?: string;
 
   @ApiPropertyOptional({ description: '地址' })
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   address?: string;
 
   @ApiPropertyOptional({ description: '縣市' })
   @IsString()
   @IsOptional()
+  @MaxLength(50)
   city?: string;
 
   @ApiPropertyOptional({ description: '區' })
   @IsString()
   @IsOptional()
+  @MaxLength(50)
   districtName?: string;
 
   @ApiPropertyOptional({ description: '里' })
   @IsString()
   @IsOptional()
+  @MaxLength(50)
   village?: string;
 
   @ApiPropertyOptional({ description: '鄰' })
   @IsString()
   @IsOptional()
+  @MaxLength(30)
   neighborhood?: string;
 
   @ApiPropertyOptional({ description: '緯度' })
@@ -104,6 +116,7 @@ export class CreateVoterDto {
   @ApiPropertyOptional({ description: '職業' })
   @IsString()
   @IsOptional()
+  @MaxLength(100)
   occupation?: string;
 
   @ApiPropertyOptional({ description: '標籤', type: [String] })
@@ -115,5 +128,6 @@ export class CreateVoterDto {
   @ApiPropertyOptional({ description: '備註' })
   @IsString()
   @IsOptional()
+  @MaxLength(5000)
   notes?: string;
 }

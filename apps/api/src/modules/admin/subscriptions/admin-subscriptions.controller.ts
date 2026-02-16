@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Delete,
   Param,
   Query,
   Body,
@@ -16,8 +17,10 @@ import {
   UpdateSubscriptionPlanDto,
   ExtendTrialDto,
   CancelSubscriptionDto,
+  AdjustPriceDto,
 } from './dto/subscription-filter.dto';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
+import { SuperAdminGuard } from '../../admin-auth/guards/super-admin.guard';
 import { CurrentAdmin } from '../../admin-auth/decorators/current-admin.decorator';
 import { AdminAuthService } from '../../admin-auth/admin-auth.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
@@ -157,13 +160,67 @@ export class AdminSubscriptionsController {
       dto.reason,
     );
 
-    // 記錄操作
     await this.adminAuthService.logAction(
       admin.id,
       'SUBSCRIPTION_CANCEL',
       'SUBSCRIPTION',
       id,
       { reason: dto.reason },
+      req.ip,
+      req.headers['user-agent'],
+    );
+
+    return result;
+  }
+
+  /**
+   * P0-2: 調整訂閱金額（僅超級管理員）
+   */
+  @Put(':id/adjust-price')
+  @UseGuards(SuperAdminGuard)
+  async adjustPrice(
+    @Param('id') id: string,
+    @Body() dto: AdjustPriceDto,
+    @CurrentAdmin() admin: any,
+    @Req() req: Request,
+  ) {
+    const result = await this.adminSubscriptionsService.adjustPrice(
+      id,
+      { customPrice: dto.customPrice, priceAdjustment: dto.priceAdjustment, reason: dto.reason },
+      admin.id,
+    );
+
+    await this.adminAuthService.logAction(
+      admin.id,
+      'SUBSCRIPTION_ADJUST_PRICE',
+      'SUBSCRIPTION',
+      id,
+      { customPrice: dto.customPrice, priceAdjustment: dto.priceAdjustment, reason: dto.reason },
+      req.ip,
+      req.headers['user-agent'],
+    );
+
+    return result;
+  }
+
+  /**
+   * P0-2: 清除金額調整（僅超級管理員）
+   */
+  @Delete(':id/adjust-price')
+  @UseGuards(SuperAdminGuard)
+  async clearPriceAdjustment(
+    @Param('id') id: string,
+    @CurrentAdmin() admin: any,
+    @Req() req: Request,
+  ) {
+    const result = await this.adminSubscriptionsService.clearPriceAdjustment(id);
+
+    await this.adminAuthService.logAction(
+      admin.id,
+      'SUBSCRIPTION_CLEAR_PRICE_ADJUSTMENT',
+      'SUBSCRIPTION',
+      id,
+      {},
       req.ip,
       req.headers['user-agent'],
     );

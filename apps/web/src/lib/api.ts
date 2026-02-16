@@ -44,7 +44,13 @@ class ApiClient {
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('token');
+      // OWASP A07: 優先使用 sessionStorage（關閉分頁即清除），向後相容 localStorage
+      this.token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      // 遷移：若 localStorage 中有 token，移至 sessionStorage
+      if (!sessionStorage.getItem('token') && localStorage.getItem('token')) {
+        sessionStorage.setItem('token', localStorage.getItem('token')!);
+        localStorage.removeItem('token');
+      }
     }
   }
 
@@ -52,8 +58,11 @@ class ApiClient {
     this.token = token;
     if (typeof window !== 'undefined') {
       if (token) {
-        localStorage.setItem('token', token);
+        // OWASP A07: 僅存入 sessionStorage，關閉分頁即失效
+        sessionStorage.setItem('token', token);
+        localStorage.removeItem('token'); // 清除舊的 localStorage token
       } else {
+        sessionStorage.removeItem('token');
         localStorage.removeItem('token');
       }
     }
@@ -221,7 +230,7 @@ export const api = new ApiClient(API_URL);
 
 // Auth API
 const realAuthApi = {
-  lineCallback: (code: string, redirectUri: string, promoterCode?: string) =>
+  lineCallback: (code: string, redirectUri: string, promoterCode?: string, state?: string) =>
     api.post<{
       accessToken?: string;
       user: any;
@@ -232,7 +241,9 @@ const realAuthApi = {
       code,
       redirectUri,
       ...(promoterCode && { promoterCode }),
+      ...(state && { state }),
     }),
+  generateOAuthState: () => api.get<{ state: string }>('/auth/oauth-state'),
   getMe: () => api.get<any>('/auth/me'),
   acceptConsent: (consentVersion: string, portraitConsent: boolean) =>
     api.post<any>('/auth/consent', { consentVersion, portraitConsent }),
@@ -351,10 +362,14 @@ export const eventsApi = isDemoMode ? demoApi.demoEventsApi : realEventsApi;
 
 // Schedules API
 const realSchedulesApi = {
+  getAll: (campaignId: string, page = 1, limit = 20) =>
+    api.get<any>('/schedules', { campaignId, page, limit }),
   getByDate: (campaignId: string, date: string) =>
     api.get<any[]>(`/schedules/date/${date}`, { campaignId }),
   getById: (id: string) => api.get<any>(`/schedules/${id}`),
   create: (data: any) => api.post<any>('/schedules', data),
+  update: (id: string, data: any) => api.put<any>(`/schedules/${id}`, data),
+  delete: (id: string) => api.delete(`/schedules/${id}`),
   addItem: (id: string, data: any) => api.post(`/schedules/${id}/items`, data),
   removeItem: (scheduleId: string, itemId: string) =>
     api.delete(`/schedules/${scheduleId}/items/${itemId}`),
@@ -473,6 +488,14 @@ const realSubscriptionsApi = {
     plan: any;
     trialPlan: any;
   }>('/subscriptions/pricing/plan', { city, electionType }),
+  // P0-3: 方案升降級
+  previewUpgrade: (planId: string) => api.get<any>(`/subscriptions/upgrade/preview/${planId}`),
+  upgradeSubscription: (planId: string) => api.post<any>(`/subscriptions/upgrade/${planId}`),
+  previewDowngrade: (planId: string) => api.get<any>(`/subscriptions/downgrade/preview/${planId}`),
+  downgradeSubscription: (planId: string) => api.post<any>(`/subscriptions/downgrade/${planId}`),
+  cancelDowngrade: () => api.post<any>('/subscriptions/downgrade/cancel'),
+  // P2-11: 自動續約
+  toggleAutoRenew: (autoRenew: boolean) => api.put<any>('/subscriptions/auto-renew', { autoRenew }),
 };
 export const subscriptionsApi = isDemoMode ? demoApi.demoSubscriptionsApi : realSubscriptionsApi;
 
@@ -489,6 +512,9 @@ const realPaymentsApi = {
     formData?: Record<string, string>;
     apiUrl?: string;
   }>('/payments/create', data),
+  // P1-5: 銀行轉帳
+  createBankTransfer: (data: { subscriptionId: string }) =>
+    api.post<{ paymentId: string; amount: number; bankInfo: any; message: string }>('/payments/bank-transfer', data),
   getHistory: () => api.get<any[]>('/payments/history'),
   getPayment: (id: string) => api.get<any>(`/payments/${id}`),
   verifyStripe: (sessionId: string, paymentId: string) =>
@@ -496,6 +522,19 @@ const realPaymentsApi = {
   refund: (id: string, reason?: string) => api.post<{ success: boolean }>(`/payments/${id}/refund`, { reason }),
 };
 export const paymentsApi = isDemoMode ? demoApi.demoPaymentsApi : realPaymentsApi;
+
+// Invoices API
+export const invoicesApi = {
+  issueInvoice: (data: {
+    paymentId: string;
+    invoiceType: 'PERSONAL' | 'COMPANY';
+    carrierType?: string;
+    carrierNumber?: string;
+    companyTaxId?: string;
+    companyName?: string;
+  }) => api.post<any>('/invoices/issue', data),
+  getInvoice: (paymentId: string) => api.get<any>(`/invoices/${paymentId}`),
+};
 
 // Referrals API
 const realReferralsApi = {
@@ -569,6 +608,13 @@ const realAdminPaymentsApi = {
   getPayment: (id: string) => api.get<any>(`/admin/payments/${id}`),
   refundPayment: (id: string, reason?: string, amount?: number) =>
     api.post<any>(`/admin/payments/${id}/refund`, { reason, amount }),
+  // P2-12: 營收報表
+  getRevenueChart: (months?: number) => api.get<any[]>('/admin/payments/revenue-chart', months ? { months: String(months) } : {}),
+  getConversionFunnel: () => api.get<any>('/admin/payments/conversion-funnel'),
+  getMRR: () => api.get<any>('/admin/payments/mrr'),
+  // P1-5: 手動確認
+  getPendingManual: () => api.get<any[]>('/admin/payments/pending-manual'),
+  confirmPayment: (id: string, notes?: string) => api.post<any>(`/admin/payments/${id}/confirm`, { notes }),
 };
 export const adminPaymentsApi = isDemoMode ? demoApi.demoAdminPaymentsApi : realAdminPaymentsApi;
 

@@ -65,6 +65,15 @@ function LoginContent() {
     }
 
     if (code) {
+      // OWASP A08: 驗證 OAuth state 參數，防止 CSRF 攻擊
+      const returnedState = searchParams.get('state');
+      const savedState = sessionStorage.getItem('oauth_state');
+      if (!returnedState || !savedState || returnedState !== savedState) {
+        setError('登入驗證失敗（state 參數不符），請重新登入');
+        sessionStorage.removeItem('oauth_state');
+        return;
+      }
+      sessionStorage.removeItem('oauth_state'); // 一次性使用，立即清除
       handleLineCallback(code);
     }
   }, [searchParams]);
@@ -183,7 +192,9 @@ function LoginContent() {
       // 從 cookie 或 sessionStorage 取得推廣碼
       const pendingPromoterCode = getPromoterCode();
 
-      const result = await authApi.lineCallback(code, callbackUrl, pendingPromoterCode || undefined);
+      // OWASP A04: 將 state 傳遞給後端做 HMAC 簽章驗證
+      const savedState = sessionStorage.getItem('oauth_state') || undefined;
+      const result = await authApi.lineCallback(code, callbackUrl, pendingPromoterCode || undefined, savedState);
 
       // 清除已使用的推廣碼
       if (pendingPromoterCode) {
@@ -216,7 +227,7 @@ function LoginContent() {
     }
   };
 
-  const handleLineLogin = () => {
+  const handleLineLogin = async () => {
     if (!isLineConfigured) {
       setError('LINE 登入尚未設定。請先在 LINE Developers Console 建立 Channel，並設定環境變數。');
       return;
@@ -227,9 +238,21 @@ function LoginContent() {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('intendedRole', 'user');
     }
-    const state = Math.random().toString(36).substring(7);
-    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}&scope=profile%20openid`;
-    window.location.href = lineAuthUrl;
+    // OWASP A04: 從後端取得 HMAC 簽章的 state，同時用於前端 + 後端雙重驗證
+    try {
+      const { state: serverState } = await authApi.generateOAuthState();
+      sessionStorage.setItem('oauth_state', serverState);
+      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${serverState}&scope=profile%20openid`;
+      window.location.href = lineAuthUrl;
+    } catch {
+      // Fallback：若後端不可用，使用本地隨機 state
+      const stateArray = new Uint8Array(32);
+      crypto.getRandomValues(stateArray);
+      const state = Array.from(stateArray, b => b.toString(16).padStart(2, '0')).join('');
+      sessionStorage.setItem('oauth_state', state);
+      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}&scope=profile%20openid`;
+      window.location.href = lineAuthUrl;
+    }
   };
 
   // 示範模式快速登入（支援不同角色入口）

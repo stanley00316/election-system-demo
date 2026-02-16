@@ -40,8 +40,8 @@ export class TempTokenGuard implements CanActivate {
       throw new UnauthorizedException('需要 2FA 臨時 token');
     }
 
-    // 檢查 token 是否被撤銷
-    const jti = `${payload.sub}:${payload.iat}`;
+    // 檢查 token 是否被撤銷（統一 JTI 格式）
+    const jti = payload.jti || `${payload.sub}:${payload.iat}`;
     if (await this.tokenBlacklist.isBlacklisted(jti)) {
       throw new UnauthorizedException('Token 已被撤銷');
     }
