@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Building2, Store, Loader2, Shield, Check } from 'lucide-react';
+import { CreditCard, Building2, Store, Loader2, Shield, Check, LogIn } from 'lucide-react';
 import { BackButton } from '@/components/common/BackButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { subscriptionsApi, paymentsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth';
 
 type PaymentProvider = 'ECPAY' | 'NEWEBPAY' | 'STRIPE';
 
@@ -142,6 +143,7 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { isAuthenticated } = useAuthStore();
 
   const planId = searchParams.get('planId');
   const sessionId = searchParams.get('session_id');
@@ -263,10 +265,14 @@ function CheckoutContent() {
   };
 
   const handlePayment = async () => {
+    if (!isAuthenticated) {
+      router.push(`/login?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
     if (!subscription) {
       toast({
-        title: '訂閱資訊錯誤',
-        description: '請重新整理頁面',
+        title: '需要先建立訂閱',
+        description: '請先登入並選擇方案',
         variant: 'destructive',
       });
       return;
@@ -338,7 +344,7 @@ function CheckoutContent() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* 返回按鈕 */}
-        <BackButton href="/pricing" label="返回方案選擇" className="mb-6" />
+        <BackButton label="返回上一頁" className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 訂單摘要 */}
@@ -474,25 +480,44 @@ function CheckoutContent() {
                 </div>
 
                 {/* 付款按鈕 */}
-                <Button
-                  className="w-full mt-6"
-                  size="lg"
-                  onClick={handlePayment}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      處理中...
-                    </>
-                  ) : (
-                    `付款 NT$ ${plan.price.toLocaleString()}`
-                  )}
-                </Button>
-
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  點擊付款即表示您同意我們的服務條款與隱私政策
-                </p>
+                {!isAuthenticated ? (
+                  <>
+                    <Button
+                      className="w-full mt-6"
+                      size="lg"
+                      onClick={() => router.push(`/login?returnUrl=${encodeURIComponent(`/checkout?planId=${planId}&city=${encodeURIComponent(cityParam || '')}&electionType=${electionTypeParam || ''}`)}`)}
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      登入後付款
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center mt-4">
+                      需要登入後才能完成付款
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      className="w-full mt-6"
+                      size="lg"
+                      onClick={handlePayment}
+                      disabled={isProcessing || !subscription}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          處理中...
+                        </>
+                      ) : !subscription ? (
+                        '建立訂閱中...'
+                      ) : (
+                        `付款 NT$ ${plan.price.toLocaleString()}`
+                      )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center mt-4">
+                      點擊付款即表示您同意我們的服務條款與隱私政策
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

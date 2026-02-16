@@ -181,8 +181,7 @@ function PricingPageContent() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuthStore();
   
-  // 智慧返回路徑：已登入返回主控台，未登入返回首頁
-  const backUrl = isAuthenticated ? '/dashboard' : '/';
+  // backUrl 不再需要，改用 router.back() 返回上一頁
   
   // 從 URL 參數取得預選的縣市和選舉類型（來自 Campaign 建立頁面的升級連結）
   const urlCity = searchParams.get('city');
@@ -253,7 +252,16 @@ function PricingPageContent() {
     }
   };
 
+  const redirectToLogin = () => {
+    const returnUrl = `/pricing?city=${encodeURIComponent(selectedCity)}&electionType=${selectedElectionType}`;
+    router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+  };
+
   const handleStartTrial = async () => {
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
     setIsStartingTrial(true);
     try {
       await subscriptionsApi.startTrial();
@@ -274,6 +282,10 @@ function PricingPageContent() {
   };
 
   const handleSubscribe = (plan: Plan) => {
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
     if (plan.code === 'FREE_TRIAL') {
       handleStartTrial();
     } else {
@@ -314,7 +326,7 @@ function PricingPageContent() {
       <div className="max-w-6xl mx-auto">
         {/* 返回按鈕 - 頂部固定區塊 */}
         <div className="sticky top-4 z-10 mb-6">
-          <BackButton href={backUrl} label={isAuthenticated ? '返回主控台' : '返回首頁'} />
+          <BackButton label="返回上一頁" />
         </div>
 
         {/* 來自 Campaign 建立頁面的升級引導提示 */}
@@ -606,7 +618,7 @@ function PricingPageContent() {
 
         {/* 底部返回按鈕 */}
         <div className="text-center mt-8 pb-8">
-          <BackButton href={backUrl} label={isAuthenticated ? '返回主控台' : '返回首頁'} />
+          <BackButton label="返回上一頁" />
         </div>
       </div>
     </div>
