@@ -5,24 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.10.1] - 2026-02-16
+## [1.10.2] - 2026-02-16
 
 ### Added
 - **全域錯誤頁面** (`error.tsx`)：未預期錯誤顯示友善提示，含重試與返回首頁按鈕，自動記錄錯誤代碼
 - **404 頁面** (`not-found.tsx`)：訪問不存在路由時顯示友善 404 頁面
 - **全域載入狀態** (`loading.tsx`)：頁面切換時顯示統一的載入動畫
-- **行程列表 API** (`GET /schedules`)：支援分頁查詢行程列表
-- **行程更新 API** (`PUT /schedules/:id`)：支援更新行程標題、描述、日期
-- **行程刪除 API** (`DELETE /schedules/:id`)：支援刪除行程及其所有項目
+- **接觸紀錄詳情頁** (`/dashboard/contacts/[id]`)：獨立的接觸紀錄詳情頁面，含選民連結、主題標籤、追蹤提醒、編輯/刪除操作
+- **行程 API 補充**：`GET /schedules`（列表分頁）、`PUT /schedules/:id`（更新）、`DELETE /schedules/:id`（刪除）
+- **PWA Service Worker**：多層快取策略（Cache First / Network First / Stale While Revalidate）、背景同步、推播通知處理
+- **單元測試**：auth / payments / subscriptions 三大核心模組共 28 個測試案例
+- **E2E 測試 (Playwright)**：公開頁面、認證流程、安全性、響應式設計測試
+- **GitHub Actions CI/CD**：自動化 lint、build、security audit 工作流程
+- **Prisma Migrations 基線**：建立 `0_init` 基線 migration，未來可使用 `prisma migrate dev`
 - **UpdateScheduleDto**：新增行程更新 DTO，含 `@MaxLength` 驗證 (OWASP A04)
-- **GitHub Actions CI/CD**：自動化 lint、build、安全審計工作流程
 
 ### Security
-- **OWASP A01 — Schedules 存取控制修復**：`findById`、`updateStatus`、`addItem`、`updateItemStatus`、`removeItem`、`reorderItems`、`optimizeRoute`、`syncToGoogle`、`unsyncFromGoogle`、`toggleSyncEnabled` 全部加入 `checkScheduleAccess` 存取驗證
+- **OWASP A01 — Schedules 存取控制修復**（危急）：`findById`、`updateStatus`、`addItem`、`updateItemStatus`、`removeItem`、`reorderItems`、`optimizeRoute`、`syncToGoogle`、`unsyncFromGoogle`、`toggleSyncEnabled` 全部 13 個端點加入 `checkScheduleAccess` 存取驗證
 - **OWASP A04 — DTO 強化**：`CreateScheduleDto` 所有字串欄位加入 `@MaxLength()` 限制
 
 ### Changed
 - 前端 `schedulesApi` 新增 `getAll`、`update`、`delete` 方法
+- 接觸紀錄列表點擊改為導向接觸詳情頁（原為選民頁）
+- Service Worker 在生產環境自動註冊，支援離線快取與背景同步
+- `providers.tsx` 整合 Service Worker 註冊與同步訊息監聽
 
 ## [1.10.0] - 2026-02-12
 
