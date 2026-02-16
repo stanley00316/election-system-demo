@@ -28,6 +28,68 @@ interface Plan {
   description?: string | null;
 }
 
+// 完整定價表（與 pricing 頁面同步）
+const FALLBACK_PRICING: Record<string, { regionLevel: number; prices: Record<string, number> }> = {
+  '新北市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 231200, REPRESENTATIVE: 257100, COUNCILOR: 343600, MAYOR: 1451000, LEGISLATOR: 1008000 } },
+  '台北市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 139100, REPRESENTATIVE: 154700, COUNCILOR: 206800, MAYOR: 873600, LEGISLATOR: 607000 } },
+  '桃園市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 134300, REPRESENTATIVE: 149400, COUNCILOR: 199600, MAYOR: 843200, LEGISLATOR: 585900 } },
+  '台中市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 163900, REPRESENTATIVE: 182300, COUNCILOR: 243600, MAYOR: 1029600, LEGISLATOR: 715000 } },
+  '台南市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 106100, REPRESENTATIVE: 118100, COUNCILOR: 157600, MAYOR: 665700, LEGISLATOR: 462500 } },
+  '高雄市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 155700, REPRESENTATIVE: 173200, COUNCILOR: 231200, MAYOR: 976500, LEGISLATOR: 678900 } },
+  '彰化縣': { regionLevel: 2, prices: { VILLAGE_CHIEF: 69100, REPRESENTATIVE: 76800, COUNCILOR: 102800, MAYOR: 434000, LEGISLATOR: 301500 } },
+  '屏東縣': { regionLevel: 2, prices: { VILLAGE_CHIEF: 44600, REPRESENTATIVE: 49600, COUNCILOR: 66400, MAYOR: 280400, LEGISLATOR: 195000 } },
+  '新竹縣': { regionLevel: 2, prices: { VILLAGE_CHIEF: 34100, REPRESENTATIVE: 38000, COUNCILOR: 50800, MAYOR: 214500, LEGISLATOR: 149200 } },
+  '新竹市': { regionLevel: 2, prices: { VILLAGE_CHIEF: 26000, REPRESENTATIVE: 29000, COUNCILOR: 38700, MAYOR: 163400, LEGISLATOR: 113700 } },
+  '南投縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 26800, REPRESENTATIVE: 29800, COUNCILOR: 39800, MAYOR: 168000, LEGISLATOR: 116800 } },
+  '苗栗縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 30300, REPRESENTATIVE: 33700, COUNCILOR: 45000, MAYOR: 190000, LEGISLATOR: 132000 } },
+  '雲林縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 37200, REPRESENTATIVE: 41400, COUNCILOR: 55300, MAYOR: 233500, LEGISLATOR: 162300 } },
+  '宜蘭縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 25700, REPRESENTATIVE: 28600, COUNCILOR: 38200, MAYOR: 161200, LEGISLATOR: 112000 } },
+  '嘉義縣': { regionLevel: 4, prices: { VILLAGE_CHIEF: 27000, REPRESENTATIVE: 30000, COUNCILOR: 40200, MAYOR: 169700, LEGISLATOR: 118000 } },
+  '基隆市': { regionLevel: 4, prices: { VILLAGE_CHIEF: 20500, REPRESENTATIVE: 22800, COUNCILOR: 30600, MAYOR: 129200, LEGISLATOR: 89800 } },
+  '花蓮縣': { regionLevel: 4, prices: { VILLAGE_CHIEF: 17800, REPRESENTATIVE: 19800, COUNCILOR: 26600, MAYOR: 112300, LEGISLATOR: 78100 } },
+  '嘉義市': { regionLevel: 4, prices: { VILLAGE_CHIEF: 14900, REPRESENTATIVE: 16600, COUNCILOR: 22200, MAYOR: 93700, LEGISLATOR: 65200 } },
+  '台東縣': { regionLevel: 4, prices: { VILLAGE_CHIEF: 11900, REPRESENTATIVE: 13200, COUNCILOR: 17700, MAYOR: 74700, LEGISLATOR: 51900 } },
+  '金門縣': { regionLevel: 5, prices: { VILLAGE_CHIEF: 8000, REPRESENTATIVE: 8900, COUNCILOR: 11900, MAYOR: 50200, LEGISLATOR: 34900 } },
+  '澎湖縣': { regionLevel: 5, prices: { VILLAGE_CHIEF: 6100, REPRESENTATIVE: 6800, COUNCILOR: 9100, MAYOR: 38400, LEGISLATOR: 26700 } },
+  '連江縣': { regionLevel: 5, prices: { VILLAGE_CHIEF: 800, REPRESENTATIVE: 900, COUNCILOR: 1200, MAYOR: 5100, LEGISLATOR: 3500 } },
+};
+
+const ELECTION_CODE_TO_CATEGORY: Record<string, string> = {
+  VILLAGE_CHIEF: 'VILLAGE_CHIEF',
+  TOWNSHIP_REP: 'REPRESENTATIVE',
+  CITY_COUNCILOR: 'COUNCILOR',
+  MAYOR: 'MAYOR',
+  LEGISLATOR: 'LEGISLATOR',
+};
+
+const REGION_LEVEL_LABELS: Record<number, string> = {
+  1: '一級戰區', 2: '二級戰區', 3: '三級戰區', 4: '四級戰區', 5: '五級戰區',
+};
+
+function buildFallbackPlan(city: string, electionType: string): Plan | null {
+  const cityData = FALLBACK_PRICING[city];
+  if (!cityData) return null;
+  const category = ELECTION_CODE_TO_CATEGORY[electionType];
+  if (!category) return null;
+  const price = cityData.prices[category];
+  if (price === undefined) return null;
+  const label = electionTypeLabels[electionType] || categoryLabels[category] || electionType;
+  return {
+    id: `fallback-${city}-${category}`,
+    name: `${city}${label}方案`,
+    code: `${city}_${category}_YEARLY`,
+    price,
+    interval: 'YEAR',
+    voterLimit: null,
+    teamLimit: 10,
+    features: [`${REGION_LEVEL_LABELS[cityData.regionLevel]}定價`, '無限選民數量', '10 位團隊成員', '完整選情分析', '行程管理功能', '資料匯出功能'],
+    city,
+    category,
+    regionLevel: cityData.regionLevel,
+    description: `${city}${label}選舉專用方案，${REGION_LEVEL_LABELS[cityData.regionLevel]}定價`,
+  };
+}
+
 const categoryLabels: Record<string, string> = {
   VILLAGE_CHIEF: '里長',
   REPRESENTATIVE: '民代',
@@ -131,28 +193,77 @@ function CheckoutContent() {
   };
 
   const loadPlan = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'loadPlan called',data:{planId,cityParam,electionTypeParam,isFallback:planId?.startsWith('fallback-')},timestamp:Date.now(),hypothesisId:'H1,H2'})}).catch(()=>{});
+    // #endregion
+
+    // fallback plan ID 來自 pricing 頁面的靜態資料，直接本地建構
+    if (planId?.startsWith('fallback-') && cityParam && electionTypeParam) {
+      const fallback = buildFallbackPlan(cityParam, electionTypeParam);
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'using fallback plan',data:{city:cityParam,electionType:electionTypeParam,planFound:!!fallback,price:fallback?.price},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      if (fallback) {
+        setPlan(fallback);
+        // fallback 模式下嘗試取得訂閱狀態，失敗也不影響顯示
+        try {
+          const subStatus = await subscriptionsApi.checkSubscription();
+          if (subStatus.hasSubscription) {
+            const currentSub = await subscriptionsApi.getCurrentSubscription();
+            setSubscription(currentSub.subscription);
+          }
+        } catch {
+          // API 不可用時忽略
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       const plans = await subscriptionsApi.getPlans();
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'getPlans succeeded',data:{planCount:plans?.length,planIds:plans?.slice(0,3).map((p:any)=>p.id)},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
       const selectedPlan = plans.find((p: Plan) => p.id === planId);
       
       if (!selectedPlan || selectedPlan.code === 'FREE_TRIAL') {
+        // 找不到方案但有 city/electionType，嘗試 fallback
+        if (cityParam && electionTypeParam) {
+          const fallback = buildFallbackPlan(cityParam, electionTypeParam);
+          if (fallback) {
+            setPlan(fallback);
+            setIsLoading(false);
+            return;
+          }
+        }
         router.push('/pricing');
         return;
       }
 
       setPlan(selectedPlan);
 
-      // 檢查是否已有訂閱，如果沒有先建立試用訂閱
       const subStatus = await subscriptionsApi.checkSubscription();
       if (!subStatus.hasSubscription) {
-        // 先建立訂閱（試用或直接訂閱）
         const newSub = await subscriptionsApi.startTrial().catch(() => null);
         setSubscription(newSub);
       } else {
         const currentSub = await subscriptionsApi.getCurrentSubscription();
         setSubscription(currentSub.subscription);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'loadPlan FAILED, trying fallback',data:{errorMsg:error?.message,cityParam,electionTypeParam},timestamp:Date.now(),hypothesisId:'H1,H2,H3'})}).catch(()=>{});
+      // #endregion
+      // API 失敗時嘗試用 URL 參數建構 fallback
+      if (cityParam && electionTypeParam) {
+        const fallback = buildFallbackPlan(cityParam, electionTypeParam);
+        if (fallback) {
+          setPlan(fallback);
+          setIsLoading(false);
+          return;
+        }
+      }
       console.error('載入方案失敗:', error);
       toast({
         title: '載入失敗',
@@ -282,10 +393,8 @@ function CheckoutContent() {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">計費週期</span>
-                  <span className="font-medium">
-                    {plan.interval === 'YEAR' ? '年繳' : '月繳'}
-                  </span>
+                  <span className="text-muted-foreground">計費方式</span>
+                  <span className="font-medium">一次性年繳</span>
                 </div>
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
