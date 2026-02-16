@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-02-16
+
+### Added
+- **PENDING 訂閱狀態**：新增 `SubscriptionStatus.PENDING` enum 值，代表「已建立訂閱、等待付款」
+- **`POST /subscriptions/subscribe`**：建立 PENDING 訂閱端點，付款後由 webhook 啟用為 ACTIVE
+- **`GET /subscriptions/pending`**：查詢待付款訂閱端點
+- **`createPendingSubscription()`**：後端 service 新增待付款訂閱建立方法，含重複建立防護
+
+### Changed
+- **訂閱流程重構**：付費方案必須完成付款才啟用（PENDING → ACTIVE），不再自動建立 TRIAL 訂閱
+- **Checkout 頁面**：移除 `loadPlan()` 中自動呼叫 `startTrial()` 的邏輯，付款按鈕直接觸發「建立 PENDING 訂閱 → 建立付款 → 跳轉金流」
+- **`activateSubscription()`**：付款成功時重新計算訂閱期間，以付款時間為起點
+
+### Fixed
+- **LINE 登入回呼端點缺少 `@Public()` 裝飾器**：`POST /auth/line/callback` 原本需要 JWT 認證，導致未登入使用者無法完成 LINE OAuth 流程
+
+### Security
+- **OWASP A01**：PENDING 訂閱不被 `getCurrentSubscription()` 視為有效訂閱，避免未付款使用者取得存取權
+
 ## [1.10.3] - 2026-02-16
 
 ### Fixed

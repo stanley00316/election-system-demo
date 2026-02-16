@@ -464,6 +464,8 @@ const realSubscriptionsApi = {
     trialEndsAt: string | null;
   }>('/subscriptions/check'),
   startTrial: () => api.post<any>('/subscriptions/trial'),
+  createPendingSubscription: (planId: string) => api.post<any>('/subscriptions/subscribe', { planId }),
+  getPendingSubscription: () => api.get<{ hasPending: boolean; subscription: any }>('/subscriptions/pending'),
   cancelSubscription: (reason?: string) => api.post<any>('/subscriptions/cancel', { reason }),
   getHistory: () => api.get<any[]>('/subscriptions/history'),
   // 分級定價 API

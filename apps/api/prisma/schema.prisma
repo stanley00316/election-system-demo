@@ -823,6 +823,7 @@ enum PlanInterval {
 }
 
 enum SubscriptionStatus {
+  PENDING // 待付款（已建立訂閱，等待付款）
   TRIAL // 試用中
   ACTIVE // 訂閱中
   PAST_DUE // 逾期未付款

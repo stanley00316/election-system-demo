@@ -1253,6 +1253,20 @@ export const demoSubscriptionsApi = {
     await delay(300);
     return { success: true };
   },
+
+  createPendingSubscription: async (_planId: string) => {
+    await delay(300);
+    return {
+      id: 'demo-pending-sub',
+      status: 'PENDING',
+      plan: demoPlans[1] || demoPlans[0],
+    };
+  },
+
+  getPendingSubscription: async () => {
+    await delay(100);
+    return { hasPending: false, subscription: null };
+  },
   
   cancelSubscription: async (_reason?: string) => {
     await delay(300);

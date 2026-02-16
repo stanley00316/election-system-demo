@@ -197,7 +197,113 @@ export class SubscriptionsService {
   }
 
   /**
-   * 訂閱付費方案
+   * 建立待付款訂閱（PENDING 狀態，需付款後才啟用）
+   */
+  async createPendingSubscription(userId: string, planId: string) {
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: planId },
+    });
+
+    if (!plan || !plan.isActive) {
+      throw new NotFoundException('找不到該方案');
+    }
+
+    if (plan.code === 'FREE_TRIAL') {
+      throw new BadRequestException('請使用 startTrial 來開始試用');
+    }
+
+    // 計算訂閱期間（付款成功後生效）
+    const now = new Date();
+    const periodEnd = this.calculatePeriodEnd(now, plan.interval);
+
+    // 檢查是否有現有 ACTIVE/TRIAL 訂閱
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: { in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] },
+      },
+    });
+
+    if (activeSubscription) {
+      throw new BadRequestException('您已有有效訂閱，請前往帳號設定管理訂閱');
+    }
+
+    // 檢查是否已有 PENDING 訂閱（避免重複建立），若有則複用
+    const pendingSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: SubscriptionStatus.PENDING,
+      },
+      include: { plan: true },
+    });
+
+    if (pendingSubscription) {
+      // 更新既有 PENDING 訂閱的方案
+      const updated = await this.prisma.subscription.update({
+        where: { id: pendingSubscription.id },
+        data: {
+          planId,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        },
+        include: { plan: true },
+      });
+      await this.logActivity(userId, 'UPDATE_PENDING_SUBSCRIPTION', 'SUBSCRIPTION', updated.id, { planId });
+      return updated;
+    }
+
+    // 建立新的 PENDING 訂閱
+    const subscription = await this.prisma.subscription.create({
+      data: {
+        userId,
+        planId,
+        status: SubscriptionStatus.PENDING,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+      },
+      include: { plan: true },
+    });
+
+    await this.logActivity(userId, 'CREATE_PENDING_SUBSCRIPTION', 'SUBSCRIPTION', subscription.id, { planId });
+    return subscription;
+  }
+
+  /**
+   * 取得使用者的待付款訂閱
+   */
+  async getPendingSubscription(userId: string) {
+    return this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: SubscriptionStatus.PENDING,
+      },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * 計算訂閱週期結束時間
+   */
+  private calculatePeriodEnd(start: Date, interval: PlanInterval): Date {
+    const periodEnd = new Date(start.getTime());
+    switch (interval) {
+      case PlanInterval.MONTH:
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        break;
+      case PlanInterval.YEAR:
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+        break;
+      case PlanInterval.LIFETIME:
+        return new Date('2099-12-31');
+      default:
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+    }
+    return periodEnd;
+  }
+
+  /**
+   * 訂閱付費方案（舊版本，保留相容性 — 由 admin 或內部呼叫）
    */
   async subscribe(userId: string, planId: string) {
     const plan = await this.prisma.plan.findUnique({
@@ -212,39 +318,20 @@ export class SubscriptionsService {
       throw new BadRequestException('請使用 startTrial 來開始試用');
     }
 
-    // 計算訂閱期間
     const now = new Date();
-    let periodEnd: Date;
+    const periodEnd = this.calculatePeriodEnd(now, plan.interval);
 
-    switch (plan.interval) {
-      case PlanInterval.MONTH:
-        periodEnd = new Date(now.getTime());
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-        break;
-      case PlanInterval.YEAR:
-        periodEnd = new Date(now.getTime());
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-        break;
-      case PlanInterval.LIFETIME:
-        periodEnd = new Date('2099-12-31');
-        break;
-      default:
-        periodEnd = new Date(now.getTime());
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-    }
-
-    // 檢查是否有現有訂閱
+    // 檢查是否有現有訂閱（含 PENDING）
     const existingSubscription = await this.prisma.subscription.findFirst({
       where: {
         userId,
         status: {
-          in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE],
+          in: [SubscriptionStatus.PENDING, SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE],
         },
       },
     });
 
     if (existingSubscription) {
-      // 更新現有訂閱
       const subscription = await this.prisma.subscription.update({
         where: { id: existingSubscription.id },
         data: {
@@ -254,15 +341,11 @@ export class SubscriptionsService {
           currentPeriodEnd: periodEnd,
           trialEndsAt: null,
         },
-        include: {
-          plan: true,
-        },
+        include: { plan: true },
       });
-
       return subscription;
     }
 
-    // 建立新訂閱
     const subscription = await this.prisma.subscription.create({
       data: {
         userId,
@@ -271,9 +354,7 @@ export class SubscriptionsService {
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
       },
-      include: {
-        plan: true,
-      },
+      include: { plan: true },
     });
 
     return subscription;
@@ -500,17 +581,34 @@ export class SubscriptionsService {
   }
 
   /**
-   * 更新訂閱狀態（用於付款完成後）
+   * 更新訂閱狀態（用於付款完成後：PENDING → ACTIVE）
+   * 付款成功時重新計算訂閱期間，以付款時間為起點
    */
   async activateSubscription(subscriptionId: string) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      include: { plan: true },
+    });
+
+    if (!subscription) {
+      this.logger.error(`activateSubscription: 找不到訂閱 ${subscriptionId}`);
+      return null;
+    }
+
+    const now = new Date();
+    const periodEnd = subscription.plan
+      ? this.calculatePeriodEnd(now, subscription.plan.interval)
+      : subscription.currentPeriodEnd;
+
     return this.prisma.subscription.update({
       where: { id: subscriptionId },
       data: {
         status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        trialEndsAt: null,
       },
-      include: {
-        plan: true,
-      },
+      include: { plan: true },
     });
   }
 

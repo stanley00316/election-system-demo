@@ -155,7 +155,6 @@ function CheckoutContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('ECPAY');
-  const [subscription, setSubscription] = useState<any>(null);
 
   useEffect(() => {
     // 處理 Stripe 回調
@@ -200,16 +199,6 @@ function CheckoutContent() {
       const fallback = buildFallbackPlan(cityParam, electionTypeParam);
       if (fallback) {
         setPlan(fallback);
-        // fallback 模式下嘗試取得訂閱狀態，失敗也不影響顯示
-        try {
-          const subStatus = await subscriptionsApi.checkSubscription();
-          if (subStatus.hasSubscription) {
-            const currentSub = await subscriptionsApi.getCurrentSubscription();
-            setSubscription(currentSub.subscription);
-          }
-        } catch {
-          // API 不可用時忽略
-        }
         setIsLoading(false);
         return;
       }
@@ -220,7 +209,6 @@ function CheckoutContent() {
       const selectedPlan = plans.find((p: Plan) => p.id === planId);
       
       if (!selectedPlan || selectedPlan.code === 'FREE_TRIAL') {
-        // 找不到方案但有 city/electionType，嘗試 fallback
         if (cityParam && electionTypeParam) {
           const fallback = buildFallbackPlan(cityParam, electionTypeParam);
           if (fallback) {
@@ -234,15 +222,6 @@ function CheckoutContent() {
       }
 
       setPlan(selectedPlan);
-
-      const subStatus = await subscriptionsApi.checkSubscription();
-      if (!subStatus.hasSubscription) {
-        const newSub = await subscriptionsApi.startTrial().catch(() => null);
-        setSubscription(newSub);
-      } else {
-        const currentSub = await subscriptionsApi.getCurrentSubscription();
-        setSubscription(currentSub.subscription);
-      }
     } catch (error: any) {
       // API 失敗時嘗試用 URL 參數建構 fallback
       if (cityParam && electionTypeParam) {
@@ -269,29 +248,34 @@ function CheckoutContent() {
       router.push(`/login?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
-    if (!subscription) {
-      toast({
-        title: '需要先建立訂閱',
-        description: '請先登入並選擇方案',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!plan) return;
 
     setIsProcessing(true);
     try {
+      // 1. 用真實 planId 建立 PENDING 訂閱；fallback plan 需先查詢真實 planId
+      let realPlanId = planId;
+      if (planId?.startsWith('fallback-') && cityParam && electionTypeParam) {
+        const locationPlan = await subscriptionsApi.getPlanByLocation(cityParam, electionTypeParam);
+        if (!locationPlan?.plan?.id) {
+          throw new Error('無法取得方案資訊，請稍後再試');
+        }
+        realPlanId = locationPlan.plan.id;
+      }
+
+      // 2. 建立 PENDING 訂閱
+      const pendingSub = await subscriptionsApi.createPendingSubscription(realPlanId!);
+
+      // 3. 建立付款
       const result = await paymentsApi.createPayment({
-        subscriptionId: subscription.id,
+        subscriptionId: pendingSub.id,
         provider: selectedProvider,
         returnUrl: `${window.location.origin}/checkout`,
         clientBackUrl: `${window.location.origin}/pricing`,
       });
 
       if (selectedProvider === 'STRIPE' && result.paymentUrl) {
-        // Stripe 直接跳轉
         window.location.href = result.paymentUrl;
       } else if (result.formData && result.apiUrl) {
-        // ECPay/NewebPay 需要表單提交
         submitPaymentForm(result.apiUrl, result.formData);
       } else {
         throw new Error('無法取得付款資訊');
@@ -500,15 +484,13 @@ function CheckoutContent() {
                       className="w-full mt-6"
                       size="lg"
                       onClick={handlePayment}
-                      disabled={isProcessing || !subscription}
+                      disabled={isProcessing}
                     >
                       {isProcessing ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           處理中...
                         </>
-                      ) : !subscription ? (
-                        '建立訂閱中...'
                       ) : (
                         `付款 NT$ ${plan.price.toLocaleString()}`
                       )}

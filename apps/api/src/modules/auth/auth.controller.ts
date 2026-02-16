@@ -41,6 +41,7 @@ export class AuthController {
   }
 
   // OWASP A05: 登入端點使用更嚴格的頻率限制（每分鐘 10 次）
+  @Public()
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('line/callback')
   @HttpCode(HttpStatus.OK)

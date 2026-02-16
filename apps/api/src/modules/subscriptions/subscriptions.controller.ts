@@ -102,6 +102,31 @@ export class SubscriptionsController {
   }
 
   /**
+   * 建立待付款訂閱（PENDING）
+   */
+  @Post('subscribe')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @HttpCode(HttpStatus.CREATED)
+  async createPendingSubscription(
+    @CurrentUser() user: any,
+    @Body('planId') planId: string,
+  ) {
+    if (!planId) {
+      return { error: '請提供方案 ID' };
+    }
+    return this.subscriptionsService.createPendingSubscription(user.id, planId);
+  }
+
+  /**
+   * 取得待付款訂閱
+   */
+  @Get('pending')
+  async getPendingSubscription(@CurrentUser() user: any) {
+    const subscription = await this.subscriptionsService.getPendingSubscription(user.id);
+    return { hasPending: !!subscription, subscription };
+  }
+
+  /**
    * 取消訂閱
    */
   @Post('cancel')
