@@ -94,6 +94,87 @@ const FALLBACK_ELECTION_TYPES: ElectionType[] = [
   { code: 'LEGISLATOR', label: '立委', category: 'LEGISLATOR' },
 ];
 
+// 完整定價表（與 seed-plans.ts 同步）
+const FALLBACK_PRICING: Record<string, { regionLevel: number; prices: Record<string, number> }> = {
+  '新北市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 231200, REPRESENTATIVE: 257100, COUNCILOR: 343600, MAYOR: 1451000, LEGISLATOR: 1008000 } },
+  '台北市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 139100, REPRESENTATIVE: 154700, COUNCILOR: 206800, MAYOR: 873600, LEGISLATOR: 607000 } },
+  '桃園市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 134300, REPRESENTATIVE: 149400, COUNCILOR: 199600, MAYOR: 843200, LEGISLATOR: 585900 } },
+  '台中市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 163900, REPRESENTATIVE: 182300, COUNCILOR: 243600, MAYOR: 1029600, LEGISLATOR: 715000 } },
+  '台南市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 106100, REPRESENTATIVE: 118100, COUNCILOR: 157600, MAYOR: 665700, LEGISLATOR: 462500 } },
+  '高雄市': { regionLevel: 1, prices: { VILLAGE_CHIEF: 155700, REPRESENTATIVE: 173200, COUNCILOR: 231200, MAYOR: 976500, LEGISLATOR: 678900 } },
+  '彰化縣': { regionLevel: 2, prices: { VILLAGE_CHIEF: 69100, REPRESENTATIVE: 76800, COUNCILOR: 102800, MAYOR: 434000, LEGISLATOR: 301500 } },
+  '屏東縣': { regionLevel: 2, prices: { VILLAGE_CHIEF: 44600, REPRESENTATIVE: 49600, COUNCILOR: 66400, MAYOR: 280400, LEGISLATOR: 195000 } },
+  '新竹縣': { regionLevel: 2, prices: { VILLAGE_CHIEF: 34100, REPRESENTATIVE: 38000, COUNCILOR: 50800, MAYOR: 214500, LEGISLATOR: 149200 } },
+  '新竹市': { regionLevel: 2, prices: { VILLAGE_CHIEF: 26000, REPRESENTATIVE: 29000, COUNCILOR: 38700, MAYOR: 163400, LEGISLATOR: 113700 } },
+  '南投縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 26800, REPRESENTATIVE: 29800, COUNCILOR: 39800, MAYOR: 168000, LEGISLATOR: 116800 } },
+  '苗栗縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 30300, REPRESENTATIVE: 33700, COUNCILOR: 45000, MAYOR: 190000, LEGISLATOR: 132000 } },
+  '雲林縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 37200, REPRESENTATIVE: 41400, COUNCILOR: 55300, MAYOR: 233500, LEGISLATOR: 162300 } },
+  '宜蘭縣': { regionLevel: 3, prices: { VILLAGE_CHIEF: 25700, REPRESENTATIVE: 28600, COUNCILOR: 38200, MAYOR: 161200, LEGISLATOR: 112000 } },
+  '嘉義縣': { regionLevel: 4, prices: { VILLAGE_CHIEF: 27000, REPRESENTATIVE: 30000, COUNCILOR: 40200, MAYOR: 169700, LEGISLATOR: 118000 } },
+  '基隆市': { regionLevel: 4, prices: { VILLAGE_CHIEF: 20500, REPRESENTATIVE: 22800, COUNCILOR: 30600, MAYOR: 129200, LEGISLATOR: 89800 } },
+  '花蓮縣': { regionLevel: 4, prices: { VILLAGE_CHIEF: 17800, REPRESENTATIVE: 19800, COUNCILOR: 26600, MAYOR: 112300, LEGISLATOR: 78100 } },
+  '嘉義市': { regionLevel: 4, prices: { VILLAGE_CHIEF: 14900, REPRESENTATIVE: 16600, COUNCILOR: 22200, MAYOR: 93700, LEGISLATOR: 65200 } },
+  '台東縣': { regionLevel: 4, prices: { VILLAGE_CHIEF: 11900, REPRESENTATIVE: 13200, COUNCILOR: 17700, MAYOR: 74700, LEGISLATOR: 51900 } },
+  '金門縣': { regionLevel: 5, prices: { VILLAGE_CHIEF: 8000, REPRESENTATIVE: 8900, COUNCILOR: 11900, MAYOR: 50200, LEGISLATOR: 34900 } },
+  '澎湖縣': { regionLevel: 5, prices: { VILLAGE_CHIEF: 6100, REPRESENTATIVE: 6800, COUNCILOR: 9100, MAYOR: 38400, LEGISLATOR: 26700 } },
+  '連江縣': { regionLevel: 5, prices: { VILLAGE_CHIEF: 800, REPRESENTATIVE: 900, COUNCILOR: 1200, MAYOR: 5100, LEGISLATOR: 3500 } },
+};
+
+const ELECTION_CODE_TO_CATEGORY: Record<string, string> = {
+  VILLAGE_CHIEF: 'VILLAGE_CHIEF',
+  TOWNSHIP_REP: 'REPRESENTATIVE',
+  CITY_COUNCILOR: 'COUNCILOR',
+  MAYOR: 'MAYOR',
+  LEGISLATOR: 'LEGISLATOR',
+};
+
+const regionLevelLabels: Record<number, string> = {
+  1: '一級戰區', 2: '二級戰區', 3: '三級戰區', 4: '四級戰區', 5: '五級戰區',
+};
+
+function buildFallbackPlan(city: string, electionType: string): Plan | null {
+  const cityData = FALLBACK_PRICING[city];
+  if (!cityData) return null;
+  const category = ELECTION_CODE_TO_CATEGORY[electionType];
+  if (!category) return null;
+  const price = cityData.prices[category];
+  if (price === undefined) return null;
+  const label = electionTypeLabels[electionType] || electionType;
+  return {
+    id: `fallback-${city}-${category}`,
+    name: `${city}${label}方案`,
+    code: `${city}_${category}_MONTHLY`,
+    price,
+    interval: 'MONTH',
+    voterLimit: null,
+    teamLimit: 10,
+    features: [`${regionLevelLabels[cityData.regionLevel]}定價`, '無限選民數量', '10 位團隊成員', '完整選情分析', '行程管理功能', '資料匯出功能'],
+    isActive: true,
+    sortOrder: 0,
+    city,
+    category,
+    regionLevel: cityData.regionLevel,
+    description: `${city}${label}選舉專用方案，${regionLevelLabels[cityData.regionLevel]}定價`,
+  };
+}
+
+const FALLBACK_TRIAL_PLAN: Plan = {
+  id: 'fallback-trial',
+  name: '免費試用',
+  code: 'FREE_TRIAL',
+  price: 0,
+  interval: 'MONTH',
+  voterLimit: 500,
+  teamLimit: 2,
+  features: ['選民管理', '接觸紀錄', '行程規劃', '地圖檢視', '基礎分析'],
+  isActive: true,
+  sortOrder: 0,
+  city: null,
+  category: null,
+  regionLevel: null,
+  description: '7 天免費試用',
+};
+
 function PricingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -162,8 +243,11 @@ function PricingPageContent() {
       setCurrentPlan(result.plan);
       setTrialPlan(result.trialPlan);
     } catch (error) {
-      console.error('載入方案失敗:', error);
-      setCurrentPlan(null);
+      console.error('載入方案失敗，使用靜態定價:', error);
+      // API 不可用時使用 fallback 定價
+      const fallbackPlan = buildFallbackPlan(selectedCity, selectedElectionType);
+      setCurrentPlan(fallbackPlan);
+      setTrialPlan(FALLBACK_TRIAL_PLAN);
     } finally {
       setIsLoadingPlan(false);
     }
