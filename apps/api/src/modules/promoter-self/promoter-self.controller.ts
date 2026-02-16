@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Query,
   UseGuards,
@@ -12,6 +13,7 @@ import { PromoterGuard } from './guards/promoter.guard';
 import { PromoterSelfService } from './promoter-self.service';
 import { CreateShareLinkDto } from './dto/create-share-link.dto';
 import { CreateTrialInviteDto } from './dto/create-trial-invite.dto';
+import { UpdatePromoterProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('promoter-self')
 @Controller('promoter/me')
@@ -24,6 +26,12 @@ export class PromoterSelfController {
   @ApiOperation({ summary: '取得推廣者自身資料' })
   async getProfile(@Req() req: any) {
     return this.promoterSelfService.getProfile(req.promoter.id);
+  }
+
+  @Put()
+  @ApiOperation({ summary: '更新推廣者個人資料' })
+  async updateProfile(@Req() req: any, @Body() dto: UpdatePromoterProfileDto) {
+    return this.promoterSelfService.updateProfile(req.promoter.id, dto);
   }
 
   @Get('stats')

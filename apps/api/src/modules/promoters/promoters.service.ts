@@ -122,6 +122,72 @@ export class PromotersService {
   }
 
   /**
+   * 記錄 ?ref=CODE 追蹤點擊
+   * 先查 Promoter.referralCode，再 fallback 查 User.referralCode
+   */
+  async trackRefClick(
+    code: string,
+    url?: string,
+    ip?: string,
+    userAgent?: string,
+    referer?: string,
+  ) {
+    const upperCode = code.toUpperCase();
+
+    // 先查推廣者
+    const promoter = await this.prisma.promoter.findUnique({
+      where: { referralCode: upperCode },
+      select: { id: true, name: true, isActive: true },
+    });
+
+    if (promoter && promoter.isActive) {
+      // 找到該推廣者的 REF_LINK 分享連結，若不存在則自動建立
+      let shareLink = await this.prisma.shareLink.findFirst({
+        where: { promoterId: promoter.id, channel: 'REF_LINK' },
+      });
+
+      if (!shareLink) {
+        shareLink = await this.prisma.shareLink.create({
+          data: {
+            promoterId: promoter.id,
+            code: `REF-${upperCode}`,
+            channel: 'REF_LINK',
+            targetUrl: url || null,
+            clickCount: 0,
+          },
+        });
+      }
+
+      await this.prisma.shareLinkClick.create({
+        data: {
+          shareLinkId: shareLink.id,
+          ipAddress: ip?.substring(0, 45),
+          userAgent: userAgent?.substring(0, 500),
+          referer: referer?.substring(0, 500),
+        },
+      });
+      await this.prisma.shareLink.update({
+        where: { id: shareLink.id },
+        data: { clickCount: { increment: 1 } },
+      });
+
+      return { tracked: true, type: 'promoter', name: promoter.name };
+    }
+
+    // Fallback: 查 User.referralCode
+    const user = await this.prisma.user.findFirst({
+      where: { referralCode: upperCode },
+      select: { id: true, name: true },
+    });
+
+    if (user) {
+      return { tracked: true, type: 'user', name: user.name };
+    }
+
+    return { tracked: false, message: '無效的推廣碼' };
+  }
+
+  /**
    * 取得分享連結資訊並記錄點擊
    */
   async getShareLinkAndRecordClick(

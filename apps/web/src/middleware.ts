@@ -46,7 +46,23 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
  * → 掃描工具無法區分「存在但需認證」和「不存在」的路徑
  */
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // ==================== ?ref=CODE 推廣追蹤 ====================
+  const refCode = searchParams.get('ref');
+  if (refCode && refCode.length >= 3 && refCode.length <= 32) {
+    // 存入 cookie（30 天有效，前端可讀取）
+    const cleanUrl = new URL(request.url);
+    cleanUrl.searchParams.delete('ref');
+    const response = NextResponse.redirect(cleanUrl);
+    response.cookies.set('ref_code', refCode, {
+      maxAge: 30 * 24 * 60 * 60, // 30 天
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    return response;
+  }
 
   // Demo 模式下放行
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -113,10 +129,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // 攔截所有 admin 與 promoter 路徑（防目錄掃描）
-    '/admin',
-    '/admin/:path*',
-    '/promoter',
-    '/promoter/:path*',
+    // 攔截所有頁面路由（排除靜態資源、API、_next）
+    // 用於 ?ref=CODE 追蹤 + admin/promoter 路徑保護
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 };

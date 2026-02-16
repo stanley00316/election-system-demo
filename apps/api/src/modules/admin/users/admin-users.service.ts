@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AdminUserFilterDto } from './dto/user-filter.dto';
+import { AdminUserFilterDto, UpdateUserDto } from './dto/user-filter.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -189,6 +189,38 @@ export class AdminUsersService {
     }
 
     return user;
+  }
+
+  /**
+   * 更新使用者基本資料
+   * 安全限制：不可修改 lineUserId（認證用途）
+   */
+  async updateUser(id: string, dto: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('使用者不存在');
+
+    const data: Prisma.UserUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+
+    return this.prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        lineUserId: true,
+        avatarUrl: true,
+        isAdmin: true,
+        isSuperAdmin: true,
+        isSuspended: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 
   /**

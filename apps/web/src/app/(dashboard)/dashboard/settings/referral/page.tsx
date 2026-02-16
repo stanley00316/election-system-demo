@@ -187,6 +187,29 @@ export default function ReferralPage() {
             </Button>
           </div>
 
+          {/* 追蹤連結（?ref=CODE 格式） */}
+          {referralCode && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">追蹤連結（分享此連結可自動記錄推薦來源）</p>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <Input
+                    value={typeof window !== 'undefined' ? `${window.location.origin}?ref=${referralCode}` : ''}
+                    readOnly
+                    className="text-sm bg-muted/50"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(`${window.location.origin}?ref=${referralCode}`, 'url')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* 推薦獎勵說明 */}
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
             <h4 className="font-medium text-primary mb-2">推薦獎勵規則</h4>

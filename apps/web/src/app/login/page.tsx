@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth';
-import { authApi, roleInvitesApi, isDemoMode } from '@/lib/api';
+import { authApi, roleInvitesApi, isDemoMode, getProductionUrl } from '@/lib/api';
 import { demoUser, demoCampaign } from '@/lib/demo-data';
 import {
   Loader2, AlertCircle, Play, Users, Phone, MapPin, BarChart3,
@@ -151,20 +151,43 @@ function LoginContent() {
     return getPostLoginPath(user);
   };
 
+  /**
+   * 從 cookie 或 sessionStorage 取得推廣碼
+   * 優先順序：cookie ref_code > sessionStorage pendingPromoterCode
+   */
+  const getPromoterCode = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    // 優先讀取 middleware 設定的 cookie（?ref=CODE 來源）
+    const cookieMatch = document.cookie.match(/(?:^|;\s*)ref_code=([^;]*)/);
+    const cookieCode = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+    // Fallback 到 sessionStorage（/s/CODE 來源）
+    const sessionCode = sessionStorage.getItem('pendingPromoterCode');
+    return cookieCode || sessionCode || null;
+  };
+
+  /**
+   * 清除所有推廣碼來源
+   */
+  const clearPromoterCode = () => {
+    if (typeof window === 'undefined') return;
+    // 清除 cookie
+    document.cookie = 'ref_code=; path=/; max-age=0';
+    // 清除 sessionStorage
+    sessionStorage.removeItem('pendingPromoterCode');
+  };
+
   const handleLineCallback = async (code: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      // 檢查是否有推廣碼需要傳遞
-      const pendingPromoterCode = typeof window !== 'undefined'
-        ? sessionStorage.getItem('pendingPromoterCode')
-        : null;
+      // 從 cookie 或 sessionStorage 取得推廣碼
+      const pendingPromoterCode = getPromoterCode();
 
       const result = await authApi.lineCallback(code, callbackUrl, pendingPromoterCode || undefined);
 
       // 清除已使用的推廣碼
       if (pendingPromoterCode) {
-        sessionStorage.removeItem('pendingPromoterCode');
+        clearPromoterCode();
       }
 
       // 2FA 流程：後端要求雙因素驗證
@@ -329,9 +352,17 @@ function LoginContent() {
               </div>
               <span className="text-lg font-bold tracking-tight">選情管理系統</span>
             </div>
-            <Badge variant="secondary" className="text-xs">
-              展示模式
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                展示模式
+              </Badge>
+              <a href={getProductionUrl()} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="h-7 text-xs bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+                  正式使用
+                  <ChevronRight className="ml-0.5 h-3 w-3" />
+                </Button>
+              </a>
+            </div>
           </div>
         </header>
 
@@ -476,6 +507,38 @@ function LoginContent() {
                   <div className="mt-1 text-xs sm:text-sm text-muted-foreground">{s.label}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 正式使用引導 ── */}
+        <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+          <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16 text-center">
+            <h2 className="text-2xl font-bold sm:text-3xl mb-4">
+              準備好開始您的選戰了嗎？
+            </h2>
+            <p className="text-blue-100 mb-8 text-lg max-w-2xl mx-auto">
+              範例版僅供功能展示，正式版提供完整選戰管理功能，立即註冊開始使用。
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a href={getProductionUrl()} target="_blank" rel="noopener noreferrer">
+                <Button
+                  size="lg"
+                  className="bg-white text-blue-700 hover:bg-blue-50 shadow-lg px-8 text-base font-semibold"
+                >
+                  前往正式版註冊
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </a>
+              <a href={getProductionUrl('/pricing')} target="_blank" rel="noopener noreferrer">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/40 text-white hover:bg-white/10 px-8 text-base"
+                >
+                  查看方案與定價
+                </Button>
+              </a>
             </div>
           </div>
         </section>

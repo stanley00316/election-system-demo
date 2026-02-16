@@ -51,3 +51,17 @@ export class SuspendUserDto {
   @IsString()
   reason: string;
 }
+
+export class UpdateUserDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+}

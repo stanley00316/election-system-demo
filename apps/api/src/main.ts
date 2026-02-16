@@ -18,11 +18,19 @@ async function bootstrap() {
   app.use(helmet());
 
   // CORS — OWASP A05: 僅允許環境變數指定的來源，生產環境不包含硬編碼 localhost
-  const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:3000');
   const isProduction = configService.get('NODE_ENV') === 'production';
-  const allowedOrigins = corsOrigin.includes(',')
-    ? corsOrigin.split(',').map((o: string) => o.trim())
-    : [corsOrigin];
+  const corsOrigin = configService.get('CORS_ORIGIN');
+
+  // OWASP A05: 生產環境必須明確設定 CORS_ORIGIN
+  if (isProduction && !corsOrigin) {
+    // eslint-disable-next-line no-console
+    console.warn('[OWASP A05] ⚠️ 生產環境未設定 CORS_ORIGIN 環境變數，CORS 將使用嚴格模式（不允許任何跨域請求）');
+  }
+
+  const effectiveCorsOrigin = corsOrigin || (isProduction ? '' : 'http://localhost:3000');
+  const allowedOrigins = effectiveCorsOrigin.includes(',')
+    ? effectiveCorsOrigin.split(',').map((o: string) => o.trim()).filter(Boolean)
+    : effectiveCorsOrigin ? [effectiveCorsOrigin] : [];
 
   // 開發環境額外允許 localhost 變體
   if (!isProduction) {

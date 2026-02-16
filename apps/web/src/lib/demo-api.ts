@@ -1868,6 +1868,16 @@ export const demoAdminUsersApi = {
     if (user) user.isSuspended = false;
     return { message: '已啟用帳號' };
   },
+  updateUser: async (id: string, data: { name?: string; email?: string; phone?: string }) => {
+    await delay(200);
+    const user = demoUsers.find((u) => u.id === id);
+    if (user) {
+      if (data.name) user.name = data.name;
+      if (data.email) user.email = data.email;
+      if (data.phone) user.phone = data.phone;
+    }
+    return user || { message: '使用者不存在' };
+  },
 };
 
 // ---- Demo 訂閱資料 ----
@@ -2569,10 +2579,21 @@ export const demoPromoterSelfApi = {
   getProfile: async () => ({
     id: 'demo-promoter-id',
     name: '示範推廣者',
+    phone: '0912-345-678',
+    email: 'promoter@example.com',
+    lineId: 'demo_line_id',
     referralCode: 'DEMO1234',
     type: 'INTERNAL',
     status: 'APPROVED',
     isActive: true,
+    organization: '示範組織',
+    region: '台北市大安區',
+    address: '台北市大安區xx路xx號',
+    category: '志工',
+    socialLinks: { facebook: 'https://facebook.com/demo', instagram: '' },
+    avatarUrl: null,
+    joinedReason: '支持候選人理念',
+    notes: '',
     createdAt: new Date().toISOString(),
     rewardConfig: {
       rewardType: 'COMMISSION',
@@ -2674,6 +2695,15 @@ export const demoPromoterSelfApi = {
     status: 'PENDING',
     plan: { id: 'plan-1', name: '專業方案' },
     createdAt: new Date().toISOString(),
+  }),
+  updateProfile: async (data: Record<string, any>) => ({
+    id: 'demo-promoter-id',
+    ...data,
+    referralCode: 'DEMO1234',
+    type: 'INTERNAL',
+    status: 'APPROVED',
+    isActive: true,
+    updatedAt: new Date().toISOString(),
   }),
 };
 

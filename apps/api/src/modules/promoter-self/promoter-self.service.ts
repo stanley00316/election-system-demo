@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { CreateShareLinkDto } from './dto/create-share-link.dto';
 import { CreateTrialInviteDto } from './dto/create-trial-invite.dto';
+import { UpdatePromoterProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class PromoterSelfService {
@@ -18,6 +19,35 @@ export class PromoterSelfService {
   async getProfile(promoterId: string) {
     return this.prisma.promoter.findUnique({
       where: { id: promoterId },
+      include: {
+        rewardConfig: true,
+        trialConfig: {
+          include: { trialPlan: { select: { id: true, name: true } } },
+        },
+      },
+    });
+  }
+
+  /**
+   * 更新推廣者個人資料（白名單限制欄位）
+   */
+  async updateProfile(promoterId: string, dto: UpdatePromoterProfileDto) {
+    const allowedFields: (keyof UpdatePromoterProfileDto)[] = [
+      'name', 'phone', 'email', 'lineId',
+      'organization', 'region', 'address', 'category',
+      'socialLinks', 'avatarUrl', 'joinedReason', 'notes',
+    ];
+
+    const data: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (dto[key] !== undefined) {
+        data[key] = dto[key];
+      }
+    }
+
+    return this.prisma.promoter.update({
+      where: { id: promoterId },
+      data,
       include: {
         rewardConfig: true,
         trialConfig: {

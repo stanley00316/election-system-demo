@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { isDemoMode } from '@/lib/api';
-import { X, Lightbulb } from 'lucide-react';
+import { isDemoMode, getProductionUrl } from '@/lib/api';
+import { X, Lightbulb, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -116,9 +116,15 @@ export function DemoTip() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <a href={getProductionUrl()} target="_blank" rel="noopener noreferrer">
+            <Button variant="default" size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white">
+              正式使用
+              <ArrowRight className="ml-1 h-3 w-3" />
+            </Button>
+          </a>
           <Link href="/login">
             <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100">
-              返回展示首頁
+              展示首頁
             </Button>
           </Link>
           <button

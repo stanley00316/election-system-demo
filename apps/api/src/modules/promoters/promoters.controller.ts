@@ -12,10 +12,23 @@ import {
   Ip,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { IsString, IsOptional, IsUrl, MinLength, MaxLength } from 'class-validator';
 import { PromotersService } from './promoters.service';
 import { RegisterPromoterDto } from './dto/register-promoter.dto';
 import { ActivateTrialDto, ApplyPromoterReferralDto } from './dto/activate-trial.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+class TrackRefDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(32)
+  code: string;
+
+  @IsOptional()
+  @IsString()
+  url?: string;
+}
 
 @ApiTags('promoters')
 @Controller('promoters')
@@ -52,6 +65,19 @@ export class PromotersController {
   @ApiOperation({ summary: '取得試用邀請資訊' })
   async getTrialInfo(@Param('code') code: string) {
     return this.promotersService.getTrialInviteInfo(code);
+  }
+
+  @Post('track-ref')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @ApiOperation({ summary: '記錄 ?ref=CODE 追蹤點擊' })
+  async trackRef(
+    @Body() dto: TrackRefDto,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent: string,
+    @Headers('referer') referer: string,
+  ) {
+    return this.promotersService.trackRefClick(dto.code, dto.url, ip, userAgent, referer);
   }
 
   // === 需認證端點 ===

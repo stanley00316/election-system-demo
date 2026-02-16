@@ -104,6 +104,33 @@ export class CreatePromoterDto {
   notes?: string;
 
   @IsOptional()
+  @IsString()
+  organization?: string;
+
+  @IsOptional()
+  @IsString()
+  region?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
+  socialLinks?: Record<string, string>;
+
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  joinedReason?: string;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => RewardConfigDto)
   rewardConfig?: RewardConfigDto;
@@ -134,4 +161,31 @@ export class UpdatePromoterDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  organization?: string;
+
+  @IsOptional()
+  @IsString()
+  region?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
+  socialLinks?: Record<string, string>;
+
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  joinedReason?: string;
 }

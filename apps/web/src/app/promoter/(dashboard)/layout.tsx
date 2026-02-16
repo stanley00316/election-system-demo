@@ -18,6 +18,8 @@ import {
   Menu,
   X,
   Copy,
+  ExternalLink,
+  UserCog,
 } from 'lucide-react';
 import { SimpleBottomNavBar } from '@/components/navigation';
 import { BackButton, getParentPath } from '@/components/common/BackButton';
@@ -27,6 +29,7 @@ const navigation = [
   { name: '推薦紀錄', href: '/promoter/referrals', icon: Users },
   { name: '分享連結', href: '/promoter/share-links', icon: Link2 },
   { name: '試用邀請', href: '/promoter/trials', icon: Gift },
+  { name: '個人資料', href: '/promoter/profile', icon: UserCog },
 ];
 
 export default function PromoterDashboardLayout({
@@ -132,20 +135,37 @@ export default function PromoterDashboardLayout({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            {/* Referral Code */}
+            {/* Referral Code + 追蹤連結 */}
             {promoterProfile?.referralCode && (
-              <div className="mt-3 flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 rounded-md px-3 py-2">
-                <span className="text-xs text-orange-600 dark:text-orange-400">推薦碼：</span>
-                <code className="text-xs font-mono font-bold text-orange-700 dark:text-orange-300">
-                  {promoterProfile.referralCode}
-                </code>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 rounded-md px-3 py-2">
+                  <span className="text-xs text-orange-600 dark:text-orange-400">推薦碼：</span>
+                  <code className="text-xs font-mono font-bold text-orange-700 dark:text-orange-300">
+                    {promoterProfile.referralCode}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 ml-auto"
+                    onClick={copyReferralCode}
+                  >
+                    <Copy className={`h-3 w-3 ${copied ? 'text-green-500' : ''}`} />
+                  </Button>
+                </div>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 ml-auto"
-                  onClick={copyReferralCode}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  onClick={() => {
+                    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                    const trackingUrl = `${baseUrl}?ref=${promoterProfile.referralCode}`;
+                    navigator.clipboard.writeText(trackingUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
                 >
-                  <Copy className={`h-3 w-3 ${copied ? 'text-green-500' : ''}`} />
+                  <ExternalLink className="h-3 w-3 mr-1.5" />
+                  {copied ? '已複製！' : '複製推廣連結'}
                 </Button>
               </div>
             )}

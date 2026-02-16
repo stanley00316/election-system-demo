@@ -203,6 +203,10 @@ export default function AdminUserDetailPage() {
           <h1 className="text-2xl font-bold text-foreground">使用者詳情</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => router.push(`/admin/users/${userId}/edit`)}>
+            <User className="h-4 w-4 mr-2" />
+            編輯
+          </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             匯出完整資料

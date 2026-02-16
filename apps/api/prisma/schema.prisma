@@ -844,6 +844,13 @@ model Promoter {
   approvedAt   DateTime?      @map("approved_at")
   approvedBy   String?        @map("approved_by")
   notes        String?
+  organization String?        // 所屬組織/公司
+  region       String?        // 負責區域（如：台北市大安區）
+  address      String?        // 聯絡地址
+  category     String?        // 推廣者分類（志工、里長、社區幹部、媒體）
+  socialLinks  Json?          @map("social_links") // {"facebook":"...", "instagram":"...", "line_official":"..."}
+  avatarUrl    String?        @map("avatar_url")   // 頭像
+  joinedReason String?        @map("joined_reason") // 加入原因/動機
   isActive     Boolean        @default(false) @map("is_active")
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
@@ -1029,6 +1036,7 @@ enum ShareChannel {
   QR_CODE
   EMAIL
   DIRECT_LINK
+  REF_LINK
   OTHER
 }
 

@@ -11,6 +11,27 @@ export const isDemoMode =
   process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ||
   (typeof window !== 'undefined' && /[-.]demo[-.]/.test(window.location.hostname));
 
+// 正式版 URL（供範例版引導使用者跳轉）
+export const PRODUCTION_URL =
+  process.env.NEXT_PUBLIC_PRODUCTION_URL || 'https://web-delta-hazel-33.vercel.app';
+
+/**
+ * 產生正式版跳轉 URL，自動帶入 ?ref= 推廣碼（若有）
+ * 推廣碼來源：cookie ref_code > URL ?ref= 參數
+ */
+export function getProductionUrl(path: string = ''): string {
+  const base = PRODUCTION_URL + path;
+  if (typeof window === 'undefined') return base;
+  // 從 cookie 讀取推廣碼
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)ref_code=([^;]*)/);
+  const refCode = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+  if (refCode) {
+    const separator = base.includes('?') ? '&' : '?';
+    return `${base}${separator}ref=${encodeURIComponent(refCode)}`;
+  }
+  return base;
+}
+
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -524,6 +545,8 @@ const realAdminUsersApi = {
   getUserVoters: (id: string, params?: any) => api.get<any>(`/admin/users/${id}/voters`, params),
   getUserContacts: (id: string, params?: any) => api.get<any>(`/admin/users/${id}/contacts`, params),
   getUserCampaignStats: (id: string) => api.get<any>(`/admin/users/${id}/campaign-stats`),
+  updateUser: (id: string, data: { name?: string; email?: string; phone?: string }) =>
+    api.put<any>(`/admin/users/${id}`, data),
   suspendUser: (id: string, reason: string) => api.put<any>(`/admin/users/${id}/suspend`, { reason }),
   activateUser: (id: string) => api.put<any>(`/admin/users/${id}/activate`),
 };
@@ -655,6 +678,7 @@ export const promotersPublicApi = {
 // 推廣者自助 API（需認證 + 推廣者身份）
 const realPromoterSelfApi = {
   getProfile: () => api.get<any>('/promoter/me'),
+  updateProfile: (data: Record<string, any>) => api.put<any>('/promoter/me', data),
   getStats: () => api.get<any>('/promoter/me/stats'),
   getReferrals: (params?: { status?: string; page?: number; limit?: number }) =>
     api.get<{ data: any[]; pagination: any }>('/promoter/me/referrals', params),

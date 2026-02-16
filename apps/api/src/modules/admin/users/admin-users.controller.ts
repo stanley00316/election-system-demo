@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AdminUsersService } from './admin-users.service';
-import { AdminUserFilterDto, SuspendUserDto } from './dto/user-filter.dto';
+import { AdminUserFilterDto, SuspendUserDto, UpdateUserDto } from './dto/user-filter.dto';
 import { AdminGuard } from '../../admin-auth/guards/admin.guard';
 import { CurrentAdmin } from '../../admin-auth/decorators/current-admin.decorator';
 import { AdminAuthService } from '../../admin-auth/admin-auth.service';
@@ -170,6 +170,15 @@ export class AdminUsersController {
   @Get(':id/campaign-stats')
   async getUserCampaignStats(@Param('id') id: string) {
     return this.adminUsersService.getUserCampaignStats(id);
+  }
+
+  /**
+   * 更新使用者基本資料（name, email, phone）
+   * lineUserId 為認證用途，不可修改
+   */
+  @Put(':id')
+  async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.adminUsersService.updateUser(id, dto);
   }
 
   /**

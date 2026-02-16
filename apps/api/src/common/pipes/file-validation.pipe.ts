@@ -68,6 +68,18 @@ export class FileValidationPipe implements PipeTransform {
       );
     }
 
+    // 3b. OWASP A03: 當 MIME type 為 application/octet-stream 時，驗證 magic bytes
+    if (file.mimetype === 'application/octet-stream' && file.buffer) {
+      if (!this.validateMagicBytes(file)) {
+        this.logger.warn(
+          `Magic bytes 驗證失敗: mimetype=${file.mimetype}, filename=${file.originalname}`,
+        );
+        throw new BadRequestException(
+          `檔案內容與格式不符。請確認上傳的是有效的 ${this.options.allowedExtensions.join(' / ')} 檔案`,
+        );
+      }
+    }
+
     // 4. 檢查副檔名
     const ext = path.extname(file.originalname).toLowerCase();
     if (this.options.allowedExtensions.length > 0 &&
@@ -102,6 +114,40 @@ export class FileValidationPipe implements PipeTransform {
 
     // 防止以點號開頭（隱藏檔案）
     return sanitized.replace(/^\.+/, '');
+  }
+
+  /**
+   * OWASP A03: 驗證檔案 magic bytes
+   * 當 MIME type 為 application/octet-stream 時，透過檔案頭確認實際格式
+   */
+  private validateMagicBytes(file: Express.Multer.File): boolean {
+    const buffer = file.buffer;
+    if (!buffer || buffer.length < 4) return false;
+
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    // XLSX: ZIP 格式（PK header: 50 4B 03 04）
+    if (ext === '.xlsx') {
+      return buffer[0] === 0x50 && buffer[1] === 0x4B &&
+             buffer[2] === 0x03 && buffer[3] === 0x04;
+    }
+
+    // XLS: OLE Compound Document（D0 CF 11 E0）
+    if (ext === '.xls') {
+      return buffer[0] === 0xD0 && buffer[1] === 0xCF &&
+             buffer[2] === 0x11 && buffer[3] === 0xE0;
+    }
+
+    // CSV: 純文字（檢查前 1024 bytes 是否為有效文字，不含 null bytes）
+    if (ext === '.csv') {
+      const sample = buffer.slice(0, Math.min(1024, buffer.length));
+      for (let i = 0; i < sample.length; i++) {
+        if (sample[i] === 0) return false;
+      }
+      return true;
+    }
+
+    return false;
   }
 }
 

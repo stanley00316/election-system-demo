@@ -64,7 +64,9 @@ export class AlbumsController {
 
   @Get('social/status')
   @ApiOperation({ summary: '取得社群平台設定狀態' })
-  async getSocialStatus() {
+  async getSocialStatus(
+    @CurrentUser('id') _userId: string, // OWASP A01: 確保已認證
+  ) {
     return this.socialService.getConfiguredPlatforms();
   }
 

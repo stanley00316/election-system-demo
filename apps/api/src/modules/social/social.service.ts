@@ -74,6 +74,9 @@ export class SocialService {
       `開始發佈相簿「${data.title}」到 [${platforms.join(', ')}]`,
     );
 
+    // OWASP A10: SSRF 防護 — 驗證所有外部 URL 使用 HTTPS 且不指向內部網路
+    const sanitizedData = this.sanitizeUrls(data);
+
     const results = await Promise.allSettled(
       platforms.map(async (platform) => {
         const provider = this.providers.get(platform);
@@ -84,7 +87,7 @@ export class SocialService {
             error: `不支援的平台: ${platform}`,
           } as SocialShareResult;
         }
-        return provider.publish(data, message);
+        return provider.publish(sanitizedData, message);
       }),
     );
 
@@ -98,5 +101,82 @@ export class SocialService {
         error: result.reason?.message || '未知錯誤',
       };
     });
+  }
+
+  /**
+   * OWASP A10: SSRF 防護
+   * 驗證 URL 為 HTTPS 且不指向內部網路（localhost、私有 IP）
+   */
+  private isAllowedUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+
+      // 必須為 HTTPS
+      if (parsed.protocol !== 'https:') {
+        this.logger.warn(`SSRF 防護：拒絕非 HTTPS URL: ${parsed.protocol}//${parsed.hostname}`);
+        return false;
+      }
+
+      const hostname = parsed.hostname.toLowerCase();
+
+      // 禁止內部網路位址
+      const blockedPatterns = [
+        'localhost',
+        '127.0.0.1',
+        '0.0.0.0',
+        '::1',
+        '169.254.',     // link-local
+        '10.',          // Class A private
+        '192.168.',     // Class C private
+      ];
+
+      for (const pattern of blockedPatterns) {
+        if (hostname === pattern || hostname.startsWith(pattern)) {
+          this.logger.warn(`SSRF 防護：拒絕內部網路 URL: ${hostname}`);
+          return false;
+        }
+      }
+
+      // 禁止 172.16.0.0/12 私有網段
+      if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) {
+        this.logger.warn(`SSRF 防護：拒絕內部網路 URL: ${hostname}`);
+        return false;
+      }
+
+      return true;
+    } catch {
+      this.logger.warn(`SSRF 防護：無效 URL 格式`);
+      return false;
+    }
+  }
+
+  /**
+   * 清理 AlbumShareData 中的所有 URL，移除不安全的 URL
+   */
+  private sanitizeUrls(data: AlbumShareData): AlbumShareData {
+    const sanitized = { ...data };
+
+    // 驗證 publicUrl
+    if (sanitized.publicUrl && !this.isAllowedUrl(sanitized.publicUrl)) {
+      this.logger.warn(`移除不安全的 publicUrl`);
+      sanitized.publicUrl = '';
+    }
+
+    // 驗證 coverPhotoUrl
+    if (sanitized.coverPhotoUrl && !this.isAllowedUrl(sanitized.coverPhotoUrl)) {
+      this.logger.warn(`移除不安全的 coverPhotoUrl`);
+      sanitized.coverPhotoUrl = undefined;
+    }
+
+    // 驗證 photoUrls
+    sanitized.photoUrls = sanitized.photoUrls.filter((url) => {
+      if (!this.isAllowedUrl(url)) {
+        this.logger.warn(`移除不安全的 photoUrl`);
+        return false;
+      }
+      return true;
+    });
+
+    return sanitized;
   }
 }

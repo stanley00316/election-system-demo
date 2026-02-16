@@ -248,6 +248,13 @@ export class AdminPromotersService {
         email: dto.email,
         lineId: dto.lineId,
         notes: dto.notes,
+        organization: dto.organization,
+        region: dto.region,
+        address: dto.address,
+        category: dto.category,
+        socialLinks: dto.socialLinks as any,
+        avatarUrl: dto.avatarUrl,
+        joinedReason: dto.joinedReason,
       },
       include: { rewardConfig: true, trialConfig: true },
     });

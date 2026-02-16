@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-02-12
+
+### Added
+- **範例版轉正式版引導**：展示首頁導航列新增「正式使用」按鈕、底部新增正式版 CTA 引導區塊（含註冊和定價入口）
+- **DemoTip 正式版入口**：範例版各頁面提示列新增「正式使用」按鈕，一鍵跳轉正式版
+- **推廣碼跨域橋接**：`getProductionUrl()` 工具函數，從範例版跳轉正式版時自動帶入 `?ref=CODE` 推廣碼（讀取 cookie）
+- **`NEXT_PUBLIC_PRODUCTION_URL`**：新增環境變數，可自訂正式版 URL（預設 `web-delta-hazel-33.vercel.app`）
+- **推廣追蹤系統**：全域 `?ref=CODE` URL 參數追蹤，Middleware 自動存入 cookie 並 redirect 至乾淨 URL
+- **推廣連結複製**：推廣者後台側邊欄新增「複製推廣連結」按鈕，一鍵產生 `{baseUrl}?ref={referralCode}` 格式連結
+- **使用者推薦連結**：使用者設定 > 推薦好友頁面新增追蹤連結格式
+- **後端追蹤端點**：新增 `POST /promoters/track-ref`，記錄推廣碼點擊（含 IP、User-Agent、Referer），Throttle 限流防濫用
+- **推廣者資料欄位擴充**：Prisma Schema `Promoter` model 新增 organization、region、address、category、socialLinks（JSON）、avatarUrl、joinedReason 七個欄位
+- **推廣者自助編輯**：新增 `PUT /promoter/me` 端點 + 前端「個人資料」頁面（基本資訊、組織資訊、社群連結、備註），推廣者可自行維護詳細資料
+- **Admin 推廣者編輯頁**：`/admin/promoters/:id/edit`，管理員可編輯所有推廣者欄位（含 LINE ID、分類下拉、社群連結）
+- **Admin 使用者編輯頁**：`/admin/users/:id/edit` + `PUT /admin/users/:id`，可修改姓名、Email、電話，LINE User ID 唯讀保護
+- ShareChannel enum 新增 `REF_LINK` 類型
+
+### Changed
+- Middleware matcher 擴展為全頁面攔截（排除 API / _next / 靜態資源），支援任意頁面的 ?ref= 追蹤
+- 登入頁整合 cookie `ref_code` 讀取（優先於 sessionStorage），登入成功後自動清除
+- Admin 推廣者詳情頁、使用者詳情頁新增「編輯」按鈕
+- CreatePromoterDto / UpdatePromoterDto 擴充新欄位支援
+- admin-promoters.service.ts `updatePromoter` 方法支援全部新欄位寫入
+- Demo API 更新：demoPromoterSelfApi 新增 updateProfile mock、demoAdminUsersApi 新增 updateUser mock
+
+### Security
+- 推廣者自助編輯使用白名單限制可修改欄位，不可修改 referralCode / type / status
+- `User.lineUserId` 為認證識別碼，API 和 UI 均設為唯讀，防止認證鏈被破壞
+- `POST /promoters/track-ref` 加入 Throttle（60 秒 30 次）防濫用
+
+## [1.9.1] - 2026-02-15
+
+### Security (OWASP Top 10 合規複查)
+- A01: 相簿 `getSocialStatus` 端點加入 `@CurrentUser` 認證一致性檢查
+- A03: 檔案上傳 `application/octet-stream` MIME type 新增 magic bytes 驗證（XLSX ZIP header / XLS OLE header / CSV 文字檢查），防止偽造副檔名繞過
+- A05: 生產環境 CORS 改為強制要求設定 `CORS_ORIGIN`，未設定時不允許任何跨域請求（移除 localhost 預設值）
+- A10: 社群平台發佈功能新增 SSRF 防護 — 驗證所有外部 URL 為 HTTPS 且不指向內部網路（localhost / 私有 IP / link-local），含完整 RFC 1918 位址檢查
+
 ## [1.9.0] - 2026-02-15
 
 ### Added

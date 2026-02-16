@@ -140,6 +140,9 @@ function PromoterDetailContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => router.push(`/admin/promoters/${id}/edit`)}>
+            <Edit className="h-4 w-4 mr-1" /> 編輯
+          </Button>
           {promoter.status === 'ACTIVE' ? (
             <Button variant="destructive" size="sm" onClick={handleSuspend}>
               <Ban className="h-4 w-4 mr-1" /> 停用
