@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.3] - 2026-02-16
+
+### Fixed
+- **定價頁面下拉選單無反應**：API 不可用時 `cityGroups` 為空陣列，導致下拉選單展開後無選項。新增靜態 fallback 資料，確保頁面不依賴後端也能正常顯示縣市與選舉類型
+
 ## [1.10.2] - 2026-02-16
 
 ### Added

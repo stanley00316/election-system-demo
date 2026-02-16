@@ -77,6 +77,23 @@ const regionLevelColors: Record<number, string> = {
   5: 'bg-blue-100 text-blue-800',
 };
 
+// 靜態 fallback 資料：API 不可用時仍可正常顯示選項
+const FALLBACK_CITY_GROUPS: CityGroup[] = [
+  { regionLevel: 1, label: '一級戰區（六都）', cities: ['新北市', '台北市', '桃園市', '台中市', '台南市', '高雄市'] },
+  { regionLevel: 2, label: '二級戰區', cities: ['彰化縣', '屏東縣', '新竹縣', '新竹市'] },
+  { regionLevel: 3, label: '三級戰區（基準）', cities: ['南投縣', '苗栗縣', '雲林縣', '宜蘭縣'] },
+  { regionLevel: 4, label: '四級戰區', cities: ['嘉義縣', '基隆市', '花蓮縣', '嘉義市', '台東縣'] },
+  { regionLevel: 5, label: '五級戰區（離島）', cities: ['金門縣', '澎湖縣', '連江縣'] },
+];
+
+const FALLBACK_ELECTION_TYPES: ElectionType[] = [
+  { code: 'VILLAGE_CHIEF', label: '里長', category: 'VILLAGE_CHIEF' },
+  { code: 'TOWNSHIP_REP', label: '民代', category: 'REPRESENTATIVE' },
+  { code: 'CITY_COUNCILOR', label: '議員', category: 'COUNCILOR' },
+  { code: 'MAYOR', label: '市長', category: 'MAYOR' },
+  { code: 'LEGISLATOR', label: '立委', category: 'LEGISLATOR' },
+];
+
 function PricingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -125,16 +142,14 @@ function PricingPageContent() {
         subscriptionsApi.getElectionTypes(),
         subscriptionsApi.checkSubscription().catch(() => null),
       ]);
-      setCityGroups(cities);
-      setElectionTypes(types);
+      // API 回傳空陣列時使用 fallback
+      setCityGroups(cities?.length ? cities : FALLBACK_CITY_GROUPS);
+      setElectionTypes(types?.length ? types : FALLBACK_ELECTION_TYPES);
       setCurrentSubscription(subscription);
     } catch (error) {
-      console.error('載入資料失敗:', error);
-      toast({
-        title: '載入失敗',
-        description: '無法載入定價資料，請稍後再試',
-        variant: 'destructive',
-      });
+      console.error('載入資料失敗，使用靜態資料:', error);
+      setCityGroups(FALLBACK_CITY_GROUPS);
+      setElectionTypes(FALLBACK_ELECTION_TYPES);
     } finally {
       setIsLoadingCities(false);
     }
