@@ -484,9 +484,9 @@ function PricingPageContent() {
                   <span className="text-4xl font-bold text-foreground">
                     {formatPrice(currentPlan.price)}
                   </span>
-                  <span className="text-muted-foreground">/月</span>
-                  <p className="text-sm text-green-600 mt-1">
-                    年繳 {formatPrice(currentPlan.price * 10)} 享 83 折
+                  <span className="text-muted-foreground">/年</span>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    一次性年繳
                   </p>
                 </div>
                 <ul className="space-y-3">
