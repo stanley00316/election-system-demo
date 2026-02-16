@@ -193,16 +193,9 @@ function CheckoutContent() {
   };
 
   const loadPlan = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'loadPlan called',data:{planId,cityParam,electionTypeParam,isFallback:planId?.startsWith('fallback-')},timestamp:Date.now(),hypothesisId:'H1,H2'})}).catch(()=>{});
-    // #endregion
-
     // fallback plan ID 來自 pricing 頁面的靜態資料，直接本地建構
     if (planId?.startsWith('fallback-') && cityParam && electionTypeParam) {
       const fallback = buildFallbackPlan(cityParam, electionTypeParam);
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'using fallback plan',data:{city:cityParam,electionType:electionTypeParam,planFound:!!fallback,price:fallback?.price},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       if (fallback) {
         setPlan(fallback);
         // fallback 模式下嘗試取得訂閱狀態，失敗也不影響顯示
@@ -222,9 +215,6 @@ function CheckoutContent() {
 
     try {
       const plans = await subscriptionsApi.getPlans();
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'getPlans succeeded',data:{planCount:plans?.length,planIds:plans?.slice(0,3).map((p:any)=>p.id)},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       const selectedPlan = plans.find((p: Plan) => p.id === planId);
       
       if (!selectedPlan || selectedPlan.code === 'FREE_TRIAL') {
@@ -252,9 +242,6 @@ function CheckoutContent() {
         setSubscription(currentSub.subscription);
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/34827fd4-7bb3-440a-b507-2d31c4b34e1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'checkout/page.tsx:loadPlan',message:'loadPlan FAILED, trying fallback',data:{errorMsg:error?.message,cityParam,electionTypeParam},timestamp:Date.now(),hypothesisId:'H1,H2,H3'})}).catch(()=>{});
-      // #endregion
       // API 失敗時嘗試用 URL 參數建構 fallback
       if (cityParam && electionTypeParam) {
         const fallback = buildFallbackPlan(cityParam, electionTypeParam);
